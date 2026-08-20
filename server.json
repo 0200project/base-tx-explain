@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.0200project/base-tx-explain",
   "title": "Base Transaction Explainer",
-  "description": "Explain any Base mainnet transaction in plain English: strict JSON with summary, action type, assets moved, labeled counterparties, risk flags, and gas in USD. Deterministic onchain decode - no LLM in the response path.",
+  "description": "Plain-English decode of any Base mainnet transaction: strict JSON, risk flags, no LLM.",
   "version": "0.1.0",
   "remotes": [
     {
