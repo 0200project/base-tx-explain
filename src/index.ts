@@ -89,10 +89,10 @@ async function initPayments(): Promise<void> {
   const resourceServer = new x402ResourceServer(facilitator).register(NETWORK, new ExactEvmScheme());
   // Payment-path visibility: a rejected payment must never be silent.
   resourceServer
-    .onVerifyFailure((ctx: unknown) => {
+    .onVerifyFailure(async (ctx: unknown) => {
       console.error('[x402] VERIFY FAILED:', JSON.stringify(ctx).slice(0, 600));
     })
-    .onSettleFailure((ctx: unknown) => {
+    .onSettleFailure(async (ctx: unknown) => {
       console.error('[x402] SETTLE FAILED:', JSON.stringify(ctx).slice(0, 600));
     });
   await resourceServer.initialize();
