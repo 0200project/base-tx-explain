@@ -66,6 +66,10 @@
       <h2 id="what-is-mcp">What is an MCP server?</h2>
       <p>MCP — the Model Context Protocol — is an open standard that lets AI assistants and agents discover and call external tools in a uniform way. An MCP server exposes one or more tools over a standard transport; the client (Claude, an agent framework, or your own code) lists the tools and calls them with structured arguments. base-tx-explain is a deliberately minimal MCP server: one tool, <code class="inline">explain_transaction</code>, served over streamable HTTP and listed in the official MCP registry as <code class="inline">io.github.0200project/base-tx-explain</code>.</p>
 
+      
+      <h2 id="mcp-blockchain-tools">Are there MCP blockchain tools for Base?</h2>
+      <p>Yes — base-tx-explain is an MCP blockchain tool built specifically for Base: it turns any Base mainnet transaction into strict JSON over the Model Context Protocol. The official MCP registry lists other blockchain servers too, mostly for raw chain data — balances, logs, blocks. base-tx-explain is the explanation layer: one call that says what a transaction <em>did</em>, with risk flags attached. The two kinds compose well — raw-data servers for lookups, base-tx-explain for understanding.</p>
+
       <h2 id="how-to-decode">How do I decode a Base transaction programmatically?</h2>
       <p>Connect any MCP client to the hosted endpoint at <code class="inline">https://base-tx-explain.fly.dev/mcp</code> (streamable HTTP), or send a plain JSON-RPC <code class="inline">tools/call</code> request with curl. The response is strict JSON with a stable schema, so software can parse it blind. The <a href="/docs/#quickstart">quickstart</a> has the exact config and curl command, and the <a href="/playground/">playground</a> decodes hashes live in your browser.</p>
 
@@ -96,6 +100,10 @@
       <h2 id="agents-pay">Can AI agents really pay for API calls by themselves?</h2>
       <p>Yes — that is the point of this whole stack. An x402-capable agent holds its own wallet, reads the 402 payment challenge from the response, pays $0.02 in USDC on Base, and retries with proof of payment attached. No card on file, no subscription, no human in the loop. You can watch the loop replayed on the <a href="/">home page</a>, or decode transactions live in the <a href="/playground/">playground</a>.</p>
 
+      
+      <h2 id="paid-json-api">Is there a blockchain JSON API an AI agent can pay for per call?</h2>
+      <p>That is exactly what base-tx-explain is: a blockchain JSON API priced per call for autonomous agents. Every response is deterministic strict JSON, and payment happens in-band through x402 — the agent hits the paywall, pays $0.02 in USDC on Base from its own wallet, and retries, with no account or API key anywhere in the loop. Among crypto tools for AI agents, the design goal here is to be the one your agent can rely on blind: stable schema, evidence-based risk flags, and honest partials when something can&rsquo;t be decoded.</p>
+
       <p style="margin-top:3rem"><a class="btn btn-primary" href="/playground/">Try the playground</a>&nbsp;&nbsp;<a class="btn btn-ghost" href="/docs/">Read the docs</a></p>
 
     </div>
@@ -122,6 +130,14 @@
       "acceptedAnswer": {
         "@type": "Answer",
         "text": "MCP — the Model Context Protocol — is an open standard that lets AI assistants and agents discover and call external tools in a uniform way. An MCP server exposes one or more tools over a standard transport; the client (Claude, an agent framework, or your own code) lists the tools and calls them with structured arguments. base-tx-explain is a deliberately minimal MCP server: one tool, explain_transaction, served over streamable HTTP and listed in the official MCP registry as io.github.0200project/base-tx-explain."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Are there MCP blockchain tools for Base?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes — base-tx-explain is an MCP blockchain tool built specifically for Base: it turns any Base mainnet transaction into strict JSON over the Model Context Protocol. The official MCP registry lists other blockchain servers too, mostly for raw chain data — balances, logs, blocks. base-tx-explain is the explanation layer: one call that says what a transaction did, with risk flags attached. The two kinds compose well — raw-data servers for lookups, base-tx-explain for understanding."
       }
     },
     {
@@ -202,6 +218,14 @@
       "acceptedAnswer": {
         "@type": "Answer",
         "text": "Yes — that is the point of this whole stack. An x402-capable agent holds its own wallet, reads the 402 payment challenge from the response, pays $0.02 in USDC on Base, and retries with proof of payment attached. No card on file, no subscription, no human in the loop. You can watch the loop replayed on the home page, or decode transactions live in the playground."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is there a blockchain JSON API an AI agent can pay for per call?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "That is exactly what base-tx-explain is: a blockchain JSON API priced per call for autonomous agents. Every response is deterministic strict JSON, and payment happens in-band through x402 — the agent hits the paywall, pays $0.02 in USDC on Base from its own wallet, and retries, with no account or API key anywhere in the loop. Among crypto tools for AI agents, the design goal here is to be the one your agent can rely on blind: stable schema, evidence-based risk flags, and honest partials when something can’t be decoded."
       }
     }
   ]
