@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "validate": "tsx scripts/validate.ts",
-    "growth": "node scripts/growth-scan.mjs"
+    "growth": "node scripts/growth-scan.mjs",
+    "status": "tsx scripts/status.ts"
   },
   "dependencies": {
     "@coinbase/cdp-sdk": "^1.55.0",
