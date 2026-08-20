@@ -149,9 +149,14 @@ data. Keep that list honest as fields change.
 8. **Info/ops:** `/healthz` publishes lifetime revenue + funnel unauthenticated;
    payer EIP-3009 signature written to logs on facilitator error; `ipTag` is a
    reversible 32-bit hash; unbounded usage-ledger Sets on a 256 MB box.
-
-Full detail and reproduction for each: the audit report (session record) and the
-findings that produced `3a13cde` / `cbe62d6`.
+9. **Free-tier enforcement is reset by every deploy** (business-logic, not a
+   security hole — nobody can _force_ a reset). The free-call counter lives only
+   in memory (`freeTier.ts`) while the usage ledger persists to the volume, so a
+   restart hands every client a fresh 10 free calls. At the current multi-session
+   deploy frequency no real user reaches the paywall, so free-tier enforcement is
+   much weaker than the code implies. The payments session owns the fix
+   (persist/derive the counter); this line moves to Fixed when it lands or the
+   founder decides to leave it. Compounds with #6.
 
 ## 6. Checked and found safe (do not re-tread)
 
@@ -200,6 +205,12 @@ a change touches any of:
   `risk_flags`/`counterparties`. Add it to `provenance.untrusted_fields`.
 - **A new upstream dependency** or a change to how an existing one's response is
   parsed.
+- **`src/labels.ts` additions are trust assertions, not just display.** A labeled
+  address makes `getLabel()` truthy, which (a) suppresses `unverified_contract`
+  and `first_time_counterparty` against it in `risk/flags.ts`, and (b) makes it
+  the canonical address for its ticker in the impersonation guard. A wrong entry
+  actively vouches for a scam. Add an address only when it is verified from the
+  issuer's official source AND cross-checked on-chain (symbol + decimals).
 - **`src/index.ts`** (shared, high-traffic) — announce to the other sessions
   before editing; read the whole request path after.
 
