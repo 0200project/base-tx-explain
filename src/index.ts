@@ -87,6 +87,14 @@ async function initPayments(): Promise<void> {
   const facilitatorUrl = process.env.X402_FACILITATOR_URL || 'https://facilitator.payai.network';
   const facilitator = new HTTPFacilitatorClient({ url: facilitatorUrl });
   const resourceServer = new x402ResourceServer(facilitator).register(NETWORK, new ExactEvmScheme());
+  // Payment-path visibility: a rejected payment must never be silent.
+  resourceServer
+    .onVerifyFailure((ctx: unknown) => {
+      console.error('[x402] VERIFY FAILED:', JSON.stringify(ctx).slice(0, 600));
+    })
+    .onSettleFailure((ctx: unknown) => {
+      console.error('[x402] SETTLE FAILED:', JSON.stringify(ctx).slice(0, 600));
+    });
   await resourceServer.initialize();
   const accepts = await resourceServer.buildPaymentRequirements({
     scheme: 'exact',
@@ -98,6 +106,14 @@ async function initPayments(): Promise<void> {
     accepts,
     resource: RESOURCE_INFO,
     extensions: BAZAAR_EXTENSIONS,
+    hooks: {
+      onBeforeExecution: ({ paymentPayload }) => {
+        console.log('[x402] payment VERIFIED, executing tool (payer payload present:', Boolean(paymentPayload), ')');
+      },
+      onAfterSettlement: ({ settlement }) => {
+        console.log('[x402] SETTLED:', JSON.stringify(settlement).slice(0, 400));
+      },
+    },
   });
   paidHandler = paid(runExplain) as typeof paidHandler;
   httpPaymentRequired = {

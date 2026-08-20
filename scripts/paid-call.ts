@@ -49,9 +49,17 @@ await client.connect(new StreamableHTTPClientTransport(new URL(SERVER_URL)));
 for (let i = 1; i <= 12; i++) {
   const result = await client.callTool('explain_transaction', { tx_hash: TX_HASH });
   const first = result.content.find((c) => c.type === 'text') as { text?: string } | undefined;
-  const summary = first?.text ? (JSON.parse(first.text).summary ?? '(no summary)') : '(no text)';
-  console.log(`call ${i}: paid=${result.paymentMade} | ${String(summary).slice(0, 80)}`);
+  const parsed = first?.text ? (JSON.parse(first.text) as Record<string, unknown>) : null;
+  const summary = parsed?.summary ?? '(no summary)';
+  console.log(`call ${i}: paid=${result.paymentMade} isError=${result.isError ?? false} | ${String(summary).slice(0, 80)}`);
   if (result.paymentMade) {
+    if (result.isError || !parsed?.summary) {
+      console.log('\nPAYMENT SENT BUT THE RESULT IS NOT A DECODE - raw response follows:');
+      console.log((first?.text ?? '(empty)').slice(0, 1200));
+      console.log('\nsettlement:', JSON.stringify(result.paymentResponse ?? null));
+      console.log('This usually means verification or settlement FAILED server-side; no funds moved.');
+      break;
+    }
     console.log('\nPAID CALL SETTLED.');
     console.log('settlement:', JSON.stringify(result.paymentResponse, null, 2));
     console.log('\nCheck the payout wallet on Basescan - the $0.02 should be there.');
