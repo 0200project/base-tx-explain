@@ -1,0 +1,8 @@
+{
+  "title": "Base Transaction Explainer (MCP server)",
+  "description": "This Actor runs as a standby MCP server — there is no per-run input. Connect any MCP client to the Actor's standby URL (path /mcp, streamable HTTP) and call the explain_transaction(tx_hash) tool. Results are returned in-band as strict JSON over MCP.",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {},
+  "required": []
+}

@@ -1,0 +1,33 @@
+{
+  "actorSpecification": 1,
+  "title": "Decoded Base transactions",
+  "description": "This MCP server returns explanations in-band over the MCP protocol; standby runs do not write datasets. The fields below document the shape of the explanation object the explain_transaction tool returns.",
+  "fields": {
+    "type": "object",
+    "properties": {
+      "summary": { "type": "string", "description": "Plain-English summary of what the transaction did (1-3 sentences)." },
+      "action_type": { "type": "string", "description": "One of 30 deterministic classifications, e.g. swap, erc20_transfer, nft_mint, bridge_out." },
+      "status": { "type": "string", "enum": ["success", "reverted"] },
+      "assets_moved": { "type": "array", "description": "Every asset that moved: token, amount (decimal string), from, to, token_address, standard." },
+      "counterparties": { "type": "array", "description": "Addresses involved, labeled where known (routers, bridges, marketplaces)." },
+      "risk_flags": { "type": "array", "description": "Evidence-based flags: unverified_contract, unlimited_approval, approval_for_all, known_drainer, first_time_counterparty, transaction_reverted." },
+      "gas_paid_usd": { "type": "number", "description": "Total gas cost in USD, including the OP-stack L1 data fee, priced at the transaction's block." },
+      "timestamp": { "type": "string" },
+      "block_number": { "type": "integer" },
+      "tx_hash": { "type": "string" },
+      "basescan_url": { "type": "string" },
+      "partial": { "type": "boolean", "description": "True when the full meaning could not be established; the summary states exactly what is and is not known." }
+    }
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": ["summary", "action_type", "status", "gas_paid_usd", "tx_hash"]
+      },
+      "display": {
+        "component": "table"
+      }
+    }
+  }
+}
