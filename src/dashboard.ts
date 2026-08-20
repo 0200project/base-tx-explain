@@ -9,7 +9,7 @@
  * same origin), /stats (same origin, HttpOnly cookie attaches automatically).
  */
 
-const SITE_URL = 'https://0200project.github.io';
+const SITE_URL = 'https://0200project.com';
 
 const BRAND_SVG =
   '<svg viewBox="0 0 64 36" aria-hidden="true" style="height:1.125rem;width:auto">' +

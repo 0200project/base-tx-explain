@@ -16,12 +16,12 @@ import { buildOpenApiDocument } from './openapi.js';
 import { consumeFreeCall, refundFreeCall, withinRateLimit } from './freeTier.js';
 import { initUsageLedger, recordEvent, usageSnapshot } from './usage.js';
 
-const VERSION = '0.1.1';
+const VERSION = '0.1.2';
 const NETWORK = 'eip155:8453' as const; // Base mainnet
 const PAYMENT_MODE = process.env.PAYMENT_MODE === 'x402' ? 'x402' : 'none';
 const PRICE_USD = process.env.X402_PRICE_USD ?? '0.02';
 const PUBLIC_URL = (process.env.PUBLIC_URL ?? 'https://base-tx-explain.fly.dev').replace(/\/$/, '');
-const SITE_URL = 'https://0200project.github.io';
+const SITE_URL = 'https://0200project.com';
 
 const TOOL_NAME = 'explain_transaction';
 const TOOL_DESCRIPTION =

@@ -3,8 +3,8 @@
   "name": "io.github.0200project/base-tx-explain",
   "title": "Base Transaction Explainer",
   "description": "Plain-English decode of any Base mainnet transaction: strict JSON, risk flags, no LLM.",
-  "version": "0.1.1",
-  "websiteUrl": "https://0200project.github.io/",
+  "version": "0.1.2",
+  "websiteUrl": "https://0200project.com/",
   "repository": {
     "url": "https://github.com/0200project/base-tx-explain",
     "source": "github",
@@ -12,7 +12,7 @@
   },
   "icons": [
     {
-      "src": "https://0200project.github.io/assets/logo.png",
+      "src": "https://0200project.com/assets/logo.png",
       "mimeType": "image/png",
       "sizes": ["512x512"]
     }

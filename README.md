@@ -6,7 +6,7 @@ Feed it a transaction hash. Get back what happened, in plain English, plus the s
 
 Base mainnet (chain id 8453) only.
 
-**Links:** [Live endpoint](https://base-tx-explain.fly.dev/mcp) · [Docs](https://0200project.github.io/docs/) · [OpenAPI](https://base-tx-explain.fly.dev/openapi.json) · MCP registry: `io.github.0200project/base-tx-explain` · [Site](https://0200project.github.io)
+**Links:** [Live endpoint](https://base-tx-explain.fly.dev/mcp) · [Docs](https://0200project.com/docs/) · [OpenAPI](https://base-tx-explain.fly.dev/openapi.json) · MCP registry: `io.github.0200project/base-tx-explain` · [Site](https://0200project.com)
 
 ## For agents
 

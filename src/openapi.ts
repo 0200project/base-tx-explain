@@ -166,7 +166,7 @@ export function buildOpenApiDocument(
   return {
     openapi: '3.1.0',
     servers: [{ url: publicUrl, description: 'Production' }],
-    externalDocs: { url: 'https://0200project.github.io/docs/', description: 'Full documentation' },
+    externalDocs: { url: 'https://0200project.com/docs/', description: 'Full documentation' },
     info: {
       title: 'base-tx-explain',
       version,

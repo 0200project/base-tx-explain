@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://0200project.github.io/sitemap.xml
+Sitemap: https://0200project.com/sitemap.xml
