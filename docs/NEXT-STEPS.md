@@ -14,13 +14,13 @@ payout path.
 ## 2. GitHub org + push (10 min)
 
 Branding research (collision-checked): keep the tool name **base-tx-explain**, publish
-everything under the handle **plainoutput** (GitHub org + npm scope were both free as of
-2026-08-19; re-check at signup). Local git identity is already set to plainoutput.
+everything under the handle **0200project** (GitHub org + npm scope were both free as of
+2026-08-19; re-check at signup). Local git identity is already set to 0200project.
 
 ```bash
 # after creating the org and an empty repo named base-tx-explain
 cd ~/Projects/base-tx-explain
-git remote add origin git@github.com:plainoutput/base-tx-explain.git
+git remote add origin git@github.com:0200project/base-tx-explain.git
 git push -u origin main
 ```
 
@@ -65,8 +65,8 @@ second wallet — I can't make payments, so this verification is yours.
 ## 5. Listings (20 min)
 
 - **Official MCP registry**: `brew install mcp-publisher`, edit `server.json` (replace
-  the placeholder URL with the live host), `mcp-publisher login github` (the plainoutput
-  account), `mcp-publisher publish`. The `io.github.plainoutput/*` namespace binds to
+  the placeholder URL with the live host), `mcp-publisher login github` (the 0200project
+  account), `mcp-publisher publish`. The `io.github.0200project/*` namespace binds to
   that GitHub login.
 - **x402 ecosystem page**: PR to the x402 repo — `app/ecosystem/partners-data/
   base-tx-explain/metadata.json` (name, description, websiteUrl, category

@@ -1,7 +1,7 @@
 # Launch posts — drafts
 
 Three drafts, one per channel, written to each channel's norms (researched 2026-08-19).
-Post from the plainoutput identity only. No emoji, no hype adjectives, show real output.
+Post from the 0200project identity only. No emoji, no hype adjectives, show real output.
 Do not post to r/LocalLLaMA; do not pitch in the official MCP contributor Discord.
 
 ---
@@ -48,7 +48,7 @@ Pricing, honestly: 10 free calls per client, then $0.02/call in USDC on Base via
 the 402 response contains everything a paying agent needs to retry autonomously, no
 account or API key. There's also a flat-rate hosted version on Apify.
 
-Endpoint: `https://base-tx-explain.fly.dev/mcp` (streamable HTTP) — repo: github.com/plainoutput/base-tx-explain
+Endpoint: `https://base-tx-explain.fly.dev/mcp` (streamable HTTP) — repo: github.com/0200project/base-tx-explain
 
 Things I'm unsure about and would genuinely take corrections on: the action-type
 taxonomy (30 types currently), whether `partial: true` semantics are right for agents,
@@ -77,7 +77,7 @@ known-drainer match.
 10 free calls, then $0.02/call USDC on Base via x402 — a paying agent handles the 402
 and retries with no signup, no API key. Also hosted flat-rate on Apify.
 
-MCP endpoint + repo: github.com/plainoutput/base-tx-explain
+MCP endpoint + repo: github.com/0200project/base-tx-explain
 
 (When posting: quote-tweet or reply into active x402 threads — @CoinbaseDev Bazaar
 threads, @x402daily — rather than shouting into an empty timeline. Showing up as a live
@@ -92,7 +92,7 @@ tool, `explain_transaction(tx_hash)` for Base mainnet. Plain-English summary + s
 JSON (assets moved, labeled counterparties, risk flags, gas USD). Deterministic decode
 only — no LLM in the response path, so the output contract is stable enough to parse
 blind. 10 free calls, then $0.02/call via x402 (or flat-rate on Apify). Repo:
-github.com/plainoutput/base-tx-explain — feedback on the schema very welcome,
+github.com/0200project/base-tx-explain — feedback on the schema very welcome,
 especially from anyone building trading or wallet agents.
 
 ---
