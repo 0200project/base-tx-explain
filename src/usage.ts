@@ -11,7 +11,7 @@ import { join } from 'node:path';
  */
 
 export type UsageEvent =
-  | { t: string; e: 'call'; charge: boolean; paid?: boolean; client: string; ok?: boolean }
+  | { t: string; e: 'call'; charge: boolean; paid?: boolean; pass?: boolean; client: string; ok?: boolean }
   | { t: string; e: 'settled'; client: string; amount_usd: number; payer?: string; tx?: string };
 
 interface DayAgg {
@@ -19,6 +19,8 @@ interface DayAgg {
   free: number;
   /** 402 challenges served: a client hit the paywall without payment attached. */
   wall_hits: number;
+  /** Calls covered by a purchased pass. */
+  pass_calls: number;
   /** Calls that arrived carrying an x402 payment (settlement is tracked separately). */
   paid_calls: number;
   settlements: number;
@@ -30,7 +32,7 @@ const dataDir = process.env.DATA_DIR ?? './data';
 const ledgerPath = join(dataDir, 'events.jsonl');
 
 const days = new Map<string, DayAgg>();
-const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, settlements: 0, revenue_usd: 0 };
+const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, settlements: 0, revenue_usd: 0 };
 const lifetimeClients = new Set<string>();
 let firstEventAt: string | null = null;
 let ledgerReady = false;
@@ -42,7 +44,7 @@ function dayOf(iso: string): string {
 function aggFor(day: string): DayAgg {
   let agg = days.get(day);
   if (!agg) {
-    agg = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, settlements: 0, revenue_usd: 0, clients: new Set() };
+    agg = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, settlements: 0, revenue_usd: 0, clients: new Set() };
     days.set(day, agg);
   }
   return agg;
@@ -54,7 +56,10 @@ function absorb(ev: UsageEvent): void {
   if (ev.e === 'call') {
     agg.calls++;
     lifetime.calls++;
-    if (ev.charge && ev.paid) {
+    if (ev.pass) {
+      agg.pass_calls++;
+      lifetime.pass_calls++;
+    } else if (ev.charge && ev.paid) {
       agg.paid_calls++;
       lifetime.paid_calls++;
     } else if (ev.charge) {
@@ -120,6 +125,7 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
       free: agg?.free ?? 0,
       wall_hits: agg?.wall_hits ?? 0,
       paid_calls: agg?.paid_calls ?? 0,
+      pass_calls: agg?.pass_calls ?? 0,
       settlements: agg?.settlements ?? 0,
       revenue_usd: Number((agg?.revenue_usd ?? 0).toFixed(6)),
       unique_clients: agg?.clients.size ?? 0,

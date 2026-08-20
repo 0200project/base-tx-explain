@@ -79,6 +79,7 @@ function flush(): void {
 
 /** Consume one free call for this client if any remain. */
 export function consumeFreeCall(ip: string): boolean {
+  if (FREE_CALLS <= 0) return false;
   const now = Date.now();
   const key = keyOf(ip);
   const entry = freeCalls.get(key);

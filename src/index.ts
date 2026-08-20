@@ -13,8 +13,9 @@ import { ExplainError, explainTransaction } from './explain.js';
 import { FAVICON_PNG } from './favicon.js';
 import { withAcceptedFieldRepair } from './cdpCompat.js';
 import { buildOpenApiDocument } from './openapi.js';
-import { registerRestRoutes } from './rest.js';
+import { registerPassRoutes, registerRestRoutes } from './rest.js';
 import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
+import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, passSnapshot, refundPassUse, usePass } from './passes.js';
 import { APIFY_BILLING_ACTIVE, initApifyBilling, chargeApifyCall } from './apifyBilling.js';
 import { initUsageLedger, recordEvent, usageSnapshot } from './usage.js';
 
@@ -61,6 +62,7 @@ async function runExplain({ tx_hash }: { tx_hash: string }): Promise<ToolResult>
 
 // --- x402 payment plumbing (initialized only in x402 mode) ---
 let paidHandler: ((args: { tx_hash: string }, extra: unknown) => Promise<Record<string, unknown>>) | null = null;
+let buyPassHandler: ((args: Record<string, never>, extra: unknown) => Promise<Record<string, unknown>>) | null = null;
 /**
  * Plain-HTTP 402 body for non-MCP callers. Discovery crawlers (CDP's
  * validator, x402scan's registration probe) send Accept: application/json
@@ -204,6 +206,56 @@ async function initPayments(): Promise<void> {
   sharedResourceServer = resourceServer;
   sharedPayTo = payTo;
   paidHandler = paid(runExplain) as typeof paidHandler;
+
+  // The $9 pass tool rides the same resource server with its own price.
+  // Mint happens in the handler (post-verify); if settlement then fails we
+  // log the loss loudly rather than strand a paying customer - the reverse
+  // error (money taken, no pass) is the one we can never allow.
+  const passAccepts = await resourceServer.buildPaymentRequirements({
+    scheme: 'exact',
+    network: NETWORK,
+    payTo,
+    price: `$${PASS_PRICE_USD}`,
+  });
+  const paidPass = createPaymentWrapper(resourceServer, {
+    accepts: passAccepts,
+    resource: {
+      url: `${PUBLIC_URL}/pass`,
+      description: `${PASS_DAYS}-day pass: up to ${PASS_CALL_CAP.toLocaleString('en-US')} explain_transaction calls for $${PASS_PRICE_USD}. Bearer token, no account.`,
+      mimeType: 'application/json',
+      serviceName: 'base-tx-explain',
+    },
+    hooks: {
+      onAfterSettlement: ({ settlement }) => {
+        console.log('[pass] $' + PASS_PRICE_USD + ' SETTLED:', JSON.stringify(settlement).slice(0, 400));
+        recordEvent({
+          t: new Date().toISOString(),
+          e: 'settled',
+          client: settlement.payer ?? 'unknown',
+          amount_usd: Number.parseFloat(PASS_PRICE_USD),
+          payer: settlement.payer,
+          tx: settlement.transaction,
+        });
+      },
+    },
+  });
+  buyPassHandler = paidPass(async () => {
+    const pass = mintPass();
+    const payload = {
+      pass_token: pass.token,
+      expires_at: pass.expires_at,
+      call_cap: pass.call_cap,
+      how_to_use: {
+        mcp: 'attach the token at _meta["btx/pass"] on tools/call',
+        rest: `POST ${PUBLIC_URL}/explain with header "X-BTX-Pass: <token>"`,
+      },
+      keep_this_token: 'This is a bearer pass. It is the only proof of purchase; store it now.',
+    };
+    return {
+      content: [{ type: 'text', text: JSON.stringify(payload) }],
+      structuredContent: payload as unknown as Record<string, unknown>,
+    };
+  }) as typeof buyPassHandler;
   httpPaymentRequired = {
     x402Version: 2,
     error: 'Payment required to access this tool',
@@ -215,7 +267,8 @@ async function initPayments(): Promise<void> {
       'This is an MCP server (streamable HTTP). Connect an MCP client with header ' +
       '"Accept: application/json, text/event-stream" and call the explain_transaction tool; ' +
       'payment settles over the x402 MCP transport (_meta["x402/payment"]). ' +
-      'HTTP-header payment retries are not supported on this endpoint yet. ' +
+      `Prefer plain HTTP? POST ${PUBLIC_URL}/explain with {"tx_hash":"0x..."} speaks the standard x402 HTTP flow. ` +
+      `Heavy use: a $${PASS_PRICE_USD} ${PASS_DAYS}-day pass (${PASS_CALL_CAP.toLocaleString('en-US')} calls) via POST ${PUBLIC_URL}/pass or the buy_pass tool. ` +
       `Deterministic decode: same hash, same JSON. Docs: ${SITE_URL}/docs/ | OpenAPI: ${PUBLIC_URL}/openapi.json | llms.txt: ${PUBLIC_URL}/llms.txt`,
   };
   console.log(
@@ -231,7 +284,7 @@ async function initPayments(): Promise<void> {
  * to the client's tier; invalid input still costs the call. Paid calls never
  * settle on error - the payment wrapper cancels settlement for isError results.
  */
-function getServer(charge: boolean, ip: string): McpServer {
+function getServer(charge: boolean, ip: string, passToken: string | null = null): McpServer {
   const server = new McpServer({ name: 'base-tx-explain', version: VERSION });
   const freeHandler = async (args: { tx_hash: string }): Promise<ToolResult> => {
     const result = await runExplain(args);
@@ -241,7 +294,11 @@ function getServer(charge: boolean, ip: string): McpServer {
     if (PAYMENT_MODE === 'x402' && result.isError) {
       try {
         const code = JSON.parse((result.content[0] as { text: string }).text).code as string;
-        if (code === 'upstream_error' || code === 'internal_error') refundFreeCall(ip);
+        if (code === 'upstream_error' || code === 'internal_error') {
+          // Our failure: give back whichever credit paid for this call.
+          if (passToken) refundPassUse(passToken);
+          else refundFreeCall(ip);
+        }
       } catch {
         /* unparseable error payload; keep the call consumed */
       }
@@ -258,6 +315,22 @@ function getServer(charge: boolean, ip: string): McpServer {
     },
     handler as Parameters<typeof server.registerTool>[2],
   );
+  if (buyPassHandler) {
+    server.registerTool(
+      'buy_pass',
+      {
+        title: `Buy a ${PASS_DAYS}-day pass`,
+        description:
+          `Buy a ${PASS_DAYS}-day pass for $${PASS_PRICE_USD} in USDC on Base via x402: up to ` +
+          `${PASS_CALL_CAP.toLocaleString('en-US')} explain_transaction calls with no per-call payment. ` +
+          'Returns a bearer pass token; attach it at _meta["btx/pass"] on MCP calls or as the ' +
+          'X-BTX-Pass header on POST /explain. No account; the token is the only proof of purchase. ' +
+          'Renew by buying a new pass after expiry.',
+        inputSchema: {},
+      },
+      buyPassHandler as Parameters<typeof server.registerTool>[2],
+    );
+  }
   return server;
 }
 
@@ -289,11 +362,13 @@ app.get('/', (_req, res) => {
       `base-tx-explain v${VERSION} - MCP server (streamable HTTP) at POST /mcp\n` +
         `Tool: ${TOOL_NAME}(tx_hash) - Base mainnet only.\n` +
         `\n` +
+        `REST:     POST ${PUBLIC_URL}/explain with {"tx_hash":"0x..."} (same decode, plain HTTP)\n` +
         `OpenAPI:  ${PUBLIC_URL}/openapi.json\n` +
         `Health:   ${PUBLIC_URL}/healthz\n` +
         `Docs:     ${SITE_URL}/docs/\n` +
         `Registry: io.github.0200project/base-tx-explain (registry.modelcontextprotocol.io)\n` +
-        `Pricing:  10 free calls per client, then $${PRICE_USD}/call in USDC on Base via x402.\n`,
+        `Pricing:  10 free calls per client, then $${PRICE_USD}/call in USDC on Base via x402.\n` +
+        `Pass:     $${PASS_PRICE_USD} for ${PASS_DAYS} days / ${PASS_CALL_CAP.toLocaleString('en-US')} calls - POST ${PUBLIC_URL}/pass or the buy_pass tool.\n`,
     );
 });
 
@@ -306,7 +381,9 @@ app.get('/llms.txt', (_req, res) => {
       `# base-tx-explain\n\n` +
         `> One MCP tool: explain_transaction(tx_hash) -> strict JSON explanation of any Base mainnet (chain id 8453) transaction. Deterministic onchain decode, no LLM in the response path.\n\n` +
         `MCP endpoint (streamable HTTP): POST ${PUBLIC_URL}/mcp\n` +
-        `Pricing: first 10 calls free per client, then $${PRICE_USD} per call in USDC on Base via x402 (payment challenge is returned in-band; attach payment at _meta["x402/payment"] and retry). No account, no API key.\n\n` +
+        `REST endpoint (standard x402 HTTP flow): POST ${PUBLIC_URL}/explain with {"tx_hash":"0x..."}\n` +
+        `Pricing: first 10 calls free per client, then $${PRICE_USD} per call in USDC on Base via x402 (MCP: challenge in-band, attach payment at _meta["x402/payment"] and retry; REST: standard 402 + PAYMENT-REQUIRED header). No account, no API key.\n` +
+        `Pass: $${PASS_PRICE_USD} buys ${PASS_DAYS} days / ${PASS_CALL_CAP.toLocaleString('en-US')} calls - POST ${PUBLIC_URL}/pass or the buy_pass MCP tool; present the token as X-BTX-Pass (REST) or _meta["btx/pass"] (MCP).\n\n` +
         `## Contracts\n\n` +
         `- [OpenAPI](${PUBLIC_URL}/openapi.json): request/response schemas for the tools/call envelope\n` +
         `- [Health](${PUBLIC_URL}/healthz): liveness and demand counters\n\n` +
@@ -437,6 +514,7 @@ app.get('/stats', (req, res) => {
     price_usd: PRICE_USD,
     since_boot: metrics,
     ...usageSnapshot(30),
+    passes: passSnapshot(),
   });
 });
 
@@ -515,25 +593,39 @@ app.post('/mcp', async (req, res) => {
     return;
   }
 
+  // buy_pass is always charged: there is no free tier on a $9 purchase.
+  const isBuyPass = messages.some((m) => m?.method === 'tools/call' && m?.params?.name === 'buy_pass');
+
   let charge = false;
   let hasPayment = false;
-  if (PAYMENT_MODE === 'x402' && isToolCall) {
-    // A retry that already carries a payment must charge (and must not burn
-    // a free call); otherwise a free call is consumed if any remain.
-    hasPayment = messages.some((m) => m?.params?._meta?.['x402/payment'] !== undefined);
-    charge = hasPayment || !consumeFreeCall(ip);
+  let passToken: string | null = null;
+  if (PAYMENT_MODE === 'x402' && isToolCall && !isBuyPass) {
+    // A valid pass wins first - the holder paid to skip both the free tier
+    // and per-call payments. Then a payment-carrying retry, then free tier.
+    const presented =
+      (req.headers['x-btx-pass'] as string | undefined) ??
+      (messages.find((m) => typeof m?.params?._meta?.['btx/pass'] === 'string')?.params?._meta?.['btx/pass'] as
+        | string
+        | undefined);
+    if (presented && usePass(presented).ok) passToken = presented;
+    if (!passToken) {
+      hasPayment = messages.some((m) => m?.params?._meta?.['x402/payment'] !== undefined);
+      charge = hasPayment || !consumeFreeCall(ip);
+    }
   }
+  if (isBuyPass) charge = true;
 
   if (isToolCall) {
     metrics.tool_calls++;
     if (charge) metrics.paywalled++;
     else metrics.free++;
     const ipTag = createHash('sha256').update(`btx:${ip}`).digest('hex').slice(0, 8);
-    console.log(`[call] ${new Date().toISOString()} ${charge ? (hasPayment ? 'paid-retry' : 'paywalled') : 'free'} client=${ipTag}`);
-    recordEvent({ t: new Date().toISOString(), e: 'call', charge, paid: hasPayment, client: ipTag });
+    const kind = passToken ? 'pass' : charge ? (hasPayment ? 'paid-retry' : isBuyPass ? 'buy-pass' : 'paywalled') : 'free';
+    console.log(`[call] ${new Date().toISOString()} ${kind} client=${ipTag}`);
+    recordEvent({ t: new Date().toISOString(), e: 'call', charge, paid: hasPayment, pass: Boolean(passToken), client: ipTag });
   }
 
-  const server = getServer(charge, ip);
+  const server = getServer(charge, ip, passToken);
   try {
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     res.on('close', () => {
@@ -575,6 +667,7 @@ const port = Number.parseInt(
 
 initUsageLedger();
 initFreeTier();
+initPasses();
 
 initApifyBilling()
   .then(() => initPayments())
@@ -591,16 +684,38 @@ initApifyBilling()
         publicUrl: PUBLIC_URL,
         tryFreeCall: (req) => consumeFreeCall(clientIpOf(req)),
         refundFreeCall: (req) => refundFreeCall(clientIpOf(req)),
-        record: (req, charged, ok) => {
+        tryPass: (req) => {
+          const token = req.headers['x-btx-pass'];
+          if (typeof token !== 'string' || !token) return null;
+          return usePass(token).ok ? token : null;
+        },
+        refundPassUse,
+        record: (req, charged, ok, viaPass) => {
           metrics.tool_calls++;
           if (charged) metrics.paywalled++;
           else metrics.free++;
           const tag = createHash('sha256').update(`btx:${clientIpOf(req)}`).digest('hex').slice(0, 8);
-          console.log(`[rest] ${new Date().toISOString()} ${charged ? 'paid' : 'free'} ok=${ok} client=${tag}`);
-          recordEvent({ t: new Date().toISOString(), e: 'call', charge: charged, paid: charged, client: tag, ok });
+          console.log(`[rest] ${new Date().toISOString()} ${viaPass ? 'pass' : charged ? 'paid' : 'free'} ok=${ok} client=${tag}`);
+          recordEvent({ t: new Date().toISOString(), e: 'call', charge: charged, paid: charged, pass: viaPass, client: tag, ok });
         },
       });
-      console.log(`REST rail: POST ${PUBLIC_URL}/explain ($${PRICE_USD}/call via x402 HTTP)`);
+      registerPassRoutes(app, {
+        resourceServer: sharedResourceServer,
+        payTo: sharedPayTo,
+        priceUsd: PASS_PRICE_USD,
+        network: NETWORK,
+        publicUrl: PUBLIC_URL,
+        callCap: PASS_CALL_CAP,
+        days: PASS_DAYS,
+        mint: mintPass,
+        recordSale: () => {
+          // Settlement details for HTTP sales are recorded by the payment
+          // middleware's receipt; the ledger row here keeps revenue whole
+          // even if that receipt is lost.
+          recordEvent({ t: new Date().toISOString(), e: 'settled', client: 'rest-pass', amount_usd: Number.parseFloat(PASS_PRICE_USD) });
+        },
+      });
+      console.log(`REST rail: POST ${PUBLIC_URL}/explain ($${PRICE_USD}/call) and POST ${PUBLIC_URL}/pass ($${PASS_PRICE_USD}/${PASS_DAYS}d) via x402 HTTP`);
     }
     app.listen(port, () => {
       console.log(`base-tx-explain v${VERSION} listening on :${port} (payment mode: ${PAYMENT_MODE})`);

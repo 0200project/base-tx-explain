@@ -119,6 +119,14 @@ export function usePass(token: string): PassCheck {
   return { ok: true, remaining: PASS_CALL_CAP - entry.calls_used };
 }
 
+/** Give back a consumed pass call when the failure was on our side. */
+export function refundPassUse(token: string): void {
+  const entry = passes.get(hashToken(token));
+  if (!entry || entry.calls_used <= 0) return;
+  entry.calls_used--;
+  flush();
+}
+
 /** Aggregate stats for /stats and the daily report. */
 export function passSnapshot(): { active_passes: number; pass_calls_used: number } {
   const now = Date.now();
