@@ -13,13 +13,25 @@ metadata: website, repo, icon); GitHub repo topics added.
 
 Open:
 
-- [ ] Post the launch drafts (section 6 below) — the highest-value remaining item
-- [ ] Apify push (section 3 below, unchanged)
-- [ ] x402 ecosystem PR (section 5 below, unchanged)
-- [ ] Run `npm run growth` daily, or schedule it via cron (see docs/growth-assistant.md)
+- [ ] Post the launch drafts (section 6 below) — the highest-value remaining item.
+      Checked 2026-08-20: no Reddit account is logged into Chrome and only the
+      PERSONAL X account is — the pseudonymous accounts (u/polaris28, X handle)
+      must be created/logged in by you first; never post 0200project content
+      from the personal account.
+- [ ] Apify console steps: the actor is PUSHED AND BUILT (id gcj5xAJ0vpAx8Uf2s,
+      https://console.apify.com/actors/gcj5xAJ0vpAx8Uf2s) — remaining: enable
+      Standby mode, set monetization, publish to the Store.
 - [ ] Google Search Console: submit https://0200project.github.io (URL-prefix verify,
       needs your Google login); re-verify via DNS once 0200project.com lands. The SEO
       groundwork (sitemap, FAQ, structured data) is live and waiting on this.
+- [ ] Run `npm run growth` (leads) and `npm run report` (daily numbers) each morning,
+      or schedule via cron (see docs/growth-assistant.md)
+
+Submitted, in review (no action unless comments arrive):
+
+- x402 ecosystem listing: https://github.com/coinbase/x402/pull/292 (open)
+- awesome-mcp-servers listing: https://github.com/punkpeye/awesome-mcp-servers/pull/12553
+  (open, agent fast-track)
 
 Blocked (not on you): **Coinbase Bazaar indexing** — CDP's facilitator rejects the
 payment payloads our @x402/core 2.23 emits (400 "must match one of x402V2Pay...");

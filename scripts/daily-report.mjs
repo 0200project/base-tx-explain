@@ -1,0 +1,165 @@
+#!/usr/bin/env node
+/**
+ * Daily discovery/monetization report. Zero dependencies, read-only.
+ *
+ *   npm run report
+ *
+ * Pulls: the server's own ledger (/stats), on-chain USDC truth (RPC balance
+ * always; Blockscout transfer list when their API is up), GitHub repo traffic
+ * (via the gh CLI when installed+authed), and the health of every discovery
+ * listing. Writes reports/YYYY-MM-DD.md (gitignored) and prints a summary.
+ * Every number is labeled with its source; anything unmeasurable says so
+ * instead of guessing.
+ */
+import { execSync } from 'node:child_process';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
+const SERVER = process.env.PUBLIC_URL ?? 'https://base-tx-explain.fly.dev';
+const WALLET = '0xd4ec730ab062f20460727710fce70664948a6bc9';
+const USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+/** Clients recorded while only we were calling it (2026-08-20 baseline). */
+const KNOWN_CLIENTS = 2;
+/** Our own test payments: never count these as customer revenue. */
+const KNOWN_PAYMENT_TXS = new Set([
+  '0x2a2aaa3a79c3a394081df1a642046c88349a1397b27d97d8cb2292d71e61939f', // founder's $0.02 PayAI test, 2026-08-20 17:08 (pre-ledger)
+]);
+
+const today = new Date().toISOString().slice(0, 10);
+const lines = [];
+const say = (s) => lines.push(s);
+
+function statsToken() {
+  try {
+    return readFileSync(join(ROOT, '.stats-token'), 'utf8').trim();
+  } catch {
+    return process.env.STATS_TOKEN ?? '';
+  }
+}
+
+async function jsonFetch(url, opts = {}) {
+  const res = await fetch(url, { ...opts, signal: AbortSignal.timeout(15_000) });
+  if (!res.ok) throw new Error(`${res.status}`);
+  return res.json();
+}
+
+function gh(args) {
+  try {
+    return JSON.parse(execSync(`gh api ${args}`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 20_000 }));
+  } catch {
+    return null;
+  }
+}
+
+// --- 1. Ledger (server source of truth for usage) ---
+let stats = null;
+try {
+  stats = await jsonFetch(`${SERVER}/stats`, { headers: { 'X-Stats-Token': statsToken() } });
+} catch (e) {
+  say(`## Usage\n\nCould not read /stats (${e.message}). Server may be down or the token rotated.`);
+}
+if (stats) {
+  const lt = stats.lifetime;
+  const yesterday = stats.daily.at(-2);
+  const todayRow = stats.daily.at(-1);
+  say(`## Usage (source: server ledger)\n`);
+  say(`Lifetime: ${lt.calls} calls · ${lt.free} free · ${lt.wall_hits} paywall hits · ${lt.paid_calls} paid calls · ${lt.settlements} settlements ($${lt.revenue_usd}) · ${lt.unique_clients} unique clients`);
+  say(`New clients beyond our own machines (baseline ${KNOWN_CLIENTS}): **${Math.max(0, lt.unique_clients - KNOWN_CLIENTS)}**`);
+  for (const [label, row] of [['Today', todayRow], ['Yesterday', yesterday]]) {
+    if (row) say(`${label} (${row.day}): ${row.calls} calls (${row.free} free / ${row.wall_hits} wall / ${row.paid_calls} paid), ${row.settlements} settled, ${row.unique_clients} clients`);
+  }
+  const last7 = stats.daily.slice(-7);
+  const wk = (k) => last7.reduce((a, r) => a + r[k], 0);
+  say(`Last 7 days: ${wk('calls')} calls · ${wk('wall_hits')} wall hits · ${wk('paid_calls')} paid · $${wk('revenue_usd').toFixed(2)} settled`);
+  say(`\n### Conversion funnel (lifetime)\n`);
+  const pct = (a, b) => (b > 0 ? `${((100 * a) / b).toFixed(0)}%` : 'n/a');
+  say(`free tester -> hit paywall: ${lt.wall_hits > 0 ? 'yes' : 'not yet'} (${lt.wall_hits} wall hits)`);
+  say(`paywall hit -> paid call: ${pct(lt.paid_calls, lt.wall_hits)} (${lt.paid_calls}/${lt.wall_hits})`);
+  say(`paid call -> settled payment: ${pct(lt.settlements, lt.paid_calls)} (${lt.settlements}/${lt.paid_calls})`);
+  say(`Visitor -> tester is unmeasurable (static site, no analytics by design; Search Console pending founder signup).`);
+}
+
+// --- 2. On-chain revenue truth ---
+say(`\n## Revenue (source: Base chain)\n`);
+try {
+  const bal = await jsonFetch('https://mainnet.base.org', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: USDC, data: `0x70a08231000000000000000000000000${WALLET.slice(2)}` }, 'latest'] }),
+  });
+  const usdc = Number(BigInt(bal.result)) / 1e6;
+  say(`Payout wallet USDC balance: **$${usdc.toFixed(2)}** (progress to $25 validation target: ${((usdc / 25) * 100).toFixed(0)}%)`);
+} catch (e) {
+  say(`RPC balance check failed (${e.message}).`);
+}
+try {
+  const tx = await jsonFetch(`https://base.blockscout.com/api/v2/addresses/${WALLET}/token-transfers?type=ERC-20&filter=to`);
+  const usdcTx = (tx.items ?? []).filter((t) => (t.token?.address_hash ?? t.token?.address ?? '').toLowerCase() === USDC.toLowerCase());
+  const strangers = usdcTx.filter((t) => !KNOWN_PAYMENT_TXS.has((t.transaction_hash ?? '').toLowerCase()));
+  say(`On-chain USDC arrivals: ${usdcTx.length} total, of which **${strangers.length} from strangers** (${usdcTx.length - strangers.length} are our own tests).`);
+  if (strangers.length > 0) say(`FIRST CUSTOMER SIGNAL: stranger payment(s) present - check the dashboard.`);
+} catch {
+  say(`Blockscout transfer list unavailable right now (their API); balance above is still authoritative.`);
+}
+
+// --- 3. Repo traffic (closest thing to "site analytics" we have) ---
+say(`\n## Traffic (source: GitHub repo insights, 14-day window)\n`);
+const views = gh('repos/0200project/base-tx-explain/traffic/views');
+const clones = gh('repos/0200project/base-tx-explain/traffic/clones');
+if (views) {
+  say(`Repo views: ${views.count} total, ${views.uniques} unique visitors`);
+  const recent = (views.views ?? []).slice(-3).map((v) => `${v.timestamp.slice(0, 10)}: ${v.count} (${v.uniques} uniq)`).join(' · ');
+  if (recent) say(`Recent days: ${recent}`);
+} else {
+  say(`Repo views unavailable (gh CLI missing or unauthenticated).`);
+}
+if (clones) say(`Repo clones: ${clones.count} total, ${clones.uniques} unique`);
+say(`Site page views: not collected (no analytics on the static site by design). Search queries: pending Google Search Console signup (founder queue).`);
+
+// --- 4. Discovery surfaces ---
+say(`\n## Discovery surfaces\n`);
+const checks = [
+  ['MCP registry', `https://registry.modelcontextprotocol.io/v0/servers?search=base-tx-explain`, (d) => {
+    const latest = d.servers?.find((s) => s._meta?.['io.modelcontextprotocol.registry/official']?.isLatest);
+    return latest ? `listed (v${latest.server.version})` : 'MISSING';
+  }],
+  ['Server /llms.txt', `${SERVER}/llms.txt`, null],
+  ['Server /openapi.json', `${SERVER}/openapi.json`, (d) => `ok (v${d.info?.version})`],
+  ['Site sitemap', 'https://0200project.github.io/sitemap.xml', null],
+  ['Glama listing', 'https://glama.ai/mcp/servers/0200project/base-tx-explain', null],
+];
+for (const [name, url, parse] of checks) {
+  try {
+    if (parse) {
+      const d = await jsonFetch(url);
+      say(`- ${name}: ${parse(d)}`);
+    } else {
+      const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+      say(`- ${name}: ${res.ok ? 'ok' : `HTTP ${res.status}`}`);
+    }
+  } catch (e) {
+    say(`- ${name}: FAILED (${e.message})`);
+  }
+}
+for (const [name, repo, head] of [
+  ['awesome-mcp-servers PR', 'punkpeye/awesome-mcp-servers', '0200project:add-base-tx-explain'],
+  ['x402 ecosystem PR', 'coinbase/x402', '0200project:add-base-tx-explain'],
+]) {
+  try {
+    const prs = gh(`"repos/${repo}/pulls?head=${head}&state=all"`);
+    say(prs?.length ? `- ${name}: #${prs[0].number} ${prs[0].state}${prs[0].merged_at ? ' (merged)' : ''}` : `- ${name}: not found`);
+  } catch {
+    say(`- ${name}: check failed`);
+  }
+}
+say(`- Coinbase Bazaar: BLOCKED (CDP rejects our payment payloads; see docs/NEXT-STEPS.md)`);
+
+// --- write + print ---
+const report = `# Daily report - ${today}\n\n${lines.join('\n')}\n`;
+mkdirSync(join(ROOT, 'reports'), { recursive: true });
+const out = join(ROOT, 'reports', `${today}.md`);
+writeFileSync(out, report);
+console.log(report);
+console.log(`Written to ${out}`);

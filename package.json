@@ -15,7 +15,8 @@
     "test": "vitest run",
     "validate": "tsx scripts/validate.ts",
     "growth": "node scripts/growth-scan.mjs",
-    "status": "tsx scripts/status.ts"
+    "status": "tsx scripts/status.ts",
+    "report": "node scripts/daily-report.mjs"
   },
   "dependencies": {
     "@coinbase/cdp-sdk": "^1.55.0",
