@@ -8,7 +8,7 @@ old ground or reopens a closed question.
 Keep it current: when a finding is fixed, move it from **Open** to **Fixed**
 with the commit; when you clear a hypothesis, add it to **Checked and safe**.
 
-_Last reviewed: 2026-08-20, at commit `85d48cc` + the metadata negative-cache fix._
+_Last reviewed: 2026-08-20, live at `8c76f44` (free-tier persistence + 19-ticker label table)._
 
 ---
 
@@ -104,12 +104,17 @@ data. Keep that list honest as fields change.
   distinct `impersonated_token` risk flag (separate from `nonstandard_token_symbol`,
   which is a merely non-standard symbol — the first is active deception, the
   second could be an honest quirk). **Bounded mitigation, not a closed class:**
-  the catch is only as wide as the token label table (`src/labels.ts`, ~8 tokens
-  today). A fake "USDC" is caught; a fake "USDT" or "EURC" is not until that
-  token's canonical address is added. Expanding the token label table widens this
-  mitigation and improves decode quality at the same time — the table is the
-  product's closest thing to a compounding asset. Unknown symbols are a
-  deliberate allow (most tokens are legitimate and unlabeled).
+  the catch is only as wide as the token label table (`src/labels.ts`). As of the
+  label expansion it covers **19 tickers** (USDC, USDT, EURC, USDS, sUSDS, GHO,
+  DAI, the ETH/BTC LSTs, etc.), up from 8 — a fake "USDT" now resolves to
+  impersonation, but a ticker still absent from the table sails through until its
+  canonical address is added. Every address was published by the issuer and read
+  back on-chain before being trusted (`scripts/verify-labels.ts` rejected 14 of
+  57 candidates); that bar is what makes widening the table safe, since a wrong
+  entry would actively vouch for an impostor. Expanding the table widens this
+  mitigation and improves decode quality at once — the table is the product's
+  closest thing to a compounding asset. Unknown symbols are a deliberate allow
+  (most tokens are legitimate and unlabeled).
 - **Token-metadata prompt injection** (`cbe62d6`). Hostile token symbols/names
   and third-party event/function names reached `summary`. Now: `sanitizeSymbol`
   hardened (NFKC, strips control/format/line-separator/mark chars incl.
@@ -126,6 +131,15 @@ data. Keep that list honest as fields change.
   allowance against the token `totalSupply` (cached), 2^128 as fallback.
 - **XFF free-tier spoof / batched `tools/call`** (`51b7f3d`, pre-audit). `trust
   proxy: 1` + `Fly-Client-IP`; multi-call batches rejected.
+- **Free-tier reset by every deploy** (`86d7f3f`). The free-call counter lived
+  only in memory while the ledger persisted, so every restart handed every client
+  a fresh 10 calls — at the multi-session deploy frequency no real user reached
+  the paywall, making revenue structurally impossible. Counts now persist to the
+  `/data` volume (salted-hash keys, 30-day window anchored to first call, atomic
+  write, degrades to in-memory on file error — over-granting, never wrongly
+  charging). Verified live: `/data/free-tier.json` initializes on boot. (Minor
+  residual: the key salt is a constant prefix, so file keys are IP-reversible the
+  same way the logged `ipTag` is — same class as the ipTag item in #7, not new.)
 
 ## 5. Open (known, unfixed) — ranked
 
@@ -158,14 +172,6 @@ data. Keep that list honest as fields change.
 7. **Info/ops:** `/healthz` publishes lifetime revenue + funnel unauthenticated;
    payer EIP-3009 signature written to logs on facilitator error; `ipTag` is a
    reversible 32-bit hash; unbounded usage-ledger Sets on a 256 MB box.
-8. **Free-tier enforcement is reset by every deploy** (business-logic, not a
-   security hole — nobody can _force_ a reset). The free-call counter lives only
-   in memory (`freeTier.ts`) while the usage ledger persists to the volume, so a
-   restart hands every client a fresh 10 free calls. At the current multi-session
-   deploy frequency no real user reaches the paywall, so free-tier enforcement is
-   much weaker than the code implies. The payments session owns the fix
-   (persist/derive the counter); this line moves to Fixed when it lands or the
-   founder decides to leave it. Compounds with #6.
 
 ## 6. Checked and found safe (do not re-tread)
 
