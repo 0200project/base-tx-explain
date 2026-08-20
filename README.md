@@ -65,7 +65,7 @@ Raw transaction + receipt from Base RPC → builtin decoders for ~40 event forma
   "mcpServers": {
     "base-tx-explain": {
       "type": "streamable-http",
-      "url": "https://<host>/mcp"
+      "url": "https://base-tx-explain.fly.dev/mcp"
     }
   }
 }

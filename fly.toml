@@ -1,0 +1,29 @@
+# fly.toml app configuration file generated for base-tx-explain on 2026-08-20T00:49:56-04:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'base-tx-explain'
+primary_region = 'iad'
+
+[build]
+[env]
+  BASE_RPC_URLS = 'https://mainnet.base.org,https://base-rpc.publicnode.com,https://base.llamarpc.com'
+  FREE_CALLS_PER_IP = '10'
+  PAYMENT_MODE = 'x402'
+  X402_FACILITATOR_URL = 'https://facilitator.payai.network'
+  X402_PAY_TO = '0xd4ec730ab062f20460727710fce70664948a6bc9'
+  X402_PRICE_USD = '0.02'
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = 'off'
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  memory = '256mb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 256

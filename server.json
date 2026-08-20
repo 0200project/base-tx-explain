@@ -7,7 +7,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://REPLACE-WITH-DEPLOYED-HOST/mcp"
+      "url": "https://base-tx-explain.fly.dev/mcp"
     }
   ]
 }

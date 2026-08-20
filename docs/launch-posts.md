@@ -48,7 +48,7 @@ Pricing, honestly: 10 free calls per client, then $0.02/call in USDC on Base via
 the 402 response contains everything a paying agent needs to retry autonomously, no
 account or API key. There's also a flat-rate hosted version on Apify.
 
-Endpoint: `https://<HOST>/mcp` (streamable HTTP) — repo: github.com/plainoutput/base-tx-explain
+Endpoint: `https://base-tx-explain.fly.dev/mcp` (streamable HTTP) — repo: github.com/plainoutput/base-tx-explain
 
 Things I'm unsure about and would genuinely take corrections on: the action-type
 taxonomy (30 types currently), whether `partial: true` semantics are right for agents,
