@@ -125,13 +125,20 @@ async function initPayments(): Promise<void> {
   const buildResourceServer = (clients: typeof facilitators) => {
     const server = new x402ResourceServer(clients).register(NETWORK, new ExactEvmScheme());
     // Payment-path visibility: a rejected payment must never be silent.
-    server
-      .onVerifyFailure(async (ctx: unknown) => {
-        console.error('[x402] VERIFY FAILED:', JSON.stringify(ctx).slice(0, 600));
-      })
-      .onSettleFailure(async (ctx: unknown) => {
-        console.error('[x402] SETTLE FAILED:', JSON.stringify(ctx).slice(0, 600));
-      });
+    // Log payment failures whole. A truncated payload is what made the CDP
+    // rejection guesswork: scheme/network fell outside the first 600 chars.
+    // Signatures and authorization nonces are single-use and already public
+    // once submitted, so there is no secret here worth truncating for.
+    const logFailure = (label: string) => async (ctx: unknown) => {
+      let body: string;
+      try {
+        body = JSON.stringify(ctx, (_k, v) => (typeof v === 'bigint' ? v.toString() : v));
+      } catch {
+        body = String(ctx);
+      }
+      console.error(`[x402] ${label}:`, body.slice(0, 8000));
+    };
+    server.onVerifyFailure(logFailure('VERIFY FAILED')).onSettleFailure(logFailure('SETTLE FAILED'));
     return server;
   };
 
