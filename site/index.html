@@ -19,7 +19,33 @@
 <link rel="stylesheet" href="/assets/style.css">
 <style>
   .hero {
+    position: relative;
     padding-block: clamp(4.5rem, 11vw, 8rem) clamp(4.5rem, 10vw, 7rem);
+  }
+  .hero::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: -10rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(72rem, 100vw);
+    height: 34rem;
+    background: radial-gradient(46rem 22rem at 50% 0%, rgba(78, 158, 255, 0.075), rgba(255, 255, 255, 0.025) 45%, transparent 72%);
+    pointer-events: none;
+  }
+  .statement-band { position: relative; }
+  .statement-band::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    bottom: -8rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(60rem, 100vw);
+    height: 24rem;
+    background: radial-gradient(34rem 16rem at 50% 100%, rgba(78, 158, 255, 0.05), transparent 70%);
+    pointer-events: none;
   }
   .hero-grid {
     display: grid;
@@ -34,8 +60,6 @@
   .hero .lead { margin-top: 1.5rem; max-width: 36rem; }
   .hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2.25rem; }
   .hero-pill { margin-bottom: 1.75rem; }
-  .hero-pill a { color: var(--fg-muted); }
-  .hero-pill a:hover { color: var(--fg-strong); }
 
   .demo-grid {
     display: grid;
@@ -101,7 +125,7 @@
   <section class="hero">
     <div class="container hero-grid">
       <div>
-        <p class="hero-pill"><span class="pill"><span class="dot dot-live"></span><a href="/tools/">Now live: base-tx-explain</a></span></p>
+        <p class="hero-pill"><a class="pill" href="/tools/"><span class="dot dot-live"></span>Now live: base-tx-explain<span class="pill-arrow" aria-hidden="true">&#8594;</span></a></p>
         <h1 class="display">Tools for autonomous AI&nbsp;agents.</h1>
         <p class="lead">0200project builds machine-native infrastructure that allows AI agents to discover, use, and pay for reliable tools automatically.</p>
         <div class="hero-actions">

@@ -100,6 +100,18 @@ h1, h2, h3, h4 { color: var(--fg-strong); font-weight: 600; }
   letter-spacing: -0.01em;
 }
 
+/* Vercel-style headline finish: white ink falling off into grey. */
+.display, .h-section, .docs-content h1 {
+  background: linear-gradient(180deg, var(--fg-strong) 55%, #b4b4bb 125%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: var(--fg-strong); /* fallback when background-clip:text is unsupported */
+}
+@supports (-webkit-background-clip: text) or (background-clip: text) {
+  .display, .h-section, .docs-content h1 { color: transparent; }
+}
+
 .eyebrow {
   display: block;
   font-family: var(--mono);
@@ -131,8 +143,8 @@ h1, h2, h3, h4 { color: var(--fg-strong); font-weight: 600; }
   justify-content: center;
   gap: 0.5rem;
   height: 2.5rem;
-  padding-inline: 1.125rem;
-  border-radius: var(--radius-sm);
+  padding-inline: 1.25rem;
+  border-radius: 999px;
   border: 1px solid transparent;
   font-family: var(--sans);
   font-size: 0.875rem;
@@ -147,10 +159,10 @@ h1, h2, h3, h4 { color: var(--fg-strong); font-weight: 600; }
   background: var(--fg-strong);
   color: #050505;
 }
-.btn-primary:hover { background: #d8d8dc; color: #050505; }
+.btn-primary:hover { background: #cccccc; color: #050505; }
 
 .btn-ghost {
-  background: transparent;
+  background: var(--bg-raised);
   color: var(--fg);
   border-color: var(--border-strong);
 }
@@ -192,23 +204,24 @@ h1, h2, h3, h4 { color: var(--fg-strong); font-weight: 600; }
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.125rem;
   list-style: none;
-  margin-left: auto;
+  margin-left: 0.75rem;
+  flex: 1 1 auto;
 }
 
-.nav-links a {
+.nav-links a:not(.btn) {
   display: inline-block;
   padding: 0.375rem 0.75rem;
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
   color: var(--fg-muted);
-  transition: color 0.15s ease, background-color 0.15s ease;
+  transition: color 0.15s ease;
 }
-.nav-links a:hover { color: var(--fg-strong); background: var(--bg-hover); }
-.nav-links a[aria-current="page"] { color: var(--fg-strong); }
+.nav-links a:not(.btn):hover { color: var(--fg-strong); }
+.nav-links a:not(.btn)[aria-current="page"] { color: var(--fg-strong); }
 
-.nav-cta { margin-left: 0.5rem; }
+.nav-cta { margin-left: auto; }
 
 .nav-toggle {
   display: none;
@@ -255,12 +268,24 @@ h1, h2, h3, h4 { color: var(--fg-strong); font-weight: 600; }
 /* ---------- Cards & panels ---------- */
 
 .card {
+  position: relative;
   background: var(--bg-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.5rem;
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
+.card::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 15%;
+  right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+  pointer-events: none;
+}
+.card:hover { border-color: var(--border-strong); }
 a.card:hover, .card-link:hover { border-color: var(--border-strong); background: var(--bg-panel); }
 
 .panel {
@@ -273,7 +298,6 @@ a.card:hover, .card-link:hover { border-color: var(--border-strong); background:
 .panel-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 1rem;
   padding: 0.625rem 1rem;
   border-bottom: 1px solid var(--border);
@@ -282,6 +306,18 @@ a.card:hover, .card-link:hover { border-color: var(--border-strong); background:
   font-size: 0.75rem;
   color: var(--fg-faint);
 }
+/* Terminal window chrome: three quiet dots, monochrome. */
+.panel-head::before {
+  content: "";
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: #33333a;
+  box-shadow: 0.875rem 0 0 #26262b, 1.75rem 0 0 #1c1c21;
+  margin-right: 1.375rem;
+}
+.panel-head > :last-child:not(:first-child) { margin-left: auto; }
 
 .grid-3 {
   display: grid;
@@ -378,6 +414,18 @@ td:first-child { color: var(--fg); }
   color: var(--fg-muted);
   white-space: nowrap;
 }
+
+a.pill {
+  padding: 0.3rem 0.875rem;
+  gap: 0.5rem;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+a.pill:hover { border-color: var(--border-hover); color: var(--fg-strong); }
+.pill-arrow {
+  color: var(--fg-faint);
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+a.pill:hover .pill-arrow { transform: translateX(2px); color: var(--fg); }
 
 .dot {
   width: 0.4375rem;
