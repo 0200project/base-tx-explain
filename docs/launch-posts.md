@@ -75,9 +75,33 @@ Built a small paid MCP server and would appreciate eyes on it: base-tx-explain. 
 
 ---
 
-## Later waves (not day one)
+## 4. r/modelcontextprotocol (post 24-48h after the r/mcp post, so 2026-08-21)
 
-- r/modelcontextprotocol (24-48h later, reworded): frame around "how do you monetize an MCP server". The x402 per-tool payment wrapper pattern is the story, the tool is the example.
+**Title:**
+
+How I monetized an MCP server with per-call USDC payments (x402): the wiring, the bugs, and honest day-one numbers
+
+**Body (paste in Markdown editor mode):**
+
+Disclosure: this is about my own server, base-tx-explain. Posting because the payment wiring took longer than the product and I'd have paid for a writeup like this.
+
+The pattern: the server stays a normal streamable-HTTP MCP server. A payment wrapper sits around the one tool handler. First N calls per client are free. After that, the tool result IS the payment challenge: an x402 402 body with the price in atomic USDC units, the receiving address, and the network, returned in-band. A paying client attaches the signed payment at `_meta["x402/payment"]` and retries the same call. No accounts, no API keys, settlement is on Base via a facilitator. The client side needs no ETH for gas (EIP-3009 transfer authorization).
+
+Three bugs I hit that anyone copying this pattern should check for:
+
+1. Trusting the whole X-Forwarded-For chain. With `trust proxy: true` in Express, any client mints a fresh free tier per request with a forged header. Trust exactly one hop, or read your host's client-IP header. My paywall was decorative until this was fixed.
+
+2. Batched JSON-RPC. Old-protocol clients can send an array of tools/call in one request. My gate consumed one free call for the whole batch. N decodes for one credit. Reject batches or meter per call.
+
+3. Charging for errors. Check what your payment wrapper does when the tool returns isError. Mine (the x402 MCP wrapper) cancels settlement on error results, which is correct, but I only knew that after reading the wrapper source. A buyer paying for "upstream RPC timed out, retry" twice is how you lose the only payers you have.
+
+Honest numbers, day one: validation suite says 95/100 recent Base transactions decode clean with zero crashes. One stranger has found the server and is working through the free tier. Paid calls from strangers: zero so far. The kill criterion is written down: no paid calls by day 14 means I ship the next tool on the same rails instead of polishing this one.
+
+Question for this sub: if you run agents that consume paid tools, what actually makes you willing to let the agent pay per call: price under some threshold, a spend cap on your side, a trust signal on the seller, or something else?
+
+---
+
+## Later waves (not day one)
 - r/AI_Agents: the "my agent discovers and pays for an API by itself" demo angle. Looking-for-testers framing, not launch framing.
 - r/ClaudeCode (flair: Built with Claude): lead with the failure mode (agent asked "what did this tx do", pasted raw logs, hallucinated an answer), then the fix.
 - Anthropic Discord Featured Projects channel plus the build-submission Typeform.
