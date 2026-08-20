@@ -8,6 +8,7 @@ import { declareDiscoveryExtension } from '@x402/extensions/bazaar';
 import { createPaymentWrapper, type ToolResult } from '@x402/mcp';
 import express from 'express';
 import * as z from 'zod/v4';
+import { dashboardPage, loginPage } from './dashboard.js';
 import { ExplainError, explainTransaction } from './explain.js';
 import { FAVICON_PNG } from './favicon.js';
 import { buildOpenApiDocument } from './openapi.js';
@@ -97,15 +98,29 @@ async function initPayments(): Promise<void> {
   // of the facilitator that processed it. CDP first (its Bazaar is the catalog
   // agents query, and it indexes only CDP-settled resources), PayAI second as a
   // keyless fallback so payments still work if CDP credentials lapse.
+  // ORDER MATTERS AND IS REVENUE-CRITICAL. The resource server routes a payment
+  // to the first facilitator supporting the scheme/network and does NOT retry
+  // the next one on rejection, so a facilitator that refuses our payloads must
+  // never be first. CDP's facilitator currently 400s the payload that
+  // @x402/core 2.23 produces ("'paymentPayload' is invalid") while the keyless
+  // facilitator settles it, so the keyless one leads. Flipping this trades all
+  // revenue for a Bazaar listing; set X402_PREFER_CDP=1 only to retest CDP.
   const facilitators: FacilitatorClient[] = [];
   const facilitatorNames: string[] = [];
-  if (process.env.CDP_API_KEY_ID && process.env.CDP_API_KEY_SECRET) {
+  const keylessUrl = process.env.X402_FACILITATOR_URL || 'https://facilitator.payai.network';
+  const cdpAvailable = Boolean(process.env.CDP_API_KEY_ID && process.env.CDP_API_KEY_SECRET);
+  const preferCdp = process.env.X402_PREFER_CDP === '1';
+
+  if (cdpAvailable && preferCdp) {
     facilitators.push(createCdpFacilitatorClient());
     facilitatorNames.push('cdp');
   }
-  const fallbackUrl = process.env.X402_FACILITATOR_URL || 'https://facilitator.payai.network';
-  facilitators.push(new HTTPFacilitatorClient({ url: fallbackUrl }));
-  facilitatorNames.push(fallbackUrl);
+  facilitators.push(new HTTPFacilitatorClient({ url: keylessUrl }));
+  facilitatorNames.push(keylessUrl);
+  if (cdpAvailable && !preferCdp) {
+    facilitators.push(createCdpFacilitatorClient());
+    facilitatorNames.push('cdp(fallback)');
+  }
 
   const buildResourceServer = (clients: typeof facilitators) => {
     const server = new x402ResourceServer(clients).register(NETWORK, new ExactEvmScheme());
@@ -127,10 +142,11 @@ async function initPayments(): Promise<void> {
   try {
     await resourceServer.initialize();
   } catch (err) {
-    if (facilitatorNames[0] !== 'cdp') throw err;
+    const cdpIndex = facilitatorNames.findIndex((n) => n.startsWith('cdp'));
+    if (cdpIndex === -1) throw err;
     console.error('[x402] CDP facilitator unavailable, falling back to keyless facilitator:', err);
-    facilitators.shift();
-    facilitatorNames.shift();
+    facilitators.splice(cdpIndex, 1);
+    facilitatorNames.splice(cdpIndex, 1);
     resourceServer = buildResourceServer(facilitators);
     await resourceServer.initialize();
   }
@@ -272,7 +288,7 @@ app.get('/llms.txt', (_req, res) => {
 });
 
 app.get('/robots.txt', (_req, res) => {
-  res.status(200).type('text/plain').send('User-agent: *\nAllow: /\n');
+  res.status(200).type('text/plain').send('User-agent: *\nAllow: /\nDisallow: /dashboard\n');
 });
 
 // Discovery crawlers (x402scan among them) probe /favicon.ico for a site icon.
@@ -302,8 +318,74 @@ app.options('/stats', (_req, res) => {
     .status(204)
     .end();
 });
+// Hash both sides so timingSafeEqual gets equal-length buffers.
+const tokenMatches = (presented: string): boolean => {
+  const a = createHash('sha256').update(presented).digest();
+  const b = createHash('sha256').update(STATS_TOKEN).digest();
+  return timingSafeEqual(a, b);
+};
+
+// --- Founder dashboard: the /dashboard page is cookie-gated with the same
+// token that gates /stats. The cookie never holds the token itself, only a
+// digest derived from it, so rotating STATS_TOKEN invalidates all sessions.
+const DASH_COOKIE = 'btx_dash';
+const dashCookieValue = (): string =>
+  createHash('sha256').update(`btx-dash-v1:${STATS_TOKEN}`).digest('hex');
+
+const hasDashCookie = (req: express.Request): boolean => {
+  if (!STATS_TOKEN) return false;
+  const m = new RegExp(`(?:^|;\\s*)${DASH_COOKIE}=([0-9a-f]{64})`).exec(String(req.headers.cookie ?? ''));
+  const presented = m?.[1];
+  if (!presented) return false;
+  // Both sides are exactly 32 bytes (the regex admits only 64 hex chars).
+  return timingSafeEqual(Buffer.from(presented, 'hex'), Buffer.from(dashCookieValue(), 'hex'));
+};
+
+const DASH_COOKIE_FLAGS = 'Path=/; HttpOnly; Secure; SameSite=Lax';
+const setDashHeaders = (res: express.Response): express.Response =>
+  res.set('Cache-Control', 'no-store').set('X-Robots-Tag', 'noindex, nofollow');
+
+app.get('/dashboard', (req, res) => {
+  if (!STATS_TOKEN) {
+    res.status(404).type('text/plain').send('Not found.\n');
+    return;
+  }
+  setDashHeaders(res)
+    .status(hasDashCookie(req) ? 200 : 401)
+    .type('html')
+    .send(hasDashCookie(req) ? dashboardPage() : loginPage());
+});
+
+app.post('/dashboard/login', express.urlencoded({ extended: false, limit: '4kb' }), (req, res) => {
+  if (!STATS_TOKEN) {
+    res.status(404).type('text/plain').send('Not found.\n');
+    return;
+  }
+  setDashHeaders(res);
+  if (!withinRateLimit(clientIpOf(req))) {
+    res.status(429).type('html').send(loginPage({ error: 'Too many attempts. Wait a minute and try again.' }));
+    return;
+  }
+  const presented = typeof (req.body as Record<string, unknown>)?.token === 'string'
+    ? ((req.body as Record<string, string>).token ?? '').trim()
+    : '';
+  if (!presented || !tokenMatches(presented)) {
+    res.status(401).type('html').send(loginPage({ error: 'That token is not right.' }));
+    return;
+  }
+  res
+    .set('Set-Cookie', `${DASH_COOKIE}=${dashCookieValue()}; Max-Age=2592000; ${DASH_COOKIE_FLAGS}`)
+    .redirect(303, '/dashboard');
+});
+
+app.post('/dashboard/logout', (_req, res) => {
+  setDashHeaders(res)
+    .set('Set-Cookie', `${DASH_COOKIE}=; Max-Age=0; ${DASH_COOKIE_FLAGS}`)
+    .redirect(303, '/dashboard');
+});
+
 app.get('/stats', (req, res) => {
-  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Origin', '*').set('Cache-Control', 'no-store');
   if (!STATS_TOKEN) {
     res.status(404).json({ error: 'stats not enabled' });
     return;
@@ -311,10 +393,10 @@ app.get('/stats', (req, res) => {
   const presented =
     (req.headers['x-stats-token'] as string | undefined) ??
     String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
-  // Hash both sides so timingSafeEqual gets equal-length buffers.
-  const a = createHash('sha256').update(presented).digest();
-  const b = createHash('sha256').update(STATS_TOKEN).digest();
-  if (!timingSafeEqual(a, b)) {
+  // Two accepted credentials: the token itself (header, for curl and any
+  // external tooling) or the dashboard's same-origin session cookie.
+  const authed = presented ? tokenMatches(presented) : hasDashCookie(req);
+  if (!authed) {
     res.status(401).json({ error: 'bad token' });
     return;
   }

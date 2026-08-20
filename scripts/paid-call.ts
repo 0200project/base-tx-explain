@@ -46,11 +46,23 @@ const client = createx402MCPClient({
 
 await client.connect(new StreamableHTTPClientTransport(new URL(SERVER_URL)));
 
+try {
 for (let i = 1; i <= 12; i++) {
   const result = await client.callTool('explain_transaction', { tx_hash: TX_HASH });
   const first = result.content.find((c) => c.type === 'text') as { text?: string } | undefined;
-  const parsed = first?.text ? (JSON.parse(first.text) as Record<string, unknown>) : null;
-  const summary = parsed?.summary ?? '(no summary)';
+  // Never let an unparseable body crash the run: the body IS the diagnosis.
+  let parsed: Record<string, unknown> | null = null;
+  if (first?.text) {
+    try {
+      parsed = JSON.parse(first.text) as Record<string, unknown>;
+    } catch {
+      console.log(`call ${i}: response was not JSON. Raw body:`);
+      console.log(first.text.slice(0, 1500));
+      console.log('\nFull content array:', JSON.stringify(result.content).slice(0, 800));
+      break;
+    }
+  }
+  const summary = parsed?.summary ?? parsed?.error ?? '(no summary)';
   console.log(`call ${i}: paid=${result.paymentMade} isError=${result.isError ?? false} | ${String(summary).slice(0, 80)}`);
   if (result.paymentMade) {
     if (result.isError || !parsed?.summary) {
@@ -66,6 +78,14 @@ for (let i = 1; i <= 12; i++) {
     break;
   }
   if (i === 12) console.log('\nNever hit the paywall - free-tier counter may have reset; rerun.');
+}
+} catch (err) {
+  console.log('\nTHREW during the call loop:');
+  console.log(err instanceof Error ? `${err.name}: ${err.message}` : String(err));
+  const cause = (err as { cause?: unknown }).cause;
+  if (cause) console.log('cause:', String(cause).slice(0, 500));
+  const data = (err as { data?: unknown }).data;
+  if (data) console.log('data:', JSON.stringify(data).slice(0, 800));
 }
 
 await client.close();
