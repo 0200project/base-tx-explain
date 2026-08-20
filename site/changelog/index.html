@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>document.documentElement.classList.add('js')</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Changelog — 0200project</title>
+<meta name="description" content="Product updates from 0200project, newest first.">
+<meta name="theme-color" content="#050505">
+<meta property="og:title" content="Changelog — 0200project">
+<meta property="og:description" content="Product updates from 0200project, newest first.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://0200project.github.io/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+  .log-body { max-width: 44rem; }
+  .log-body ul { margin-top: 1rem; }
+  .log-follow {
+    padding-block: 2rem 6rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.875rem;
+    color: var(--fg-faint);
+  }
+  .log-follow a { color: var(--fg-muted); }
+  .log-follow a:hover { color: var(--fg-strong); }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="0200project home">
+      <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+      0200project
+    </a>
+    <button class="nav-toggle" aria-expanded="false" aria-label="Menu" aria-controls="site-menu">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/docs/">Docs</a></li>
+      <li><a href="/status/">Status</a></li>
+      <li><a href="https://github.com/0200project">GitHub</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/docs/">Get Started</a></li>
+    </ul></nav>
+  </div>
+</header>
+
+<main>
+  <div class="container">
+
+    <section class="page-hero">
+      <span class="eyebrow">Changelog</span>
+      <h1 class="h-section">Changelog</h1>
+      <p class="lead">Product updates from 0200project, newest first.</p>
+    </section>
+
+    <section aria-label="Release history">
+
+      <article class="log-entry">
+        <div class="log-date"><time datetime="2026-08-20">August 20, 2026</time></div>
+        <div class="log-body">
+          <h2>base-tx-explain v0.1.0</h2>
+          <p>Our first tool is live: deterministic Base transaction decoding for AI agents. One MCP tool, <code class="inline">explain_transaction(tx_hash)</code>, returns a strict JSON explanation of any Base mainnet transaction — same input, same output, no LLM in the response path.</p>
+          <ul>
+            <li>Base mainnet transaction decoding across ~40 builtin event formats — ERC-20/721/1155, Uniswap V2/V3/V4, Seaport, Aave V3, OP-stack bridges, ERC-4337, EAS, and more.</li>
+            <li>MCP streamable-HTTP endpoint at <code class="inline">base-tx-explain.fly.dev/mcp</code>.</li>
+            <li>x402 pay-per-call support — $0.02 in USDC on Base, 10 free calls per client.</li>
+            <li>Risk flags backed by Sourcify verification and public drainer blocklists.</li>
+            <li>Listed in the official MCP registry as <code class="inline">io.github.0200project/base-tx-explain</code>.</li>
+            <li>Validated against 100 random live Base transactions before release — 95 decoded to a specific action type, zero crashes.</li>
+          </ul>
+        </div>
+      </article>
+
+      <p class="log-follow">Follow <a href="https://github.com/0200project/base-tx-explain">the repository on GitHub</a> for release notifications.</p>
+
+    </section>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/" aria-label="0200project home">
+          <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+          0200project
+        </a>
+        <p>Machine-native tools for autonomous AI agents.</p>
+      </div>
+      <nav aria-label="Product">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/tools/">Tools</a></li>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/docs/#request-format">API</a></li>
+          <li><a href="/changelog/">Changelog</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Developers">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="https://github.com/0200project">GitHub</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io">MCP Registry</a></li>
+          <li><a href="/status/">Status</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Company">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/#about">About</a></li>
+          <li><a href="/security/">Security</a></li>
+          <li><a href="mailto:contact@0200project.com">Contact</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 0200project</span>
+      <span>Built for autonomous software.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/site.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>document.documentElement.classList.add('js')</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tools — 0200project</title>
+<meta name="description" content="Machine-native tools with stable contracts and per-call pricing. First tool: base-tx-explain — deterministic Base transaction decoding for AI agents over MCP.">
+<meta name="theme-color" content="#050505">
+<meta property="og:title" content="Tools — 0200project">
+<meta property="og:description" content="Machine-native tools with stable contracts and per-call pricing, built to be called by autonomous agents.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://0200project.github.io/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+  .directory {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    padding-bottom: clamp(4.5rem, 10vw, 7rem);
+  }
+
+  .tool-featured {
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr);
+    gap: clamp(1.75rem, 4vw, 3rem);
+    align-items: start;
+  }
+  @media (max-width: 63.9em) {
+    .tool-featured { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  .tool-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.875rem;
+  }
+  .tool-name {
+    font-family: var(--mono);
+    font-size: clamp(1.25rem, 3vw, 1.5rem);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .tool-desc { margin-top: 0.75rem; color: var(--fg-muted); max-width: 32rem; }
+  .tool-featured .checks { margin-top: 1.5rem; }
+  .tool-meta { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.75rem; }
+  .tool-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.75rem; }
+
+  .tool-sample .panel pre {
+    padding: 1.125rem 1.25rem;
+    overflow-x: auto;
+    font-size: 0.78125rem;
+    line-height: 1.7;
+  }
+  .tool-sample-note { margin-top: 0.75rem; }
+  .tool-sample-note a { color: var(--fg-muted); }
+  .tool-sample-note a:hover { color: var(--fg-strong); }
+
+  .more-note {
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    font-size: 0.875rem;
+    color: var(--fg-faint);
+  }
+  .more-note a { color: var(--fg-muted); }
+  .more-note a:hover { color: var(--fg-strong); }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="0200project home">
+      <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+      0200project
+    </a>
+    <button class="nav-toggle" aria-expanded="false" aria-label="Menu" aria-controls="site-menu">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/tools/" aria-current="page">Tools</a></li>
+      <li><a href="/docs/">Docs</a></li>
+      <li><a href="/status/">Status</a></li>
+      <li><a href="https://github.com/0200project">GitHub</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/docs/">Get Started</a></li>
+    </ul></nav>
+  </div>
+</header>
+
+<main>
+  <div class="container">
+
+    <header class="page-hero">
+      <span class="eyebrow">Tools</span>
+      <h1 class="h-section">Machine-native tools.</h1>
+      <p class="lead">Machine-native tools with stable contracts and per-call pricing — strict JSON in and out, priced per request, built to be called by agents rather than browsed by humans.</p>
+    </header>
+
+    <div class="directory">
+
+      <article class="card tool-featured reveal" aria-labelledby="tool-btx">
+        <div>
+          <div class="tool-head">
+            <h2 class="tool-name" id="tool-btx">base-tx-explain</h2>
+            <span class="pill"><span class="dot dot-live"></span>live</span>
+          </div>
+          <p class="tool-desc">Deterministic blockchain transaction decoding for autonomous AI agents.</p>
+          <ul class="checks">
+            <li>Structured JSON output</li>
+            <li>No LLM in the response path</li>
+            <li>What happened: action, assets, counterparties</li>
+            <li>Risk analysis with evidence</li>
+            <li>Agent-ready responses (MCP + x402)</li>
+          </ul>
+          <div class="tool-meta">
+            <span class="pill">v0.1.0</span>
+            <span class="pill">Base mainnet</span>
+            <span class="pill">$0.02 per call</span>
+            <span class="pill">10 free calls</span>
+          </div>
+          <p class="small faint" style="margin-top:1.25rem">Validated on 100 random live Base transactions before launch — 95 decoded to a specific action type, the rest to an honest partial, zero crashes.</p>
+          <div class="tool-actions">
+            <a class="btn btn-primary" href="/playground/">Open playground</a>
+            <a class="btn btn-ghost" href="/docs/">Documentation</a>
+            <a class="btn btn-ghost" href="https://github.com/0200project/base-tx-explain">GitHub</a>
+          </div>
+        </div>
+
+        <div class="tool-sample">
+          <div class="panel">
+            <div class="panel-head"><span>explain_transaction</span><span>excerpt</span></div>
+            <pre><code><span class="tok-punc">{</span>
+  <span class="tok-key">"summary"</span><span class="tok-punc">:</span> <span class="tok-str">"0x401d…f2c5 swapped 0.03 ETH
+    for 12,899,422 WNL via Uniswap V4
+    PoolManager."</span><span class="tok-punc">,</span>
+  <span class="tok-key">"action_type"</span><span class="tok-punc">:</span> <span class="tok-str">"swap"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"status"</span><span class="tok-punc">:</span> <span class="tok-str">"success"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"counterparties"</span><span class="tok-punc">: [</span>
+    <span class="tok-punc">{</span> <span class="tok-key">"label"</span><span class="tok-punc">:</span> <span class="tok-str">"Uniswap V4 PoolManager"</span> <span class="tok-punc">}</span>
+  <span class="tok-punc">],</span>
+  <span class="tok-key">"risk_flags"</span><span class="tok-punc">: [</span>
+    <span class="tok-punc">{</span> <span class="tok-key">"flag"</span><span class="tok-punc">:</span> <span class="tok-flag">"unverified_contract"</span> <span class="tok-punc">}</span>
+  <span class="tok-punc">],</span>
+  <span class="tok-key">"gas_paid_usd"</span><span class="tok-punc">:</span> <span class="tok-num">0.020562</span>
+<span class="tok-punc">}</span></code></pre>
+          </div>
+          <p class="tool-sample-note small faint">Excerpt of an actual response for a <a href="https://basescan.org/tx/0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c">live Base transaction</a>, trimmed for width. Full schema in the <a href="/docs/">docs</a>.</p>
+        </div>
+      </article>
+
+      <p class="more-note reveal">More tools are in development. New releases are announced on the <a href="/changelog/">changelog</a> and on <a href="https://github.com/0200project">GitHub</a>.</p>
+
+    </div>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/" aria-label="0200project home">
+          <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+          0200project
+        </a>
+        <p>Machine-native tools for autonomous AI agents.</p>
+      </div>
+      <nav aria-label="Product">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/tools/">Tools</a></li>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/docs/#request-format">API</a></li>
+          <li><a href="/changelog/">Changelog</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Developers">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="https://github.com/0200project">GitHub</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io">MCP Registry</a></li>
+          <li><a href="/status/">Status</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Company">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/#about">About</a></li>
+          <li><a href="/security/">Security</a></li>
+          <li><a href="mailto:contact@0200project.com">Contact</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 0200project</span>
+      <span>Built for autonomous software.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/site.js" defer></script>
+</body>
+</html>

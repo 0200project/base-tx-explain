@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>document.documentElement.classList.add('js')</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Playground — 0200project</title>
+<meta name="description" content="Paste a Base transaction hash and see the structured explanation base-tx-explain returns — five real pre-decoded samples, plus a ready-to-run curl for anything else.">
+<meta name="theme-color" content="#050505">
+<meta property="og:title" content="Playground — 0200project">
+<meta property="og:description" content="Paste a Base transaction hash and see the structured explanation base-tx-explain returns.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://0200project.github.io/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+  .pg-section { padding-bottom: clamp(4.5rem, 10vw, 7.5rem); }
+  .pg-wrap { max-width: 48rem; }
+
+  .pg-input-body { padding: 1rem; display: grid; gap: 0.875rem; }
+  .pg-row { display: flex; flex-wrap: wrap; gap: 0.625rem; }
+  .pg-field {
+    flex: 1 1 14rem;
+    min-width: 0;
+    height: 2.5rem;
+    padding-inline: 0.875rem;
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    color: var(--fg);
+    background: var(--bg-inset);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .pg-field::placeholder { color: var(--fg-faint); }
+  .pg-field:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+
+  .pg-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+  .pg-chips-label {
+    font-family: var(--mono);
+    font-size: 0.71875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-faint);
+    margin-right: 0.25rem;
+  }
+  .chip {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    padding: 0.3rem 0.75rem;
+    background: transparent;
+    color: var(--fg-muted);
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  }
+  .chip:hover { color: var(--fg-strong); border-color: var(--border-hover); background: var(--bg-hover); }
+  .chip.active { color: var(--fg-strong); border-color: var(--accent); }
+
+  .pg-note { margin-top: 0.875rem; font-size: 0.8125rem; color: var(--fg-faint); max-width: 44rem; }
+  .pg-note a { color: var(--fg-muted); }
+  .pg-note a:hover { color: var(--fg-strong); }
+
+  .pg-out { margin-top: 1.5rem; }
+  .pg-state {
+    min-height: 16rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 2rem 1.5rem;
+    text-align: center;
+  }
+  .pg-hint { color: var(--fg-muted); font-size: 0.875rem; max-width: 26rem; }
+  .pg-json {
+    padding: 1.125rem 1.25rem;
+    overflow-x: auto;
+    font-size: 0.78125rem;
+    line-height: 1.7;
+    color: var(--fg);
+  }
+  .pg-miss { padding: 1.25rem; }
+  .pg-miss p { color: var(--fg-muted); font-size: 0.875rem; margin-bottom: 0.875rem; max-width: 40rem; }
+  .pg-miss .codeblock pre { font-size: 0.78125rem; }
+
+  @media (max-width: 47.9em) {
+    .pg-field { font-size: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="0200project home">
+      <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+      0200project
+    </a>
+    <button class="nav-toggle" aria-expanded="false" aria-label="Menu" aria-controls="site-menu">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/docs/">Docs</a></li>
+      <li><a href="/status/">Status</a></li>
+      <li><a href="https://github.com/0200project">GitHub</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/docs/">Get Started</a></li>
+    </ul></nav>
+  </div>
+</header>
+
+<main>
+
+  <section class="page-hero">
+    <div class="container">
+      <span class="eyebrow">Playground</span>
+      <h1 class="h-section">Explain a Base transaction.</h1>
+      <p class="lead">See the structured explanation base-tx-explain returns — five real pre-decoded samples, plus a ready-to-run command for any other hash.</p>
+    </div>
+  </section>
+
+  <section class="pg-section">
+    <div class="container">
+      <div class="pg-wrap">
+
+        <div class="panel">
+          <div class="panel-head"><span>input</span><span>tx_hash · base (8453)</span></div>
+          <div class="pg-input-body">
+            <div class="pg-row">
+              <input id="pg-hash" class="pg-field" type="text" placeholder="0x…" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Transaction hash">
+              <button id="pg-run" class="btn btn-primary" type="button">Explain</button>
+            </div>
+            <div class="pg-chips" role="group" aria-label="Sample transactions">
+              <span class="pg-chips-label">samples</span>
+              <button class="chip" type="button" aria-pressed="false" data-hash="0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c">Swap</button>
+              <button class="chip" type="button" aria-pressed="false" data-hash="0x8b246d458fd8b982455cdc172613272a090d1f84da559feb3392c152a09721c8">Reverted swap</button>
+              <button class="chip" type="button" aria-pressed="false" data-hash="0x8f1e67833a72c7d2d82ff57731fefaf96fa17bdecb9da7f9ac3f4c6b5679fa12">Add liquidity</button>
+              <button class="chip" type="button" aria-pressed="false" data-hash="0x08d78d805d54d3bface91a2f8d081d79429279bdd5a2f8c10da2b833dd3e0100">USDC transfer</button>
+              <button class="chip" type="button" aria-pressed="false" data-hash="0x3002b2c60d153e11e69986103b42d4887da30f8e02890f834d6de16e0c358be3">ETH transfer</button>
+            </div>
+          </div>
+        </div>
+
+        <p class="pg-note">These five samples are real Base transactions decoded with the exact pipeline behind the production endpoint; the browser cannot call the MCP endpoint directly, so this page replays their stored output.</p>
+
+        <div class="panel pg-out">
+          <div class="panel-head"><span>output</span><span id="pg-meta" aria-live="polite">explain_transaction</span></div>
+          <div id="pg-body" role="region" aria-label="Tool output">
+            <div class="pg-state"><p class="pg-hint">Run a sample or paste a hash. Samples replay the exact JSON the tool returned; any other hash gets a ready-to-run command against the live endpoint.</p></div>
+          </div>
+        </div>
+
+        <p class="pg-note">The full response schema — all 30 action types and 6 risk flags — is in the <a href="/docs/">docs</a>. First 10 calls per client are free; after that, $0.02 per call in USDC via x402.</p>
+
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/" aria-label="0200project home">
+          <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+          0200project
+        </a>
+        <p>Machine-native tools for autonomous AI agents.</p>
+      </div>
+      <nav aria-label="Product">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/tools/">Tools</a></li>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/docs/#request-format">API</a></li>
+          <li><a href="/changelog/">Changelog</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Developers">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="https://github.com/0200project">GitHub</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io">MCP Registry</a></li>
+          <li><a href="/status/">Status</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Company">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/#about">About</a></li>
+          <li><a href="/security/">Security</a></li>
+          <li><a href="mailto:contact@0200project.com">Contact</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 0200project</span>
+      <span>Built for autonomous software.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  /* Five real Base transactions, decoded by the production pipeline. */
+  var SAMPLES = {
+    "0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c": {
+      "summary": "0x401d...f2c5 swapped 0.03 ETH for 12,899,422 WNL via Uniswap V4 PoolManager.",
+      "action_type": "swap",
+      "status": "success",
+      "assets_moved": [
+        {
+          "token": "ETH",
+          "amount": "0.03",
+          "from": "0x401d224f8fc8f17c452ca478a9bd4ecf5d3ff2c5",
+          "to": "0xd0a40c6526acdebd4f6d87931098ff37a9f8e4bf",
+          "token_address": null,
+          "standard": "native"
+        },
+        {
+          "token": "WNL",
+          "amount": "12899422.144134853458613801",
+          "from": "0x498581fF718922c3f8e6A244956aF099B2652b2b",
+          "to": "0x401d224F8fc8F17C452Ca478A9Bd4ECf5d3FF2C5",
+          "token_address": "0xb200000000000000000000447fb52a1948fb9a01",
+          "standard": "erc20"
+        }
+      ],
+      "counterparties": [
+        {
+          "address": "0xd0a40c6526acdebd4f6d87931098ff37a9f8e4bf",
+          "label": null
+        },
+        {
+          "address": "0x498581fF718922c3f8e6A244956aF099B2652b2b",
+          "label": "Uniswap V4 PoolManager"
+        }
+      ],
+      "risk_flags": [
+        {
+          "flag": "unverified_contract",
+          "detail": "The target contract 0xd0a4...e4bf has no verified source code on Sourcify."
+        }
+      ],
+      "gas_paid_usd": 0.020562,
+      "timestamp": "2026-08-20T03:54:19.000Z",
+      "block_number": 50204356,
+      "tx_hash": "0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c",
+      "basescan_url": "https://basescan.org/tx/0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c",
+      "partial": false
+    },
+    "0x8b246d458fd8b982455cdc172613272a090d1f84da559feb3392c152a09721c8": {
+      "summary": "0xf9b6...af41 called 0xbe6d...18a5 (function: exactInputSingle), but the transaction reverted and no assets moved.",
+      "action_type": "contract_interaction",
+      "status": "reverted",
+      "assets_moved": [],
+      "counterparties": [
+        {
+          "address": "0xbe6d8f0d05cc4be24d5167a3ef062215be6d18a5",
+          "label": null
+        }
+      ],
+      "risk_flags": [
+        {
+          "flag": "transaction_reverted",
+          "detail": "The transaction reverted; no state changes took effect (gas was still paid)."
+        }
+      ],
+      "gas_paid_usd": 0.024652,
+      "timestamp": "2026-08-20T06:34:25.000Z",
+      "block_number": 50209159,
+      "tx_hash": "0x8b246d458fd8b982455cdc172613272a090d1f84da559feb3392c152a09721c8",
+      "basescan_url": "https://basescan.org/tx/0x8b246d458fd8b982455cdc172613272a090d1f84da559feb3392c152a09721c8",
+      "partial": false
+    },
+    "0x8f1e67833a72c7d2d82ff57731fefaf96fa17bdecb9da7f9ac3f4c6b5679fa12": {
+      "summary": "0x81db...cf4d added liquidity of 2,770,537 BRETT and 0.688192 WETH to a pool.",
+      "action_type": "add_liquidity",
+      "status": "success",
+      "assets_moved": [
+        {
+          "token": "WETH",
+          "amount": "0.68819229908857906",
+          "from": "0x81db196456AD53fA2C8131a9D276C8c1E661cF4d",
+          "to": "0x4e829F8A5213c42535AB84AA40BD4aDCCE9cBa02",
+          "token_address": "0x4200000000000000000000000000000000000006",
+          "standard": "erc20"
+        },
+        {
+          "token": "BRETT",
+          "amount": "2770536.736337070998678965",
+          "from": "0x81db196456AD53fA2C8131a9D276C8c1E661cF4d",
+          "to": "0x4e829F8A5213c42535AB84AA40BD4aDCCE9cBa02",
+          "token_address": "0x532f27101965dd16442e59d40670faf5ebb142e4",
+          "standard": "erc20"
+        }
+      ],
+      "counterparties": [
+        {
+          "address": "0x827922686190790b37229fd06084350e74485b72",
+          "label": null
+        },
+        {
+          "address": "0x4e829F8A5213c42535AB84AA40BD4aDCCE9cBa02",
+          "label": null
+        }
+      ],
+      "risk_flags": [],
+      "gas_paid_usd": 0.005471,
+      "timestamp": "2026-08-20T06:34:25.000Z",
+      "block_number": 50209159,
+      "tx_hash": "0x8f1e67833a72c7d2d82ff57731fefaf96fa17bdecb9da7f9ac3f4c6b5679fa12",
+      "basescan_url": "https://basescan.org/tx/0x8f1e67833a72c7d2d82ff57731fefaf96fa17bdecb9da7f9ac3f4c6b5679fa12",
+      "partial": false
+    },
+    "0x08d78d805d54d3bface91a2f8d081d79429279bdd5a2f8c10da2b833dd3e0100": {
+      "summary": "0x8581...c402 sent 0.000792 USDC to 0x6652...0B38.",
+      "action_type": "erc20_transfer",
+      "status": "success",
+      "assets_moved": [
+        {
+          "token": "USDC",
+          "amount": "0.000792",
+          "from": "0x8581784D3E598cCa3482375CFF2409Ac9DD8c402",
+          "to": "0x665286B0a31Cd91E1dd459696ae03b07D25E0B38",
+          "token_address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "standard": "erc20"
+        }
+      ],
+      "counterparties": [
+        {
+          "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "label": "USDC"
+        },
+        {
+          "address": "0x665286B0a31Cd91E1dd459696ae03b07D25E0B38",
+          "label": null
+        }
+      ],
+      "risk_flags": [],
+      "gas_paid_usd": 0.000618,
+      "timestamp": "2026-08-20T06:36:41.000Z",
+      "block_number": 50209227,
+      "tx_hash": "0x08d78d805d54d3bface91a2f8d081d79429279bdd5a2f8c10da2b833dd3e0100",
+      "basescan_url": "https://basescan.org/tx/0x08d78d805d54d3bface91a2f8d081d79429279bdd5a2f8c10da2b833dd3e0100",
+      "partial": false
+    },
+    "0x3002b2c60d153e11e69986103b42d4887da30f8e02890f834d6de16e0c358be3": {
+      "summary": "0x3304...566a sent 0.00925 ETH to 0xf919...700d.",
+      "action_type": "eth_transfer",
+      "status": "success",
+      "assets_moved": [
+        {
+          "token": "ETH",
+          "amount": "0.00925",
+          "from": "0x3304e22ddaa22bcdc5fca2269b418046ae7b566a",
+          "to": "0xf919498b30744b6438580c2aab734975ca30700d",
+          "token_address": null,
+          "standard": "native"
+        }
+      ],
+      "counterparties": [
+        {
+          "address": "0xf919498b30744b6438580c2aab734975ca30700d",
+          "label": null
+        }
+      ],
+      "risk_flags": [],
+      "gas_paid_usd": 0.005693,
+      "timestamp": "2026-08-20T06:36:41.000Z",
+      "block_number": 50209227,
+      "tx_hash": "0x3002b2c60d153e11e69986103b42d4887da30f8e02890f834d6de16e0c358be3",
+      "basescan_url": "https://basescan.org/tx/0x3002b2c60d153e11e69986103b42d4887da30f8e02890f834d6de16e0c358be3",
+      "partial": false
+    }
+  };
+
+  var HASH_RE = /^0x[0-9a-fA-F]{64}$/;
+  var input = document.getElementById('pg-hash');
+  var runBtn = document.getElementById('pg-run');
+  var body = document.getElementById('pg-body');
+  var meta = document.getElementById('pg-meta');
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip'));
+  var timer = null;
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function tok(cls, txt) {
+    return '<span class="tok-' + cls + '">' + txt + '</span>';
+  }
+
+  function pad(n) {
+    return new Array(n + 1).join('  ');
+  }
+
+  /* Deterministic pretty-printer: walks the parsed object and emits
+     tinted tokens. risk_flags "flag" values get the accent tint. */
+  function renderVal(v, ind, riskItem, key) {
+    if (v === null) return tok('num', 'null');
+    var t = typeof v;
+    if (t === 'string') {
+      var cls = (riskItem && key === 'flag') ? 'flag' : 'str';
+      return tok(cls, esc(JSON.stringify(v)));
+    }
+    if (t === 'number' || t === 'boolean') return tok('num', String(v));
+    if (Array.isArray(v)) {
+      if (v.length === 0) return tok('punc', '[]');
+      var childRisk = key === 'risk_flags';
+      var items = v.map(function (item) {
+        return pad(ind + 1) + renderVal(item, ind + 1, childRisk, null);
+      });
+      return tok('punc', '[') + '\n' + items.join(tok('punc', ',') + '\n') + '\n' + pad(ind) + tok('punc', ']');
+    }
+    var keys = Object.keys(v);
+    if (keys.length === 0) return tok('punc', '{}');
+    var rows = keys.map(function (k) {
+      return pad(ind + 1) + tok('key', esc(JSON.stringify(k))) + tok('punc', ':') + ' ' + renderVal(v[k], ind + 1, riskItem, k);
+    });
+    return tok('punc', '{') + '\n' + rows.join(tok('punc', ',') + '\n') + '\n' + pad(ind) + tok('punc', '}');
+  }
+
+  function showJSON(obj) {
+    body.innerHTML = '<pre class="pg-json"><code>' + renderVal(obj, 0, false, null) + '</code></pre>';
+  }
+
+  function showLoader() {
+    body.innerHTML =
+      '<div class="pg-state">' +
+      '<svg class="logo-loader" width="36" height="36" viewBox="0 0 35 35" role="img" aria-label="Decoding">' +
+      '<rect class="tile" x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/>' +
+      '<rect class="tile" x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/>' +
+      '<rect class="tile" x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/>' +
+      '<rect class="tile" x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/>' +
+      '</svg>' +
+      '</div>';
+  }
+
+  function curlFor(hash) {
+    return "curl -X POST https://base-tx-explain.fly.dev/mcp \\\n" +
+      "  -H 'Content-Type: application/json' \\\n" +
+      "  -H 'Accept: application/json, text/event-stream' \\\n" +
+      "  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"explain_transaction\",\"arguments\":{\"tx_hash\":\"" + hash + "\"}}}'";
+  }
+
+  function showMiss(hash) {
+    body.innerHTML =
+      '<div class="pg-miss">' +
+      '<p>This hash isn’t one of the pre-decoded samples. Decode it live against the production endpoint:</p>' +
+      '<div class="codeblock">' +
+      '<div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#pg-curl">Copy</button></div>' +
+      '<pre><code id="pg-curl">' + esc(curlFor(hash)) + '</code></pre>' +
+      '</div>' +
+      '</div>';
+  }
+
+  function showInvalid() {
+    showJSON({
+      "error": "tx_hash must be a 0x-prefixed 64-character hex string.",
+      "code": "invalid_hash"
+    });
+  }
+
+  function setActiveChip(hash) {
+    chips.forEach(function (c) {
+      var match = c.getAttribute('data-hash') === hash;
+      c.classList.toggle('active', match);
+      c.setAttribute('aria-pressed', match ? 'true' : 'false');
+    });
+  }
+
+  function explain() {
+    var raw = input.value.trim();
+    if (timer) { clearTimeout(timer); timer = null; }
+
+    if (!HASH_RE.test(raw)) {
+      setActiveChip(null);
+      meta.textContent = 'error · invalid_hash';
+      showInvalid();
+      return;
+    }
+
+    var hash = raw.toLowerCase();
+    var sample = SAMPLES[hash];
+    setActiveChip(sample ? hash : null);
+    meta.textContent = 'decoding…';
+    showLoader();
+
+    /* Fixed 500ms pause for legibility — the decode is replayed locally,
+       no network request is made. */
+    timer = setTimeout(function () {
+      timer = null;
+      if (sample) {
+        meta.textContent = 'explain_transaction · ' + sample.action_type;
+        showJSON(sample);
+      } else {
+        meta.textContent = 'not pre-decoded';
+        showMiss(hash);
+      }
+    }, 500);
+  }
+
+  runBtn.addEventListener('click', explain);
+
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      explain();
+    }
+  });
+
+  input.addEventListener('input', function () {
+    setActiveChip(null);
+  });
+
+  chips.forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      input.value = chip.getAttribute('data-hash');
+      explain();
+    });
+  });
+
+  /* Copy button inside the dynamically rendered curl block. Uses the shared
+     clipboard helper from site.js (with execCommand fallback) when present. */
+  body.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-copy]');
+    if (!btn) return;
+    var src = document.querySelector(btn.getAttribute('data-copy'));
+    if (!src) return;
+    var write = window.__copyText || (navigator.clipboard && function (t) { return navigator.clipboard.writeText(t); });
+    if (!write) { btn.textContent = 'Copy failed'; return; }
+    var prev = btn.textContent;
+    write(src.textContent.trim()).then(
+      function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = prev; }, 1600); },
+      function () { btn.textContent = 'Copy failed'; setTimeout(function () { btn.textContent = prev; }, 1600); }
+    );
+  });
+})();
+</script>
+
+<script src="/assets/site.js" defer></script>
+</body>
+</html>

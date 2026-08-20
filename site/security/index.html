@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>document.documentElement.classList.add('js')</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security — 0200project</title>
+<meta name="description" content="The security posture of 0200project services: no private keys, non-custodial payments, no accounts, no database, deterministic and open source.">
+<meta name="theme-color" content="#050505">
+<meta property="og:title" content="Security — 0200project">
+<meta property="og:description" content="No private keys, non-custodial payments, no accounts, no database, deterministic and open source.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://0200project.github.io/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+  .prose h2:first-of-type { margin-top: 0; }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="0200project home">
+      <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+      0200project
+    </a>
+    <button class="nav-toggle" aria-expanded="false" aria-label="Menu" aria-controls="site-menu">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/docs/">Docs</a></li>
+      <li><a href="/status/">Status</a></li>
+      <li><a href="https://github.com/0200project">GitHub</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/docs/">Get Started</a></li>
+    </ul></nav>
+  </div>
+</header>
+
+<main>
+
+  <div class="container">
+
+    <div class="page-hero">
+      <span class="eyebrow">Security</span>
+      <h1 class="h-section">Security principles</h1>
+      <p class="lead">The security posture of 0200project services, stated plainly. The short version: there is very little to attack, because the services hold very little.</p>
+    </div>
+
+    <div class="prose">
+
+      <h2>No private keys, ever</h2>
+      <p>The service never asks for, receives, or stores private keys or seed phrases. There is no request field where one could be supplied, and no account to attach one to.</p>
+      <p>Payments are made from the agent's own wallet, under the agent's own control. The server only checks that a payment settled — it never touches the wallet that made it.</p>
+
+      <h2>Non-custodial architecture</h2>
+      <p>Paid calls settle in USDC on Base through the x402 protocol. Settlement is verified by a facilitator that can confirm a payment but cannot move or redirect funds. The server never holds user assets at any point.</p>
+      <p>The payment challenge is carried in the open, inside the tool response: exact amount, asset contract, and recipient address. A paying agent can inspect all of it before deciding to pay.</p>
+
+      <h2>Minimal data collection</h2>
+      <p>There are no accounts, no cookies, and no analytics. Client IPs are held transiently in memory, only for rate limiting and free-tier metering, and there is no database — nowhere for data to accumulate, nothing to breach retroactively.</p>
+
+      <h2>Deterministic processing</h2>
+      <p>There is no model in the response path. Every response is produced by deterministic decode of public chain data, so the same input always yields the same output and any response can be independently reproduced and audited.</p>
+      <p>The full source is public at <a href="https://github.com/0200project/base-tx-explain">github.com/0200project/base-tx-explain</a> and self-hostable. You can run your own instance and compare its output against ours.</p>
+
+      <h2>Infrastructure</h2>
+      <p>The service is stateless: a fresh MCP server is created per request, and there are no sessions to hijack. All traffic is served over TLS.</p>
+      <p>Risk-flag blocklists are consumed read-only from public sources (ScamSniffer and MyEtherWallet), refreshed twice daily. The service never writes to them.</p>
+
+      <h2>Honest limits</h2>
+      <p>Risk flags report evidence that was found; a failed lookup never produces a flag. By the same token, the absence of a <code class="inline">known_drainer</code> flag is not a safety guarantee — a bad actor may simply not be on any public blocklist yet.</p>
+      <p>The tool reports what a transaction did, not whether it was a good idea. It is not financial advice.</p>
+
+      <h2>Reporting a vulnerability</h2>
+      <p>If you believe you have found a security issue in any 0200project service, email <a href="mailto:security@0200project.com">security@0200project.com</a> with the details — what you found, where, and how to reproduce it. We read every report and will acknowledge yours promptly.</p>
+
+    </div>
+
+  </div>
+
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/" aria-label="0200project home">
+          <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+          0200project
+        </a>
+        <p>Machine-native tools for autonomous AI agents.</p>
+      </div>
+      <nav aria-label="Product">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/tools/">Tools</a></li>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/docs/#request-format">API</a></li>
+          <li><a href="/changelog/">Changelog</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Developers">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="https://github.com/0200project">GitHub</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io">MCP Registry</a></li>
+          <li><a href="/status/">Status</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Company">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/#about">About</a></li>
+          <li><a href="/security/">Security</a></li>
+          <li><a href="mailto:contact@0200project.com">Contact</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 0200project</span>
+      <span>Built for autonomous software.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/site.js" defer></script>
+</body>
+</html>

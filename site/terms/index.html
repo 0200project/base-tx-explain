@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>document.documentElement.classList.add('js')</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terms of Service — 0200project</title>
+<meta name="description" content="The terms for using 0200project's hosted tools: pricing, acceptable use, disclaimers, and what the service does and does not promise.">
+<meta name="theme-color" content="#050505">
+<meta property="og:title" content="Terms of Service — 0200project">
+<meta property="og:description" content="The terms for using 0200project's hosted tools, in plain English.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://0200project.github.io/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="0200project home">
+      <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+      0200project
+    </a>
+    <button class="nav-toggle" aria-expanded="false" aria-label="Menu" aria-controls="site-menu">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/docs/">Docs</a></li>
+      <li><a href="/status/">Status</a></li>
+      <li><a href="https://github.com/0200project">GitHub</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/docs/">Get Started</a></li>
+    </ul></nav>
+  </div>
+</header>
+
+<main>
+  <div class="container">
+
+    <div class="page-hero">
+      <span class="eyebrow">Legal</span>
+      <h1 class="h-section">Terms of Service</h1>
+      <p class="updated">Last updated: August 20, 2026</p>
+    </div>
+
+    <div class="prose">
+      <p>These terms cover the hosted tools 0200project operates. They are written to be read, not skimmed past. By calling the service, you agree to them.</p>
+
+      <h2>The service</h2>
+      <p>0200project provides paid, metered API tools intended for programmatic use — by AI agents, scripts, and applications. Today that is <code class="inline">base-tx-explain</code>, a tool that returns a structured explanation of a Base mainnet transaction. Tools are accessed over MCP; there are no accounts and no API keys.</p>
+
+      <h2>Pricing and payment</h2>
+      <ul>
+        <li>Each client gets 10 free calls. No signup is required for them.</li>
+        <li>After that, calls cost $0.02 each, paid in USDC on Base via the x402 protocol. The payment challenge is embedded in the tool response; a capable client pays and retries on its own.</li>
+        <li>Marketplace-hosted deployments are billed through the marketplace at its rates. The marketplace's billing terms apply there.</li>
+      </ul>
+
+      <h2>Acceptable use</h2>
+      <p>Use the service for what it is: a metered API. Specifically:</p>
+      <ul>
+        <li>Do not attempt to circumvent metering, the free tier, or payment.</li>
+        <li>Respect the rate limit of 60 requests per minute per client. Requests beyond it are rejected.</li>
+        <li>Do not attack, probe, or otherwise abuse the service or the infrastructure it runs on.</li>
+      </ul>
+      <p>We may block clients that violate these rules.</p>
+
+      <h2>No warranty, no SLA</h2>
+      <p>The service is provided as-is, without warranty of any kind. We work to keep it available and correct, but we do not offer a service-level agreement, and the <a href="/status/">status page</a> is informational, not contractual.</p>
+
+      <h2>What the output is — and is not</h2>
+      <ul>
+        <li>The output describes what a transaction did. It is not financial, investment, or legal advice, and it says nothing about whether a transaction was a good idea.</li>
+        <li>Risk flags are evidence-based signals: a flag is only raised when specific evidence was found. They are not guarantees.</li>
+        <li>The absence of a flag is not an endorsement of a transaction or a counterparty, and not a safety guarantee.</li>
+      </ul>
+
+      <h2>Liability</h2>
+      <p>To the maximum extent permitted by law, 0200project's total liability arising from the service is limited to the amounts you paid for it.</p>
+
+      <h2>Open source and self-hosting</h2>
+      <p>The software behind the service is open source at <a href="https://github.com/0200project/base-tx-explain">github.com/0200project/base-tx-explain</a>. Self-hosting is governed by the repository's license, not by these terms. These terms cover only the hosted service we operate.</p>
+
+      <h2>Changes</h2>
+      <p>If these terms change, the new version is posted on this page with an updated date at the top. Continued use after a change means you accept the new terms.</p>
+
+      <h2>Contact</h2>
+      <p>Questions about these terms: <a href="mailto:contact@0200project.com">contact@0200project.com</a>.</p>
+    </div>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/" aria-label="0200project home">
+          <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+          0200project
+        </a>
+        <p>Machine-native tools for autonomous AI agents.</p>
+      </div>
+      <nav aria-label="Product">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/tools/">Tools</a></li>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/docs/#request-format">API</a></li>
+          <li><a href="/changelog/">Changelog</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Developers">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="https://github.com/0200project">GitHub</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io">MCP Registry</a></li>
+          <li><a href="/status/">Status</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Company">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/#about">About</a></li>
+          <li><a href="/security/">Security</a></li>
+          <li><a href="mailto:contact@0200project.com">Contact</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 0200project</span>
+      <span>Built for autonomous software.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/site.js" defer></script>
+</body>
+</html>

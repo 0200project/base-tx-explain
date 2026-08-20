@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>document.documentElement.classList.add('js')</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Status — 0200project</title>
+<meta name="description" content="Current operational state of 0200project services, checked live from your browser against the production endpoints.">
+<meta name="theme-color" content="#050505">
+<meta property="og:title" content="Status — 0200project">
+<meta property="og:description" content="Current operational state of 0200project services.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://0200project.github.io/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+  .status-col { max-width: 46rem; }
+  .status-body { padding-bottom: clamp(4rem, 9vw, 6.5rem); }
+  .status-banner { margin-bottom: 1rem; }
+
+  .service-sub {
+    font-family: var(--mono);
+    font-size: 0.71875rem;
+    color: var(--fg-faint);
+    margin-top: 0.2rem;
+    overflow-wrap: anywhere;
+  }
+  .state [data-ms] { color: var(--fg-faint); }
+  .state [data-ms]:empty { display: none; }
+
+  .dot-wait { background: var(--border-strong); }
+  .dot-down { background: transparent; border: 1.5px solid var(--fg-muted); }
+
+  .status-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    margin-top: 1.25rem;
+  }
+  .method-note { margin-top: 1.5rem; max-width: 40rem; }
+
+  .incidents {
+    border-top: 1px solid var(--border);
+    padding-block: clamp(3.5rem, 8vw, 5.5rem);
+  }
+  .incidents h2 { font-size: 1.375rem; letter-spacing: -0.015em; }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="0200project home">
+      <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+      0200project
+    </a>
+    <button class="nav-toggle" aria-expanded="false" aria-label="Menu" aria-controls="site-menu">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/docs/">Docs</a></li>
+      <li><a href="/status/" aria-current="page">Status</a></li>
+      <li><a href="https://github.com/0200project">GitHub</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/docs/">Get Started</a></li>
+    </ul></nav>
+  </div>
+</header>
+
+<main>
+
+  <section class="page-hero">
+    <div class="container">
+      <span class="eyebrow">Status</span>
+      <h1 class="h-section">System status</h1>
+      <p class="lead">The current operational state of 0200project services, checked live from this page.</p>
+    </div>
+  </section>
+
+  <div class="container status-body">
+    <div class="status-col">
+
+      <div class="status-banner" role="status" aria-live="polite">
+        <span class="dot dot-wait" id="banner-dot"></span>
+        <span id="banner-text">Checking&hellip;</span>
+      </div>
+
+      <div class="panel">
+        <div class="service-row" id="row-mcp">
+          <div>
+            <div class="name">MCP Endpoint</div>
+            <div class="service-sub">base-tx-explain.fly.dev/mcp</div>
+          </div>
+          <span class="state"><span class="dot dot-wait" data-dot></span><span data-label>Checking&hellip;</span><span data-ms></span></span>
+        </div>
+        <div class="service-row" id="row-decoder">
+          <div>
+            <div class="name">Transaction Decoder</div>
+            <div class="service-sub">same deployment &middot; probed via /healthz</div>
+          </div>
+          <span class="state"><span class="dot dot-wait" data-dot></span><span data-label>Checking&hellip;</span></span>
+        </div>
+        <div class="service-row" id="row-pay">
+          <div>
+            <div class="name">Payment System</div>
+            <div class="service-sub">x402 facilitator &middot; facilitator.payai.network</div>
+          </div>
+          <span class="state"><span class="dot dot-wait" data-dot></span><span data-label>Checking&hellip;</span><span data-ms></span></span>
+        </div>
+      </div>
+
+      <div class="status-meta">
+        <button class="btn btn-ghost btn-sm" id="recheck" type="button">Re-check</button>
+        <span class="small faint" id="last-checked"></span>
+      </div>
+
+      <p class="small faint method-note">These checks run from your browser against the production endpoints — no third-party monitoring service is involved. Reported latency is the round trip from your network location. A check confirms the host answered; cross-origin rules prevent this page from reading response bodies, so "reachable" means exactly that. The MCP endpoint and the transaction decoder are one deployment, so both rows derive from a single probe of <code class="inline">/healthz</code>.</p>
+
+      <noscript>
+        <p class="small faint method-note">JavaScript is disabled, so live checks cannot run from this page. You can probe the endpoint directly: <code class="inline">curl https://base-tx-explain.fly.dev/healthz</code></p>
+      </noscript>
+
+    </div>
+  </div>
+
+  <section class="incidents">
+    <div class="container">
+      <div class="status-col">
+        <h2>Incident history</h2>
+        <div class="log-entry">
+          <div class="log-date">Since Aug 20, 2026</div>
+          <div class="log-body">
+            <h3>No incidents reported.</h3>
+            <p>Operational history begins August 20, 2026, when base-tx-explain v0.1.0 launched. Incidents, when they occur, will be listed here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/" aria-label="0200project home">
+          <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+          0200project
+        </a>
+        <p>Machine-native tools for autonomous AI agents.</p>
+      </div>
+      <nav aria-label="Product">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/tools/">Tools</a></li>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/docs/#request-format">API</a></li>
+          <li><a href="/changelog/">Changelog</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Developers">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="https://github.com/0200project">GitHub</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io">MCP Registry</a></li>
+          <li><a href="/status/">Status</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Company">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/#about">About</a></li>
+          <li><a href="/security/">Security</a></li>
+          <li><a href="mailto:contact@0200project.com">Contact</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 0200project</span>
+      <span>Built for autonomous software.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var HEALTH = 'https://base-tx-explain.fly.dev/healthz';
+  var FACILITATOR = 'https://facilitator.payai.network/';
+
+  var bannerDot = document.getElementById('banner-dot');
+  var bannerText = document.getElementById('banner-text');
+  var lastChecked = document.getElementById('last-checked');
+  var btn = document.getElementById('recheck');
+
+  function refs(id) {
+    var el = document.getElementById(id);
+    return {
+      dot: el.querySelector('[data-dot]'),
+      label: el.querySelector('[data-label]'),
+      ms: el.querySelector('[data-ms]')
+    };
+  }
+
+  var rows = { mcp: refs('row-mcp'), decoder: refs('row-decoder'), pay: refs('row-pay') };
+
+  function setState(row, dotClass, label, ms) {
+    row.dot.className = 'dot ' + dotClass;
+    row.label.textContent = label;
+    if (row.ms) row.ms.textContent = (typeof ms === 'number') ? ms + ' ms' : '';
+  }
+
+  // An opaque (no-cors) response resolving means the host answered;
+  // a rejected fetch (or a 10s timeout) means it was unreachable from this browser.
+  function probe(url) {
+    var t0 = performance.now();
+    var ctrl = new AbortController();
+    var to = setTimeout(function () { ctrl.abort(); }, 10000);
+    return fetch(url, { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal })
+      .then(function () { clearTimeout(to); return { ok: true, ms: Math.round(performance.now() - t0) }; })
+      .catch(function () { clearTimeout(to); return { ok: false }; });
+  }
+
+  function run() {
+    btn.disabled = true;
+    bannerDot.className = 'dot dot-wait';
+    bannerText.textContent = 'Checking…';
+    setState(rows.mcp, 'dot-wait', 'Checking…');
+    setState(rows.decoder, 'dot-wait', 'Checking…');
+    setState(rows.pay, 'dot-wait', 'Checking…');
+
+    Promise.all([probe(HEALTH), probe(FACILITATOR)]).then(function (results) {
+      var health = results[0];
+      var facilitator = results[1];
+
+      if (health.ok) {
+        setState(rows.mcp, 'dot-live', 'Reachable', health.ms);
+        setState(rows.decoder, 'dot-live', 'Reachable');
+      } else {
+        setState(rows.mcp, 'dot-down', 'Unreachable');
+        setState(rows.decoder, 'dot-down', 'Unreachable');
+      }
+
+      if (facilitator.ok) {
+        setState(rows.pay, 'dot-live', 'Reachable', facilitator.ms);
+      } else {
+        setState(rows.pay, 'dot-down', 'Unreachable');
+      }
+
+      if (health.ok && facilitator.ok) {
+        bannerDot.className = 'dot dot-live';
+        bannerText.textContent = 'All endpoints reachable from your browser';
+      } else {
+        bannerDot.className = 'dot dot-down';
+        bannerText.textContent = 'An endpoint is unreachable from your browser';
+      }
+
+      lastChecked.textContent = 'Last checked: ' + new Date().toLocaleTimeString();
+      btn.disabled = false;
+    });
+  }
+
+  btn.addEventListener('click', run);
+  run();
+})();
+</script>
+
+<script src="/assets/site.js" defer></script>
+</body>
+</html>

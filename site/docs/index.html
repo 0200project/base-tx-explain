@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>document.documentElement.classList.add('js')</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Documentation — 0200project</title>
+<meta name="description" content="Reference documentation for 0200project tools: connect over MCP, call base-tx-explain, parse the response schema, handle errors, and pay per call with x402.">
+<meta name="theme-color" content="#050505">
+<meta property="og:title" content="Documentation — 0200project">
+<meta property="og:description" content="Connect over MCP, call base-tx-explain, parse the response schema, handle errors, and pay per call with x402.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://0200project.github.io/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+
+  .docs-content .enum-list {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding-left: 0;
+    margin: 1.25rem 0 1.5rem;
+  }
+  .docs-content .enum-list li {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--fg-muted);
+    background: var(--bg-raised);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.15rem 0.5rem;
+  }
+  .docs-content .enum-list li + li { margin-top: 0; }
+
+  .docs-content .docs-lead { font-size: 1.0625rem; line-height: 1.65; }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="0200project home">
+      <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+      0200project
+    </a>
+    <button class="nav-toggle" aria-expanded="false" aria-label="Menu" aria-controls="site-menu">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/docs/" aria-current="page">Docs</a></li>
+      <li><a href="/status/">Status</a></li>
+      <li><a href="https://github.com/0200project">GitHub</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/docs/">Get Started</a></li>
+    </ul></nav>
+  </div>
+</header>
+
+<main>
+  <div class="container docs-layout">
+
+    <aside class="docs-nav" aria-label="Documentation navigation">
+      <h4>Getting started</h4>
+      <ul>
+        <li><a href="#introduction">Introduction</a></li>
+        <li><a href="#quickstart">Quickstart</a></li>
+        <li><a href="#installation">Installation</a></li>
+        <li><a href="#authentication">Authentication</a></li>
+      </ul>
+      <h4>Tools</h4>
+      <ul>
+        <li><a href="#base-tx-explain">base-tx-explain</a></li>
+        <li><a href="#request-format">Request format</a></li>
+        <li><a href="#response-schema">Response schema</a></li>
+        <li><a href="#error-handling">Error handling</a></li>
+        <li><a href="#examples">Examples</a></li>
+      </ul>
+      <h4>Payments</h4>
+      <ul>
+        <li><a href="#x402-payments">x402 payments</a></li>
+        <li><a href="#usage">Usage</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+      </ul>
+    </aside>
+
+    <article class="docs-content">
+      <h1>Documentation</h1>
+      <p class="docs-lead">Everything needed to connect an MCP client, call <code class="inline">explain_transaction</code>, parse the response, and pay per call — by hand or autonomously.</p>
+
+      <h2 id="introduction">Introduction</h2>
+      <p>0200project builds machine-native tools for autonomous AI agents: narrowly scoped services with strict JSON contracts, designed to be called and parsed by software without a human in the loop. The first and currently only shipped tool is <strong>base-tx-explain</strong> v0.1.0, launched August 20, 2026. More tools are in development.</p>
+      <p><strong>Deterministic by design.</strong> There is no LLM in the response path. Every response is produced by deterministic onchain decoding: the same input always produces the same output. Nothing is generated, so nothing can hallucinate or drift between calls.</p>
+      <p><strong>MCP is the interface.</strong> Each tool is served over the <a href="https://registry.modelcontextprotocol.io">Model Context Protocol</a> as a streamable HTTP endpoint. Any MCP client can connect; any HTTP client can call it directly with a JSON-RPC request. The registry entry is <code class="inline">io.github.0200project/base-tx-explain</code>.</p>
+
+      <h2 id="quickstart">Quickstart</h2>
+      <p>Add the server to any MCP client that supports streamable HTTP transport:</p>
+      <div class="codeblock">
+        <div class="panel-head"><span>mcp config · json</span><button class="copy-btn" type="button" data-copy="#cfg-json">Copy</button></div>
+        <pre><code id="cfg-json"><span class="tok-punc">{</span>
+  <span class="tok-key">"mcpServers"</span><span class="tok-punc">: {</span>
+    <span class="tok-key">"base-tx-explain"</span><span class="tok-punc">: {</span>
+      <span class="tok-key">"type"</span><span class="tok-punc">:</span> <span class="tok-str">"streamable-http"</span><span class="tok-punc">,</span>
+      <span class="tok-key">"url"</span><span class="tok-punc">:</span> <span class="tok-str">"https://base-tx-explain.fly.dev/mcp"</span>
+    <span class="tok-punc">}</span>
+  <span class="tok-punc">}</span>
+<span class="tok-punc">}</span></code></pre>
+      </div>
+      <p>Or make a first <code class="inline">tools/call</code> directly:</p>
+      <div class="codeblock">
+        <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#curl-cmd">Copy</button></div>
+        <pre><code id="curl-cmd">curl -X POST https://base-tx-explain.fly.dev/mcp \
+  -H 'Content-Type: application/json' \
+  -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"explain_transaction","arguments":{"tx_hash":"0x..."}}}'</code></pre>
+      </div>
+      <p>The response arrives as a server-sent-events frame — an <code class="inline">event: message</code> line followed by a <code class="inline">data:</code> line carrying the JSON-RPC result:</p>
+      <div class="codeblock">
+        <div class="panel-head"><span>response · text/event-stream</span></div>
+        <pre><code>event: message
+data: {"jsonrpc":"2.0","id":1,"result":{ ... }}</code></pre>
+      </div>
+      <p>The tool result carries the explanation twice: as <code class="inline">structuredContent</code>, and stringified in <code class="inline">content[0].text</code>. Parse whichever your client prefers. The first 10 calls per client are free — no signup.</p>
+
+      <h2 id="installation">Installation</h2>
+      <h3>Hosted endpoint</h3>
+      <p>The hosted server at <code class="inline">https://base-tx-explain.fly.dev/mcp</code> works with any MCP client using the config above — nothing to install. It is also listed in the MCP registry as <code class="inline">io.github.0200project/base-tx-explain</code>, and available marketplace-hosted at a flat rate (marketplace billing applies there).</p>
+      <h3>Self-hosting</h3>
+      <p>The server is open source under an MIT-style license and runs anywhere Docker runs. It is a stateless Express server — no database, no sessions — so it scales horizontally without coordination.</p>
+      <div class="codeblock">
+        <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#selfhost-cmd">Copy</button></div>
+        <pre><code id="selfhost-cmd">git clone https://github.com/0200project/base-tx-explain
+cd base-tx-explain
+npm install
+cp .env.example .env
+npm run dev</code></pre>
+      </div>
+      <p>Defaults are free mode with public Base RPCs. Key environment variables:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Variable</th><th>Purpose</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code class="inline">PAYMENT_MODE</code></td><td><code class="inline">none</code> or <code class="inline">x402</code>. Default is free mode.</td></tr>
+            <tr><td><code class="inline">X402_PAY_TO</code></td><td>Address that receives x402 payments.</td></tr>
+            <tr><td><code class="inline">X402_PRICE_USD</code></td><td>Price per paid call, in USD.</td></tr>
+            <tr><td><code class="inline">X402_FACILITATOR_URL</code></td><td>x402 facilitator used to verify and settle payments.</td></tr>
+            <tr><td><code class="inline">FREE_CALLS_PER_IP</code></td><td>Free calls granted per client before payment is required.</td></tr>
+            <tr><td><code class="inline">BASE_RPC_URLS</code></td><td>Base RPC endpoints. Defaults to public Base RPCs.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="authentication">Authentication</h2>
+      <p>There is none, by design. No accounts, no API keys, no OAuth — nothing to provision, rotate, leak, or revoke.</p>
+      <p>Identity is replaced by payment. A free tier is metered per client, and beyond it each call is paid individually over <a href="#x402-payments">x402</a>. The server never needs to know who you are, only that the call is paid for.</p>
+
+      <h2 id="base-tx-explain">base-tx-explain</h2>
+      <p>One tool: <code class="inline">explain_transaction(tx_hash)</code> returns a strict JSON explanation of any Base mainnet transaction (chain id 8453) — a plain-English summary, a classified action type, every asset that moved, labeled counterparties, evidence-backed risk flags, and the total gas cost in USD.</p>
+      <p><strong>Input contract.</strong> <code class="inline">tx_hash</code> is <code class="inline">0x</code> followed by 64 hex characters. Base mainnet only.</p>
+      <p><strong>Determinism.</strong> The pipeline is raw transaction + receipt from Base RPC, through roughly 40 builtin event decoders (ERC-20/721/1155, Uniswap V2/V3/V4, Aerodrome/Solidly, Seaport, Aave V3, Compound V3, OP-stack bridges, ERC-4337 EntryPoint, EAS, Basenames, WETH, LP position managers), into a deterministic rule-ordered classification. Labels come from a verified table of major Base contracts; app-specific events are named via verified ABIs on Sourcify. No model touches the response — the same hash always yields the same bytes.</p>
+      <p>Before launch, 100 random recent live Base transactions were decoded: 95 produced a specific action type, the rest degraded to an honest partial summary, and there were zero crashes.</p>
+      <h3>Known limits</h3>
+      <ul>
+        <li>Base mainnet only.</li>
+        <li>Internal ETH transfers (contract-to-contract value moves) are not visible without trace APIs; WETH events cover the common cases.</li>
+        <li>When something cannot be decoded, the output says so instead of guessing.</li>
+        <li>The absence of a <code class="inline">known_drainer</code> flag is not a safety guarantee.</li>
+        <li>Not financial advice — the tool reports what a transaction did, not whether it was a good idea.</li>
+      </ul>
+
+      <h2 id="request-format">Request format</h2>
+      <p>The endpoint accepts <strong>POST only</strong> — GET and DELETE return 405. Two headers are required:</p>
+      <ul>
+        <li><code class="inline">Content-Type: application/json</code></li>
+        <li><code class="inline">Accept: application/json, text/event-stream</code></li>
+      </ul>
+      <p>The body is a standard JSON-RPC 2.0 <code class="inline">tools/call</code>:</p>
+      <div class="codeblock">
+        <div class="panel-head"><span>POST /mcp · json-rpc 2.0</span><button class="copy-btn" type="button" data-copy="#req-json">Copy</button></div>
+        <pre><code id="req-json"><span class="tok-punc">{</span>
+  <span class="tok-key">"jsonrpc"</span><span class="tok-punc">:</span> <span class="tok-str">"2.0"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"id"</span><span class="tok-punc">:</span> <span class="tok-num">1</span><span class="tok-punc">,</span>
+  <span class="tok-key">"method"</span><span class="tok-punc">:</span> <span class="tok-str">"tools/call"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"params"</span><span class="tok-punc">: {</span>
+    <span class="tok-key">"name"</span><span class="tok-punc">:</span> <span class="tok-str">"explain_transaction"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"arguments"</span><span class="tok-punc">: {</span>
+      <span class="tok-key">"tx_hash"</span><span class="tok-punc">:</span> <span class="tok-str">"0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c"</span>
+    <span class="tok-punc">}</span>
+  <span class="tok-punc">}</span>
+<span class="tok-punc">}</span></code></pre>
+      </div>
+
+      <h2 id="response-schema">Response schema</h2>
+      <p>Every successful call returns one JSON object with these fields:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Field</th><th>Type</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code class="inline">summary</code></td><td>string</td><td>1–3 sentence plain-English description of what the transaction did.</td></tr>
+            <tr><td><code class="inline">action_type</code></td><td>string</td><td>One of 30 enum values — see below.</td></tr>
+            <tr><td><code class="inline">status</code></td><td>string</td><td><code class="inline">"success"</code> or <code class="inline">"reverted"</code>.</td></tr>
+            <tr><td><code class="inline">assets_moved</code></td><td>array</td><td>Each entry: <code class="inline">token</code>, <code class="inline">amount</code> (decimal string), <code class="inline">from</code>, <code class="inline">to</code>, <code class="inline">token_address</code>, <code class="inline">standard</code>.</td></tr>
+            <tr><td><code class="inline">counterparties</code></td><td>array</td><td>Each entry: <code class="inline">address</code>, <code class="inline">label</code> (string or null). Labels come from a verified table of major Base contracts.</td></tr>
+            <tr><td><code class="inline">risk_flags</code></td><td>array</td><td>Each entry: <code class="inline">flag</code>, <code class="inline">detail</code>. See the flag table below.</td></tr>
+            <tr><td><code class="inline">gas_paid_usd</code></td><td>number</td><td>Total gas cost in USD, including the OP-stack L1 data fee. ETH is priced from the Chainlink ETH/USD feed at the transaction's block.</td></tr>
+            <tr><td><code class="inline">timestamp</code></td><td>—</td><td>Block timestamp of the transaction.</td></tr>
+            <tr><td><code class="inline">block_number</code></td><td>number</td><td>Block that included the transaction.</td></tr>
+            <tr><td><code class="inline">tx_hash</code></td><td>string</td><td>The transaction hash, echoed back.</td></tr>
+            <tr><td><code class="inline">basescan_url</code></td><td>string</td><td>Link to the transaction on Basescan.</td></tr>
+            <tr><td><code class="inline">partial</code></td><td>boolean</td><td><code class="inline">true</code> when full meaning could not be established; the summary then says exactly what is and isn't known.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3><code>action_type</code> values</h3>
+      <p>Classification is deterministic and rule-ordered. The full enum, 30 values:</p>
+      <ul class="enum-list">
+        <li>eth_transfer</li>
+        <li>erc20_transfer</li>
+        <li>erc20_approval</li>
+        <li>approval_revoked</li>
+        <li>approval_for_all</li>
+        <li>swap</li>
+        <li>add_liquidity</li>
+        <li>remove_liquidity</li>
+        <li>wrap</li>
+        <li>unwrap</li>
+        <li>nft_mint</li>
+        <li>nft_transfer</li>
+        <li>nft_sale</li>
+        <li>token_mint</li>
+        <li>bridge_in</li>
+        <li>bridge_out</li>
+        <li>lending_supply</li>
+        <li>lending_withdraw</li>
+        <li>lending_borrow</li>
+        <li>lending_repay</li>
+        <li>stake</li>
+        <li>unstake</li>
+        <li>claim</li>
+        <li>batch_transfer</li>
+        <li>account_abstraction_bundle</li>
+        <li>attestation</li>
+        <li>name_registration</li>
+        <li>contract_deployment</li>
+        <li>contract_interaction</li>
+        <li>unknown</li>
+      </ul>
+
+      <h3><code>risk_flags</code> values</h3>
+      <p>A flag always means evidence was found — a failed lookup never produces a flag. Sources: Sourcify and Basescan verification status, the ScamSniffer and MyEtherWallet public blocklists (consumed at runtime, refreshed twice daily), and approval semantics.</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Flag</th><th>Meaning</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code class="inline">unverified_contract</code></td><td>A contract involved has no verified source on Sourcify or Basescan.</td></tr>
+            <tr><td><code class="inline">first_time_counterparty</code></td><td>The sender is interacting with this counterparty for the first time.</td></tr>
+            <tr><td><code class="inline">approval_for_all</code></td><td>The transaction granted an operator approval over an entire collection.</td></tr>
+            <tr><td><code class="inline">unlimited_approval</code></td><td>The transaction granted an effectively unlimited token approval.</td></tr>
+            <tr><td><code class="inline">known_drainer</code></td><td>An involved address appears on the ScamSniffer or MyEtherWallet public blocklists.</td></tr>
+            <tr><td><code class="inline">transaction_reverted</code></td><td>The transaction reverted onchain.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="error-handling">Error handling</h2>
+      <p>Tool-level errors return <code class="inline">isError: true</code> with a body of the shape <code class="inline">{ "error": "...", "code": "..." }</code>:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Code</th><th>Meaning</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code class="inline">invalid_hash</code></td><td><code class="inline">tx_hash</code> is not <code class="inline">0x</code> followed by 64 hex characters.</td></tr>
+            <tr><td><code class="inline">not_found</code></td><td>No transaction with that hash on Base mainnet.</td></tr>
+            <tr><td><code class="inline">pending</code></td><td>The transaction exists but has not been included in a block yet.</td></tr>
+            <tr><td><code class="inline">upstream_error</code></td><td>An upstream data source failed. Safe to retry.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Partial results are not errors.</strong> When full meaning cannot be established, the call succeeds with <code class="inline">partial: true</code> and a summary that says exactly what is and isn't known — the tool never guesses.</p>
+      <p><strong>Rate limiting.</strong> Above 60 requests per minute per client, the server returns JSON-RPC error <code class="inline">-32000</code> with HTTP 429. Back off and retry.</p>
+      <p><strong>Payment required.</strong> Once the free tier is exhausted, the tool response embeds an x402 payment challenge. This is the real challenge from the live server, trimmed:</p>
+      <div class="codeblock">
+        <div class="panel-head"><span>402 challenge · json</span></div>
+        <pre><code><span class="tok-punc">{</span>
+  <span class="tok-key">"x402Version"</span><span class="tok-punc">:</span> <span class="tok-num">2</span><span class="tok-punc">,</span>
+  <span class="tok-key">"error"</span><span class="tok-punc">:</span> <span class="tok-str">"Payment required to access this tool"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"accepts"</span><span class="tok-punc">: [{</span>
+    <span class="tok-key">"scheme"</span><span class="tok-punc">:</span> <span class="tok-str">"exact"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"network"</span><span class="tok-punc">:</span> <span class="tok-str">"eip155:8453"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"amount"</span><span class="tok-punc">:</span> <span class="tok-str">"20000"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"asset"</span><span class="tok-punc">:</span> <span class="tok-str">"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"payTo"</span><span class="tok-punc">:</span> <span class="tok-str">"0xd4ec730ab062f20460727710fce70664948a6bc9"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"maxTimeoutSeconds"</span><span class="tok-punc">:</span> <span class="tok-num">300</span><span class="tok-punc">,</span>
+    <span class="tok-key">"extra"</span><span class="tok-punc">: {</span> <span class="tok-key">"name"</span><span class="tok-punc">:</span> <span class="tok-str">"USD Coin"</span><span class="tok-punc">,</span> <span class="tok-key">"version"</span><span class="tok-punc">:</span> <span class="tok-str">"2"</span> <span class="tok-punc">}</span>
+  <span class="tok-punc">}]</span>
+<span class="tok-punc">}</span></code></pre>
+      </div>
+      <p>An x402-capable agent handles this autonomously; see <a href="#x402-payments">x402 payments</a>.</p>
+
+      <h2 id="examples">Examples</h2>
+      <p>Actual output for a <a href="https://basescan.org/tx/0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c">live Base transaction</a>, trimmed for width — <code class="inline">from</code>/<code class="inline">to</code>/<code class="inline">token_address</code>/<code class="inline">standard</code> on assets, addresses on counterparties, flag details, timestamp, and block number elided:</p>
+      <div class="codeblock">
+        <div class="panel-head"><span>explain_transaction · trimmed output</span></div>
+        <pre><code><span class="tok-punc">{</span>
+  <span class="tok-key">"summary"</span><span class="tok-punc">:</span> <span class="tok-str">"0x401d…f2c5 swapped 0.03 ETH for
+    12,899,422 WNL via Uniswap V4 PoolManager."</span><span class="tok-punc">,</span>
+  <span class="tok-key">"action_type"</span><span class="tok-punc">:</span> <span class="tok-str">"swap"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"status"</span><span class="tok-punc">:</span> <span class="tok-str">"success"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"assets_moved"</span><span class="tok-punc">: [</span>
+    <span class="tok-punc">{</span> <span class="tok-key">"token"</span><span class="tok-punc">:</span> <span class="tok-str">"ETH"</span><span class="tok-punc">,</span>  <span class="tok-key">"amount"</span><span class="tok-punc">:</span> <span class="tok-str">"0.03"</span> <span class="tok-punc">},</span>
+    <span class="tok-punc">{</span> <span class="tok-key">"token"</span><span class="tok-punc">:</span> <span class="tok-str">"WNL"</span><span class="tok-punc">,</span>  <span class="tok-key">"amount"</span><span class="tok-punc">:</span> <span class="tok-str">"12899422.14…"</span> <span class="tok-punc">}</span>
+  <span class="tok-punc">],</span>
+  <span class="tok-key">"counterparties"</span><span class="tok-punc">: [</span>
+    <span class="tok-punc">{</span> <span class="tok-key">"label"</span><span class="tok-punc">:</span> <span class="tok-str">"Uniswap V4 PoolManager"</span> <span class="tok-punc">}</span>
+  <span class="tok-punc">],</span>
+  <span class="tok-key">"risk_flags"</span><span class="tok-punc">: [</span>
+    <span class="tok-punc">{</span> <span class="tok-key">"flag"</span><span class="tok-punc">:</span> <span class="tok-flag">"unverified_contract"</span> <span class="tok-punc">}</span>
+  <span class="tok-punc">],</span>
+  <span class="tok-key">"gas_paid_usd"</span><span class="tok-punc">:</span> <span class="tok-num">0.020562</span><span class="tok-punc">,</span>
+  <span class="tok-key">"tx_hash"</span><span class="tok-punc">:</span> <span class="tok-str">"0x0c84b951051f…9d6c4d8c"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"basescan_url"</span><span class="tok-punc">:</span> <span class="tok-str">"https://basescan.org/tx/0x0c84…"</span><span class="tok-punc">,</span>
+  <span class="tok-key">"partial"</span><span class="tok-punc">:</span> <span class="tok-flag">false</span>
+<span class="tok-punc">}</span></code></pre>
+      </div>
+      <p>A malformed hash comes back as a tool error rather than a decode:</p>
+      <div class="codeblock">
+        <div class="panel-head"><span>error result · isError: true</span></div>
+        <pre><code><span class="tok-punc">{</span> <span class="tok-key">"error"</span><span class="tok-punc">:</span> <span class="tok-str">"..."</span><span class="tok-punc">,</span> <span class="tok-key">"code"</span><span class="tok-punc">:</span> <span class="tok-flag">"invalid_hash"</span> <span class="tok-punc">}</span></code></pre>
+      </div>
+      <p>To try the tool against any transaction from a browser, use the <a href="/playground/">playground</a>.</p>
+
+      <h2 id="x402-payments">x402 payments</h2>
+      <p>Payment is part of the protocol, not a separate billing system. The loop:</p>
+      <ol>
+        <li><strong>Call.</strong> The client calls the tool as usual. Past the free tier, the tool response embeds the 402-style challenge shown in <a href="#error-handling">Error handling</a>.</li>
+        <li><strong>Pay.</strong> The challenge carries everything needed: scheme, network, amount, asset, and recipient. The client pays in USDC on Base through the x402 facilitator.</li>
+        <li><strong>Retry.</strong> The client retries the call with proof of payment attached and receives the result. An x402-capable agent runs this loop autonomously — no human, no signup.</li>
+      </ol>
+      <p>Reading the challenge: <code class="inline">"amount": "20000"</code> is denominated in 6-decimal USDC units, so 20000 = $0.02. <code class="inline">asset</code> is the canonical USDC contract on Base, <code class="inline">payTo</code> is the receiving address, and <code class="inline">network</code> is <code class="inline">eip155:8453</code> — Base mainnet.</p>
+      <p><strong>Non-custodial.</strong> The x402 facilitator (PayAI) verifies and settles payments but cannot move or redirect funds. The server never holds user assets and never asks for private keys.</p>
+
+      <h2 id="usage">Usage</h2>
+      <ul>
+        <li><strong>Free tier</strong> — the first 10 calls per client are free, with no signup. After that, each call is paid via x402.</li>
+        <li><strong>Rate limit</strong> — 60 requests per minute per client. Exceeding it returns JSON-RPC error <code class="inline">-32000</code> with HTTP 429.</li>
+        <li><strong>Statelessness</strong> — the server keeps no sessions and no database, and a fresh MCP server is created per request. Calls are independent and deterministic, so parallelizing and retrying are always safe.</li>
+      </ul>
+
+      <h2 id="pricing">Pricing</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Tier</th><th>Price</th><th>Notes</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Free tier</td><td>$0</td><td>First 10 calls per client. No signup.</td></tr>
+            <tr><td>Per call</td><td>$0.02</td><td>USDC on Base via x402, paid per call.</td></tr>
+            <tr><td>Marketplace-hosted</td><td>Flat-rate</td><td>Marketplace billing applies.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>No accounts, no API keys, no minimums. Self-hosting is free under an MIT-style license — see <a href="#installation">Installation</a>.</p>
+
+    </article>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/" aria-label="0200project home">
+          <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+          0200project
+        </a>
+        <p>Machine-native tools for autonomous AI agents.</p>
+      </div>
+      <nav aria-label="Product">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/tools/">Tools</a></li>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/docs/#request-format">API</a></li>
+          <li><a href="/changelog/">Changelog</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Developers">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="https://github.com/0200project">GitHub</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io">MCP Registry</a></li>
+          <li><a href="/status/">Status</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Company">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/#about">About</a></li>
+          <li><a href="/security/">Security</a></li>
+          <li><a href="mailto:contact@0200project.com">Contact</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 0200project</span>
+      <span>Built for autonomous software.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/site.js" defer></script>
+</body>
+</html>
