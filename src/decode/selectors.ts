@@ -1,5 +1,6 @@
 import { toFunctionSelector, type Hex } from 'viem';
 import { DAY, TtlCache } from '../cache.js';
+import { sanitizeSymbol } from './tokens.js';
 
 /** Coarse intent hint derived from the called function, used as a tiebreaker by the classifier. */
 export type SelectorHint =
@@ -141,7 +142,13 @@ export async function lookupSelector(selector: Hex): Promise<BuiltinSelector | n
       const entries = body.result?.function?.[selector];
       const name = entries?.[0]?.name;
       if (!name) return null;
-      return { name: name.slice(0, name.indexOf('(')), hint: inferHint(name) };
+      // The signature is community-submitted (anyone can register a selector's
+      // "name") and flows into the summary as "(function: X)". Sanitize it the
+      // same way as token symbols before it becomes attacker-controlled prose;
+      // hint inference still reads the raw signature (never shown to the user).
+      const fnName = sanitizeSymbol(name.slice(0, name.indexOf('(')));
+      if (!fnName) return null;
+      return { name: fnName, hint: inferHint(name) };
     } catch {
       return null;
     }

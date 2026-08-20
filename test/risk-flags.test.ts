@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   verified: new Set<string>(), // addresses to report as verified; everything else is 'unverified'
   firstTime: new Set<string>(), // addresses for which isFirstInteraction returns true
   drainers: new Set<string>(), // addresses on the drainer blocklist
+  supply: new Map<string, bigint | null>(), // token address -> totalSupply (null = read failed)
 }));
 
 vi.mock('../src/risk/verification.js', () => ({
@@ -22,6 +23,14 @@ vi.mock('../src/risk/firstTime.js', () => ({
 vi.mock('../src/risk/drainers.js', () => ({
   isKnownDrainer: async (addr: string) => state.drainers.has(addr.toLowerCase()),
 }));
+// Partial mock: keep the real shortAddress/sanitizeSymbol, stub the network read.
+vi.mock('../src/decode/tokens.js', async (importActual) => {
+  const actual = await importActual<typeof import('../src/decode/tokens.js')>();
+  return {
+    ...actual,
+    getTokenSupply: async (addr: string) => state.supply.get(addr.toLowerCase()) ?? null,
+  };
+});
 
 import { buildRiskFlags } from '../src/risk/flags.js';
 
@@ -53,6 +62,7 @@ beforeEach(() => {
   state.verified.clear();
   state.firstTime.clear();
   state.drainers.clear();
+  state.supply.clear();
 });
 
 describe('buildRiskFlags — approval trust target resolution', () => {
@@ -142,5 +152,47 @@ describe('buildRiskFlags — approval trust target resolution', () => {
     });
     expect(flagCodes(flags)).toContain('known_drainer');
     expect(detailFor(flags, 'known_drainer')).toContain(short(ATTACKER));
+  });
+});
+
+describe('buildRiskFlags — unlimited_approval via totalSupply', () => {
+  const approve = (value: bigint) =>
+    buildRiskFlags({
+      from: SENDER,
+      to: USDC,
+      blockNumber: 1000n,
+      reverted: false,
+      classification: { action: 'erc20_approval', detail: {} },
+      events: [approvalEvent(ATTACKER, value)],
+      movements: [],
+    });
+
+  it('flags an approval at or above the token total supply', async () => {
+    state.supply.set(USDC.toLowerCase(), 1_000_000_000n);
+    const flags = await approve(1_000_000_000n);
+    expect(flagCodes(flags)).toContain('unlimited_approval');
+    expect(detailFor(flags, 'unlimited_approval')).toContain('circulating supply');
+  });
+
+  it('does NOT flag a bounded approval below total supply', async () => {
+    state.supply.set(USDC.toLowerCase(), 1_000_000_000n);
+    const flags = await approve(1_000n);
+    expect(flagCodes(flags)).not.toContain('unlimited_approval');
+  });
+
+  it('catches the 2^128-1 evasion when supply is known (the old fixed-threshold gap)', async () => {
+    // 2^128 - 1 slips under the old `value >= 2^128` rule, but it is astronomically
+    // larger than any real token supply, so the supply comparison still flags it.
+    state.supply.set(USDC.toLowerCase(), 1_000_000n);
+    const flags = await approve(2n ** 128n - 1n);
+    expect(flagCodes(flags)).toContain('unlimited_approval');
+  });
+
+  it('falls back to the 2^128 rule when the supply read is unavailable', async () => {
+    // supply unknown (null) → old behavior: >= 2^128 flags, 2^128-1 does not.
+    const atThreshold = await approve(2n ** 128n);
+    expect(flagCodes(atThreshold)).toContain('unlimited_approval');
+    const belowThreshold = await approve(2n ** 128n - 1n);
+    expect(flagCodes(belowThreshold)).not.toContain('unlimited_approval');
   });
 });

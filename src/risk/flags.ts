@@ -2,7 +2,7 @@ import type { Address } from 'viem';
 import type { Classification } from '../decode/classify.js';
 import { isUnlimitedApproval } from '../decode/classify.js';
 import type { DecodedEvent } from '../decode/events.js';
-import { shortAddress } from '../decode/tokens.js';
+import { getTokenSupply, shortAddress } from '../decode/tokens.js';
 import { getLabel } from '../labels.js';
 import type { AssetMovement, RiskFlag } from '../types.js';
 import { isKnownDrainer } from './drainers.js';
@@ -44,18 +44,34 @@ export async function buildRiskFlags(ctx: FlagContext): Promise<RiskFlag[]> {
         detail: `Granted ${operatorLabel ?? shortAddress(operator)} operator control over ALL tokens in collection ${shortAddress(e.emitter)} — this permits future transfers without further signatures.`,
       });
     }
-    if (e.kind === 'erc20_approval') {
-      const value = e.args.value as bigint | undefined;
-      if (value !== undefined && isUnlimitedApproval(value)) {
+  }
+
+  // Unlimited-approval detection. A fixed 2^128 threshold is evadable (grant
+  // 2^128 - 1 and stay under it), so prefer the token's own totalSupply: an
+  // allowance at or above the entire supply can never be a real, bounded amount.
+  // Fall back to the 2^128 rule only when the supply read is unavailable.
+  const unlimitedFlags = await Promise.all(
+    events
+      .filter((e) => e.kind === 'erc20_approval')
+      .map(async (e) => {
+        const value = e.args.value as bigint | undefined;
+        if (value === undefined) return null;
+        const supply = await getTokenSupply(e.emitter);
+        const bounded = supply !== null && supply > 0n;
+        const unlimited = bounded ? value >= supply : isUnlimitedApproval(value);
+        if (!unlimited) return null;
         const spender = String(e.args.spender ?? '');
         const spenderLabel = getLabel(spender)?.label;
-        flags.push({
-          flag: 'unlimited_approval',
-          detail: `Approved ${spenderLabel ?? shortAddress(spender)} to spend an effectively unlimited amount of token ${shortAddress(e.emitter)}.`,
-        });
-      }
-    }
-  }
+        const scope = bounded
+          ? `more than the entire circulating supply of token ${shortAddress(e.emitter)}`
+          : `an effectively unlimited amount of token ${shortAddress(e.emitter)}`;
+        return {
+          flag: 'unlimited_approval' as const,
+          detail: `Approved ${spenderLabel ?? shortAddress(spender)} to spend ${scope}.`,
+        };
+      }),
+  );
+  for (const f of unlimitedFlags) if (f) flags.push(f);
 
   // Addresses that gained power or received the sender's assets in this tx.
   const exposedAddresses = new Set<string>();

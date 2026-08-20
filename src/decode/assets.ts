@@ -20,7 +20,7 @@ interface TxContext {
 export async function buildAssetsMoved(
   events: DecodedEvent[],
   tx: TxContext,
-): Promise<{ movements: AssetMovement[]; truncated: boolean }> {
+): Promise<{ movements: AssetMovement[]; truncated: boolean; nonStandardSymbols: string[] }> {
   const movements: AssetMovement[] = [];
 
   if (tx.value > 0n && tx.to) {
@@ -52,11 +52,17 @@ export async function buildAssetsMoved(
   const metaByAddress = new Map(erc20Metas);
   const nameByAddress = new Map(nftNames);
 
+  // Tokens whose self-reported symbol was not a standard ticker (shown as their
+  // address instead). Surfaced as a risk flag by the caller.
+  const nonStandardSymbols = [...metaByAddress.entries()]
+    .filter(([, m]) => m && m.standardSymbol === false)
+    .map(([a]) => a as string);
+
   const wethLower = tx.wethAddress.toLowerCase();
 
   for (const e of events) {
     if (movements.length >= MAX_MOVEMENTS) {
-      return { movements, truncated: true };
+      return { movements, truncated: true, nonStandardSymbols };
     }
     const a = e.args;
     switch (e.kind) {
@@ -151,7 +157,7 @@ export async function buildAssetsMoved(
     }
   }
 
-  return { movements, truncated: false };
+  return { movements, truncated: false, nonStandardSymbols };
 }
 
 /**

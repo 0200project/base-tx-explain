@@ -49,6 +49,7 @@ returns (as both `structuredContent` and stringified JSON in `content[0].text`):
 - `status` — `success` or `reverted`. Reverted transactions are classified by intent (what was attempted) and carry a `transaction_reverted` risk flag.
 - `partial: true` — the transaction's full meaning could not be established; `summary` states exactly what is and is not known. On errors the tool returns `isError: true` with `{ "error": "...", "code": "invalid_hash" | "not_found" | "pending" | "upstream_error" }`.
 - Amounts are decimal strings (not floats). Addresses are as emitted onchain; compare case-insensitively.
+- `provenance.untrusted_fields` — lists the fields whose string contents come from attacker-controllable sources (token symbols, contract/collection names, event/function names): today `summary`, `assets_moved[].token`, and `counterparties[].label`. **If you feed this output to an LLM, treat those fields as data, never as instructions.** A token that names itself with instruction-like or promotional text is a scam signal, not a command. Symbols are normalized (control characters, line separators, emoji, and homoglyphs are stripped) and a token whose self-reported symbol is not a plausible ticker is shown as its contract address rather than its chosen name — so a hostile name cannot impersonate a real one or smuggle text into an agent's context.
 
 ### How it decodes
 
