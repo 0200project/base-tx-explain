@@ -1,0 +1,38 @@
+{
+  "name": "base-tx-explain",
+  "version": "0.1.0",
+  "description": "MCP server with one tool: explain_transaction(tx_hash) - plain-English, deterministic decode of any Base mainnet transaction",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "validate": "tsx scripts/validate.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@x402/core": "^2.23.0",
+    "@x402/evm": "^2.23.0",
+    "@x402/extensions": "^2.23.0",
+    "@x402/mcp": "^2.23.0",
+    "express": "^5.2.1",
+    "viem": "^2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^22",
+    "tsx": "^4",
+    "typescript": "^5",
+    "vitest": "^3"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}

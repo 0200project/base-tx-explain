@@ -1,0 +1,12 @@
+{
+  "actorSpecification": 1,
+  "name": "base-tx-explain",
+  "title": "Base Transaction Explainer (MCP server)",
+  "description": "MCP server with one tool: explain_transaction(tx_hash). Plain-English, deterministic decode of any Base mainnet transaction - summary, action type, assets moved, counterparties, risk flags, gas in USD. No LLM in the response path.",
+  "version": "0.1",
+  "usesStandbyMode": true,
+  "webServerMcpPath": "/mcp",
+  "minMemoryMbytes": 256,
+  "maxMemoryMbytes": 1024,
+  "dockerfile": "./Dockerfile"
+}
