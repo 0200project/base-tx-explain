@@ -1,6 +1,6 @@
 {
   "name": "base-tx-explain",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server with one tool: explain_transaction(tx_hash) - plain-English, deterministic decode of any Base mainnet transaction",
   "type": "module",
   "private": true,

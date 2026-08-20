@@ -9,11 +9,17 @@ primary_region = 'iad'
 [build]
 [env]
   BASE_RPC_URLS = 'https://mainnet.base.org,https://base-rpc.publicnode.com,https://base.llamarpc.com'
+  DATA_DIR = '/data'
   FREE_CALLS_PER_IP = '10'
   PAYMENT_MODE = 'x402'
   X402_FACILITATOR_URL = 'https://facilitator.payai.network'
   X402_PAY_TO = '0xd4ec730ab062f20460727710fce70664948a6bc9'
   X402_PRICE_USD = '0.02'
+
+# One machine, one volume: the usage ledger is a single-writer append log.
+[mounts]
+  source = 'data'
+  destination = '/data'
 
 [http_service]
   internal_port = 3000

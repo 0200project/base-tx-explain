@@ -14,6 +14,12 @@ export function consumeFreeCall(ip: string): boolean {
   return true;
 }
 
+/** Return a consumed free call, e.g. when the decode failed on our side. */
+export function refundFreeCall(ip: string): void {
+  const used = freeCalls.get(ip) ?? 0;
+  if (used > 0) freeCalls.set(ip, used - 1);
+}
+
 const RATE_LIMIT_PER_MINUTE = 60;
 
 /** Coarse per-IP request throttle so a single client cannot exhaust upstream RPC quota. */

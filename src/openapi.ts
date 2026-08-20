@@ -57,7 +57,12 @@ const EXPLAIN_RESULT_SCHEMA = {
   required: ['summary', 'action_type', 'status', 'assets_moved', 'counterparties', 'risk_flags', 'gas_paid_usd', 'timestamp', 'basescan_url'],
 } as const;
 
-export function buildOpenApiDocument(version: string, priceUsd: string, paid: boolean): Record<string, unknown> {
+export function buildOpenApiDocument(
+  version: string,
+  priceUsd: string,
+  paid: boolean,
+  publicUrl: string,
+): Record<string, unknown> {
   const operation: Record<string, unknown> = {
     operationId: 'explain_transaction',
     summary: 'Explain a Base mainnet transaction in plain English (MCP tools/call)',
@@ -120,7 +125,35 @@ export function buildOpenApiDocument(version: string, priceUsd: string, paid: bo
           },
         },
       },
-      '402': { description: 'Payment Required' },
+      '402': {
+        description:
+          'Payment Required. The x402 v2 challenge is returned both in the JSON body and base64-encoded in the PAYMENT-REQUIRED response header.',
+        content: {
+          'application/json': {
+            schema: {
+              type: 'object',
+              properties: {
+                x402Version: { type: 'number', const: 2 },
+                error: { type: 'string' },
+                resource: {
+                  type: 'object',
+                  properties: {
+                    url: { type: 'string' },
+                    description: { type: 'string' },
+                    mimeType: { type: 'string' },
+                  },
+                },
+                accepts: {
+                  type: 'array',
+                  description: 'x402 payment requirements: scheme, network, asset, amount in atomic units, payTo',
+                  items: { type: 'object' },
+                },
+              },
+              required: ['x402Version', 'accepts'],
+            },
+          },
+        },
+      },
     },
   };
   if (paid) {
@@ -132,9 +165,13 @@ export function buildOpenApiDocument(version: string, priceUsd: string, paid: bo
 
   return {
     openapi: '3.1.0',
+    servers: [{ url: publicUrl, description: 'Production' }],
+    externalDocs: { url: 'https://0200project.github.io/docs/', description: 'Full documentation' },
     info: {
       title: 'base-tx-explain',
       version,
+      contact: { name: '0200project', url: 'https://github.com/0200project/base-tx-explain/issues' },
+      license: { name: 'MIT', identifier: 'MIT' },
       description:
         'Plain-English, deterministic decode of any Base mainnet transaction. Strict JSON: summary, action type, assets moved, labeled counterparties, risk flags, gas in USD. No LLM in the response path.',
       'x-guidance':

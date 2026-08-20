@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { HTTPFacilitatorClient, x402ResourceServer } from '@x402/core/server';
@@ -8,13 +8,17 @@ import { createPaymentWrapper, type ToolResult } from '@x402/mcp';
 import express from 'express';
 import * as z from 'zod/v4';
 import { ExplainError, explainTransaction } from './explain.js';
+import { FAVICON_PNG } from './favicon.js';
 import { buildOpenApiDocument } from './openapi.js';
-import { consumeFreeCall, withinRateLimit } from './freeTier.js';
+import { consumeFreeCall, refundFreeCall, withinRateLimit } from './freeTier.js';
+import { initUsageLedger, recordEvent, usageSnapshot } from './usage.js';
 
-const VERSION = '0.1.0';
+const VERSION = '0.1.1';
 const NETWORK = 'eip155:8453' as const; // Base mainnet
 const PAYMENT_MODE = process.env.PAYMENT_MODE === 'x402' ? 'x402' : 'none';
 const PRICE_USD = process.env.X402_PRICE_USD ?? '0.02';
+const PUBLIC_URL = (process.env.PUBLIC_URL ?? 'https://base-tx-explain.fly.dev').replace(/\/$/, '');
+const SITE_URL = 'https://0200project.github.io';
 
 const TOOL_NAME = 'explain_transaction';
 const TOOL_DESCRIPTION =
@@ -60,8 +64,10 @@ let paidHandler: ((args: { tx_hash: string }, extra: unknown) => Promise<Record<
  */
 let httpPaymentRequired: Record<string, unknown> | null = null;
 
+// An https resource URL: x402 indexers (Bazaar, x402scan) group and link
+// resources by URL and may drop non-https schemes.
 const RESOURCE_INFO = {
-  url: `mcp://tool/${TOOL_NAME}`,
+  url: `${PUBLIC_URL}/mcp`,
   description: TOOL_DESCRIPTION,
   mimeType: 'application/json',
   serviceName: 'base-tx-explain',
@@ -113,6 +119,14 @@ async function initPayments(): Promise<void> {
       },
       onAfterSettlement: ({ settlement }) => {
         console.log('[x402] SETTLED:', JSON.stringify(settlement).slice(0, 400));
+        recordEvent({
+          t: new Date().toISOString(),
+          e: 'settled',
+          client: settlement.payer ?? 'unknown',
+          amount_usd: Number.parseFloat(PRICE_USD),
+          payer: settlement.payer,
+          tx: settlement.transaction,
+        });
       },
     },
   });
@@ -135,10 +149,25 @@ async function initPayments(): Promise<void> {
 /**
  * Stateless streamable HTTP: a fresh McpServer per request. `charge` decides
  * whether this request's tool call goes through the x402 payment wrapper.
+ * Free calls that die on our side (degraded RPC, internal error) are refunded
+ * to the client's tier; invalid input still costs the call. Paid calls never
+ * settle on error - the payment wrapper cancels settlement for isError results.
  */
-function getServer(charge: boolean): McpServer {
+function getServer(charge: boolean, ip: string): McpServer {
   const server = new McpServer({ name: 'base-tx-explain', version: VERSION });
-  const handler = charge && paidHandler ? paidHandler : runExplain;
+  const freeHandler = async (args: { tx_hash: string }): Promise<ToolResult> => {
+    const result = await runExplain(args);
+    if (PAYMENT_MODE === 'x402' && result.isError) {
+      try {
+        const code = JSON.parse((result.content[0] as { text: string }).text).code as string;
+        if (code === 'upstream_error' || code === 'internal_error') refundFreeCall(ip);
+      } catch {
+        /* unparseable error payload; keep the call consumed */
+      }
+    }
+    return result;
+  };
+  const handler = charge && paidHandler ? paidHandler : freeHandler;
   server.registerTool(
     TOOL_NAME,
     {
@@ -152,8 +181,22 @@ function getServer(charge: boolean): McpServer {
 }
 
 const app = express();
-app.set('trust proxy', true);
+// Trust exactly one proxy hop (Fly's edge). `trust proxy: true` trusted the
+// whole client-supplied X-Forwarded-For chain, which let anyone mint a fresh
+// free tier per request with a forged header.
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '256kb' }));
+
+// On Fly the edge stamps Fly-Client-IP itself; elsewhere fall back to
+// Express's rightmost-untrusted-hop resolution.
+const ON_FLY = Boolean(process.env.FLY_APP_NAME);
+const clientIpOf = (req: express.Request): string => {
+  if (ON_FLY) {
+    const flyIp = req.headers['fly-client-ip'];
+    if (typeof flyIp === 'string' && flyIp) return flyIp;
+  }
+  return req.ip ?? 'unknown';
+};
 
 // Root responds instantly: humans, uptime checks, and the Apify standby
 // readiness probe (which GETs / with x-apify-container-server-readiness-probe).
@@ -161,18 +204,97 @@ app.get('/', (_req, res) => {
   res
     .status(200)
     .type('text/plain')
-    .send(`base-tx-explain v${VERSION} - MCP server (streamable HTTP) at POST /mcp\nTool: ${TOOL_NAME}(tx_hash) - Base mainnet only.\n`);
+    .send(
+      `base-tx-explain v${VERSION} - MCP server (streamable HTTP) at POST /mcp\n` +
+        `Tool: ${TOOL_NAME}(tx_hash) - Base mainnet only.\n` +
+        `\n` +
+        `OpenAPI:  ${PUBLIC_URL}/openapi.json\n` +
+        `Health:   ${PUBLIC_URL}/healthz\n` +
+        `Docs:     ${SITE_URL}/docs/\n` +
+        `Registry: io.github.0200project/base-tx-explain (registry.modelcontextprotocol.io)\n` +
+        `Pricing:  10 free calls per client, then $${PRICE_USD}/call in USDC on Base via x402.\n`,
+    );
+});
+
+// Machine-readable map for agents probing the origin they were handed.
+app.get('/llms.txt', (_req, res) => {
+  res
+    .status(200)
+    .type('text/plain')
+    .send(
+      `# base-tx-explain\n\n` +
+        `> One MCP tool: explain_transaction(tx_hash) -> strict JSON explanation of any Base mainnet (chain id 8453) transaction. Deterministic onchain decode, no LLM in the response path.\n\n` +
+        `MCP endpoint (streamable HTTP): POST ${PUBLIC_URL}/mcp\n` +
+        `Pricing: first 10 calls free per client, then $${PRICE_USD} per call in USDC on Base via x402 (payment challenge is returned in-band; attach payment at _meta["x402/payment"] and retry). No account, no API key.\n\n` +
+        `## Contracts\n\n` +
+        `- [OpenAPI](${PUBLIC_URL}/openapi.json): request/response schemas for the tools/call envelope\n` +
+        `- [Health](${PUBLIC_URL}/healthz): liveness and demand counters\n\n` +
+        `## Docs\n\n` +
+        `- [Documentation](${SITE_URL}/docs/): request format, field contract, x402 payment loop, self-hosting\n` +
+        `- [Site](${SITE_URL}/): product overview\n` +
+        `- [Source](https://github.com/0200project/base-tx-explain)\n` +
+        `- MCP registry name: io.github.0200project/base-tx-explain\n`,
+    );
+});
+
+app.get('/robots.txt', (_req, res) => {
+  res.status(200).type('text/plain').send('User-agent: *\nAllow: /\n');
+});
+
+// Discovery crawlers (x402scan among them) probe /favicon.ico for a site icon.
+app.get('/favicon.ico', (_req, res) => {
+  res.status(200).type('image/png').set('Cache-Control', 'public, max-age=86400').send(FAVICON_PNG);
 });
 // Since-boot demand counters: enough to see whether strangers are calling,
 // deliberately nothing that identifies them.
 const metrics = { tool_calls: 0, free: 0, paywalled: 0, booted_at: new Date().toISOString() };
 
 app.get('/healthz', (_req, res) => {
-  res.status(200).json({ ok: true, version: VERSION, payment_mode: PAYMENT_MODE, metrics });
+  const snapshot = usageSnapshot(1) as { lifetime: Record<string, unknown> };
+  res
+    .status(200)
+    .set('Access-Control-Allow-Origin', '*')
+    .json({ ok: true, version: VERSION, payment_mode: PAYMENT_MODE, metrics, lifetime: snapshot.lifetime });
+});
+
+// Founder stats: full daily series behind a bearer token. Absent token
+// config keeps the endpoint dark. CORS is open because the dashboard is a
+// static page on another origin and the token is the actual gate.
+const STATS_TOKEN = process.env.STATS_TOKEN ?? '';
+app.options('/stats', (_req, res) => {
+  res
+    .set('Access-Control-Allow-Origin', '*')
+    .set('Access-Control-Allow-Headers', 'authorization, x-stats-token')
+    .status(204)
+    .end();
+});
+app.get('/stats', (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  if (!STATS_TOKEN) {
+    res.status(404).json({ error: 'stats not enabled' });
+    return;
+  }
+  const presented =
+    (req.headers['x-stats-token'] as string | undefined) ??
+    String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+  // Hash both sides so timingSafeEqual gets equal-length buffers.
+  const a = createHash('sha256').update(presented).digest();
+  const b = createHash('sha256').update(STATS_TOKEN).digest();
+  if (!timingSafeEqual(a, b)) {
+    res.status(401).json({ error: 'bad token' });
+    return;
+  }
+  res.status(200).json({
+    version: VERSION,
+    payment_mode: PAYMENT_MODE,
+    price_usd: PRICE_USD,
+    since_boot: metrics,
+    ...usageSnapshot(30),
+  });
 });
 
 // Canonical machine-readable contract for discovery indexers (x402scan et al.).
-const openApiDocument = buildOpenApiDocument(VERSION, PRICE_USD, PAYMENT_MODE === 'x402');
+const openApiDocument = buildOpenApiDocument(VERSION, PRICE_USD, PAYMENT_MODE === 'x402', PUBLIC_URL);
 app.get('/openapi.json', (_req, res) => {
   res.status(200).json(openApiDocument);
 });
@@ -194,8 +316,24 @@ function send402(res: express.Response): void {
     .json(httpPaymentRequired);
 }
 
+// Browser clients (the site playground) need CORS; the payment challenge
+// header must be exposed for the pay-and-retry loop to work from a page.
+const MCP_CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Expose-Headers': 'PAYMENT-REQUIRED, mcp-session-id',
+};
+app.options('/mcp', (_req, res) => {
+  res
+    .set(MCP_CORS)
+    .set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+    .set('Access-Control-Allow-Headers', 'content-type, accept, authorization, mcp-protocol-version, mcp-session-id, last-event-id')
+    .status(204)
+    .end();
+});
+
 app.post('/mcp', async (req, res) => {
-  const ip = req.ip ?? 'unknown';
+  res.set(MCP_CORS);
+  const ip = clientIpOf(req);
   if (!withinRateLimit(ip)) {
     res.status(429).json({
       jsonrpc: '2.0',
@@ -213,13 +351,26 @@ app.post('/mcp', async (req, res) => {
   }
 
   const messages = Array.isArray(req.body) ? req.body : [req.body];
-  const isToolCall = messages.some((m) => m?.method === 'tools/call');
+  const toolCallCount = messages.filter((m) => m?.method === 'tools/call').length;
+  const isToolCall = toolCallCount > 0;
+
+  // JSON-RPC batching was removed in MCP 2025-06-18, but older clients can
+  // still send arrays; N executions must not ride on one free call.
+  if (toolCallCount > 1) {
+    res.status(400).json({
+      jsonrpc: '2.0',
+      error: { code: -32600, message: 'Batched tools/call requests are not supported; send one call per request.' },
+      id: null,
+    });
+    return;
+  }
 
   let charge = false;
+  let hasPayment = false;
   if (PAYMENT_MODE === 'x402' && isToolCall) {
     // A retry that already carries a payment must charge (and must not burn
     // a free call); otherwise a free call is consumed if any remain.
-    const hasPayment = messages.some((m) => m?.params?._meta?.['x402/payment'] !== undefined);
+    hasPayment = messages.some((m) => m?.params?._meta?.['x402/payment'] !== undefined);
     charge = hasPayment || !consumeFreeCall(ip);
   }
 
@@ -228,10 +379,11 @@ app.post('/mcp', async (req, res) => {
     if (charge) metrics.paywalled++;
     else metrics.free++;
     const ipTag = createHash('sha256').update(`btx:${ip}`).digest('hex').slice(0, 8);
-    console.log(`[call] ${new Date().toISOString()} ${charge ? 'paywalled' : 'free'} client=${ipTag}`);
+    console.log(`[call] ${new Date().toISOString()} ${charge ? (hasPayment ? 'paid-retry' : 'paywalled') : 'free'} client=${ipTag}`);
+    recordEvent({ t: new Date().toISOString(), e: 'call', charge, paid: hasPayment, client: ipTag });
   }
 
-  const server = getServer(charge);
+  const server = getServer(charge, ip);
   try {
     const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
     res.on('close', () => {
@@ -257,6 +409,7 @@ const methodNotAllowed = (_req: express.Request, res: express.Response) => {
   res.status(405).json({ jsonrpc: '2.0', error: { code: -32000, message: 'Method not allowed.' }, id: null });
 };
 app.get('/mcp', (req, res) => {
+  res.set(MCP_CORS);
   if (httpPaymentRequired && !isMcpClient(req)) {
     send402(res);
     return;
@@ -269,6 +422,8 @@ const port = Number.parseInt(
   process.env.ACTOR_WEB_SERVER_PORT ?? process.env.PORT ?? '3000',
   10,
 );
+
+initUsageLedger();
 
 initPayments()
   .then(() => {
