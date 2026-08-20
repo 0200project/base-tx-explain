@@ -93,6 +93,67 @@ export const LABELS: Record<string, AddressLabel> = {
   // --- Oracles / misc ---
   '0x71041dddad3595f9ced3dccfbe3d1f4b0a16bb70': { label: 'Chainlink ETH/USD Feed', category: 'infra' },
   '0xd152f549545093347a162dce210e7293f1452150': { label: 'Disperse.app', category: 'other' },
+
+  // --- Tokens: canonical issuances. The impersonation guard treats these as
+  // the real contract for their ticker, so an addition here is a trust
+  // assertion, not decoration. Every one verified from the issuer AND read
+  // back on-chain (symbol + decimals) before being added.
+  '0xfde4c96c8593536e31f229ea8f37b2ada2699bb2': { label: 'USDT', category: 'token' },
+  '0x60a3e35cc302bfa44cb288bc5a4f316fdb1adb42': { label: 'EURC', category: 'token' },
+  '0x820c137fa70c8691f0e44dc420a5e53c168921dc': { label: 'USDS', category: 'token' },
+  '0x5875eee11cf8398102fdad704c9e96607675467a': { label: 'sUSDS', category: 'token' },
+  '0x6bb7a212910682dcfdbd5bcbb3e28fb4e8da10ee': { label: 'GHO', category: 'token' },
+  '0xc1cba3fcea344f92d9239c08c0568f6f2f0ee452': { label: 'wstETH', category: 'token' },
+  '0x04c0599ae5a44757c0af6f9ec3b93da8976c150a': { label: 'weETH', category: 'token' },
+  '0xb6fe221fe9eef5aba221c348ba20a1bf5e73624c': { label: 'rETH', category: 'token' },
+  '0x2416092f143378750bb29b79ed961ab195cceea5': { label: 'ezETH', category: 'token' },
+  '0x236aa50979d5f3de3bd1eeb40e81137f22ab794b': { label: 'tBTC', category: 'token' },
+  '0xecac9c5f704e954931349da37f60e39f515c11c1': { label: 'LBTC', category: 'token' },
+
+  // --- Lending ---
+  '0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb': { label: 'Morpho Blue', category: 'lending' },
+  '0xff62a7c278c62ed665133147129245053bbf5918': { label: 'MetaMorpho Factory', category: 'lending' },
+  '0x4501125508079a99ebbebce205dec9593c2b5857': { label: 'Morpho Vault V2 Factory', category: 'lending' },
+
+  // --- DEX / AMM ---
+  '0xfdf682f51fe81aa4898f0ae2163d8a55c127fbc7': { label: 'Uniswap Universal Router', category: 'dex' },
+  '0x7c5f5a4bbd8fd63184577525326123b519429bdc': { label: 'Uniswap V4 Position Manager', category: 'dex' },
+  '0xbe6d8f0d05cc4be24d5167a3ef062215be6d18a5': { label: 'Aerodrome Slipstream Router', category: 'dex' },
+  '0x698cb2b6dd822994581fea6ea4fc755d1363a92f': { label: 'Aerodrome Slipstream Router', category: 'dex' },
+  '0x827922686190790b37229fd06084350e74485b72': { label: 'Aerodrome Slipstream Position Manager', category: 'dex' },
+  '0xe1f8cd9ac4e4a65f54f38a5cdafca44f6dd68b53': { label: 'Aerodrome Slipstream Position Manager', category: 'dex' },
+  '0x5e7bb104d84c7cb9b682aac2f3d509f5f406809a': { label: 'Aerodrome Slipstream Factory', category: 'dex' },
+  '0xf8f2eb4940cfe7d13603dddd87f123820fc061ef': { label: 'Aerodrome Slipstream Factory', category: 'dex' },
+  '0x16613524e02ad97edfef371bc883f2f5d6c480a5': { label: 'Aerodrome Voter', category: 'dex' },
+  '0xba12222222228d8ba445958a75a0704d566bf2c8': { label: 'Balancer V2 Vault', category: 'dex' },
+  '0xba1333333333a1ba1108e8412f11850a5c319ba9': { label: 'Balancer V3 Vault', category: 'dex' },
+  '0x3f170631ed9821ca51a59d996ab095162438dc10': { label: 'Balancer V3 Router', category: 'dex' },
+  '0x85a80afee867adf27b50bdb7b76da70f1e853062': { label: 'Balancer V3 BatchRouter', category: 'dex' },
+  '0x4f37a9d177470499a2dd084621020b023fcffc1f': { label: 'Curve Router', category: 'dex' },
+  '0x888888888889758f76e7103c6cbf23abbf58f946': { label: 'Pendle Router', category: 'dex' },
+  '0x81e80a50e56d10c501ff17b5fe2f662bd9ea4590': { label: 'Pendle Market Factory', category: 'dex' },
+
+  // --- Bridges and cross-chain messaging ---
+  '0x1a44076050125825900e736c501f859c50fe728c': { label: 'LayerZero EndpointV2', category: 'bridge' },
+
+  // --- NFT / creator platforms ---
+  '0x777777722d078c97c6ad07d9f36801e653e356ae': { label: 'Zora Timed Sale Strategy', category: 'nft_marketplace' },
+
+  // --- Registries ---
+  '0x00000000fc84484d585c3cf48d213424dfde43fd': { label: 'Farcaster Tier Registry', category: 'registry' },
+
+  // --- Smart accounts and infrastructure ---
+  '0xba5ed110efdba3d005bfc882d75358acbbb85842': { label: 'Coinbase Smart Wallet Factory', category: 'infra' },
+  '0x0ba5ed0c6aa8c49038f819e587e2633c4a9f428a': { label: 'Coinbase Smart Wallet Factory (v1)', category: 'infra' },
+  '0x4e1dcf7ad4e460cfd30791ccc4f9c8a4f820ec67': { label: 'Safe Proxy Factory 1.4.1', category: 'infra' },
+  '0x14f2982d601c9458f93bd70b218933a6f8165e7b': { label: 'Safe Proxy Factory 1.5.0', category: 'infra' },
+  '0x29fcb43b46531bca003ddc8fcb67ffe91900c762': { label: 'Safe Singleton 1.4.1', category: 'infra' },
+  '0x41675c099f32341bf84bfc5382af534df5c7461a': { label: 'Safe Singleton 1.4.1', category: 'infra' },
+  '0xedd160febbd92e350d4d398fb636302fccd67c7e': { label: 'Safe Singleton 1.5.0', category: 'infra' },
+  '0xff51a5898e281db6dfc7855790607438df2ca44b': { label: 'Safe Singleton 1.5.0', category: 'infra' },
+  '0x458138fc0d67027e9a6778ef40a6ffc318c69061': { label: 'Chainlink USDC/USD Feed', category: 'infra' },
+  '0x07da0e54543a844a80abe69c8a12f22b3aa59f9d': { label: 'Chainlink cbBTC/USD Feed', category: 'infra' },
+
 };
 
 export const WETH_ADDRESS = '0x4200000000000000000000000000000000000006' as const;
