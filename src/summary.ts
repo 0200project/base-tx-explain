@@ -14,6 +14,8 @@ interface SummaryContext {
   deployedContract: string | null;
   /** Symbol of the token contract being approved, when the action is an approval. */
   approvalTokenSymbol?: string | null;
+  /** Address granted spending power, when the action is an ERC-20 approval. */
+  approvalSpender?: string | null;
 }
 
 /** Compact human number: thousands separators, at most 6 significant decimals. */
@@ -78,7 +80,8 @@ export function buildSummary(ctx: SummaryContext): string {
     case 'erc20_approval': {
       const tokenName = ctx.approvalTokenSymbol ?? nameOf(to);
       if (reverted) return attempted(`grant a token approval on ${tokenName}`);
-      return `${sender} approved a spender to use their ${tokenName} tokens. No assets moved in this transaction.`;
+      const spender = ctx.approvalSpender ? nameOf(ctx.approvalSpender) : 'a spender';
+      return `${sender} approved ${spender} to spend their ${tokenName} tokens. No assets moved in this transaction.`;
     }
     case 'approval_revoked':
       if (reverted) return attempted('revoke an approval');

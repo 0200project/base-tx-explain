@@ -9,6 +9,8 @@ import { isKnownDrainer } from './drainers.js';
 import { isFirstInteraction } from './firstTime.js';
 import { verificationStatus } from './verification.js';
 
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
 interface FlagContext {
   from: Address;
   to: Address | null;
@@ -87,20 +89,63 @@ export async function buildRiskFlags(ctx: FlagContext): Promise<RiskFlag[]> {
     events.some((e) => e.kind === 'erc20_approval' || (e.kind === 'approval_for_all' && Boolean(e.args.approved))) ||
     (!ctx.reverted && action === 'contract_interaction');
 
-  if (to && extendsTrust && action !== 'eth_transfer' && !getLabel(to)) {
-    const status = await verificationStatus(to);
+  // Resolve the address(es) this tx actually extends trust TO. For an approval
+  // that is the spender/operator, NOT `to` (which is the token contract) —
+  // otherwise a drain-enabling approve() to a fresh, unverified attacker
+  // contract is never checked, and is skipped outright when the token is
+  // labeled (e.g. USDC). `to` still matters for the call itself (e.g. an
+  // unverified router in an approve+swap), so include BOTH — spenders first so
+  // they win the CHECK_CAP when a tx has many.
+  const targets: Array<{ addr: string; role: 'spender' | 'contract' }> = [];
+  const seen = new Set<string>();
+  const addTarget = (raw: string | undefined | null, role: 'spender' | 'contract') => {
+    if (!raw) return;
+    const lower = raw.toLowerCase();
+    if (seen.has(lower)) return;
+    seen.add(lower);
+    targets.push({ addr: lower, role });
+  };
+  for (const e of events) {
+    if (e.kind === 'erc20_approval' && e.args.spender) addTarget(String(e.args.spender), 'spender');
+    if (e.kind === 'approval_for_all' && Boolean(e.args.approved) && e.args.operator) {
+      addTarget(String(e.args.operator), 'spender');
+    }
+  }
+  if (to && extendsTrust && action !== 'eth_transfer') addTarget(to, 'contract');
+
+  // Only unfamiliar addresses warrant a lookup: skip the sender, the zero
+  // address, and anything already labeled as known infrastructure. Cap the
+  // number of upstream checks so a crafted tx cannot fan out unboundedly.
+  const CHECK_CAP = 3;
+  const toCheck = targets
+    .filter((t) => t.addr !== sender && t.addr !== ZERO_ADDRESS && !getLabel(t.addr))
+    .slice(0, CHECK_CAP);
+
+  // Run the lookups concurrently but emit flags in a deterministic order
+  // (toCheck order, unverified before first_time per address).
+  const trustResults = await Promise.all(
+    toCheck.map(async (t) => {
+      const address = t.addr as Address;
+      const [status, first] = await Promise.all([
+        verificationStatus(address),
+        isFirstInteraction(from, address, ctx.blockNumber),
+      ]);
+      return { ...t, status, first };
+    }),
+  );
+  for (const { addr, role, status, first } of trustResults) {
+    const noun = role === 'spender' ? 'Approved spender' : 'Target contract';
     if (status === 'unverified') {
       flags.push({
         flag: 'unverified_contract',
-        detail: `The target contract ${shortAddress(to)} has no verified source code on Sourcify${process.env.ETHERSCAN_API_KEY ? ' or Basescan' : ''}.`,
+        detail: `${noun} ${shortAddress(addr)} has no verified source code on Sourcify${process.env.ETHERSCAN_API_KEY ? ' or Basescan' : ''}.`,
       });
     }
-
-    const first = await isFirstInteraction(from, to, ctx.blockNumber);
     if (first === true) {
+      const what = role === 'spender' ? 'approved spender' : 'counterparty';
       flags.push({
         flag: 'first_time_counterparty',
-        detail: `This is the sender's first recorded transaction with ${shortAddress(to)} on Base.`,
+        detail: `This is the sender's first recorded transaction with ${what} ${shortAddress(addr)} on Base.`,
       });
     }
   }

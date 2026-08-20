@@ -189,6 +189,15 @@ export async function explainTransaction(txHashRaw: string): Promise<ExplainResu
     approvalTokenSymbol = (await getTokenMeta(tx.to))?.symbol ?? null;
   }
 
+  // Name the actual spender in the summary, not just "a spender": for an ERC-20
+  // approval the risky party is the approved address, and it appears nowhere
+  // else in the human-readable output.
+  let approvalSpender: string | null = null;
+  if (classification.action === 'erc20_approval') {
+    const appr = events.find((e) => e.kind === 'erc20_approval');
+    approvalSpender = appr ? String(appr.args.spender ?? '') || null : null;
+  }
+
   let summary = buildSummary({
     classification,
     movements,
@@ -197,6 +206,7 @@ export async function explainTransaction(txHashRaw: string): Promise<ExplainResu
     reverted,
     deployedContract: receipt.contractAddress ?? null,
     approvalTokenSymbol,
+    approvalSpender,
   });
   if (truncated) {
     summary += ' This transaction moved more assets than shown; the list is truncated.';
