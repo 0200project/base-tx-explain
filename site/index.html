@@ -40,43 +40,53 @@
 }
 </script>
 <style>
-  .hero {
-    position: relative;
-    padding-block: clamp(4.5rem, 11vw, 8rem) clamp(4.5rem, 10vw, 7rem);
-  }
   .grid-3 .card { display: flex; flex-direction: column; }
   .grid-3 .card p { margin: 0.5rem 0 1.25rem; }
+
+  /* ---- Hero: one band — display and lead left, glowing terminal right. ---- */
+  .hero { position: relative; padding-block: clamp(4rem, 10vw, 7rem) clamp(4rem, 9vw, 6.5rem); }
+  .hero .container { max-width: 74rem; }
+  .hero .display {
+    font-size: clamp(2.5rem, 4.1vw, 3.45rem);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+  }
   .hero-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
     gap: clamp(2.5rem, 6vw, 5rem);
-    align-items: center;
+    align-items: stretch;
   }
-  @media (max-width: 63.9em) {
-    .hero-grid { grid-template-columns: minmax(0, 1fr); }
-    .hero-rail { max-width: 26rem; }
+  @media (max-width: 47.9em) {
+    .hero .display br { display: none; }
   }
-  /* One light source: a quiet monochrome halo behind the terminal. */
-  .hero-rail { position: relative; }
-  .hero-rail::before {
+  /* Copy block spreads to match the terminal's top and bottom edges. */
+  .hero-copy { display: flex; flex-direction: column; justify-content: space-between; }
+  .hero-copy .lead { font-size: 1.125rem; max-width: 34rem; margin-top: 1.5rem; }
+  .hero-checks { margin-top: 1.5rem; }
+  .hero-checks li + li { margin-top: 0.75rem; }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2.25rem; }
+  .hero-artifact { position: relative; display: flex; flex-direction: column; }
+  .hero-artifact .term { flex: 1; display: flex; flex-direction: column; }
+  .hero-artifact .term-body { flex: 1; }
+  .hero-artifact .term-note {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+  }
+  .hero-artifact::before {
     content: "";
     position: absolute;
     z-index: -1;
-    inset: -5rem -4rem;
-    background: radial-gradient(30rem 19rem at 50% 42%, rgba(255, 255, 255, 0.05), transparent 68%);
+    inset: -4rem -5rem;
+    background: radial-gradient(32rem 20rem at 50% 45%, rgba(255, 255, 255, 0.07), transparent 70%);
     pointer-events: none;
   }
-  .hero .lead { margin-top: 1.5rem; max-width: 36rem; font-size: 1.125rem; }
-  .hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2.25rem; }
-  .hero-pill { margin-bottom: 1.75rem; }
-  .hero-meta {
-    margin-top: 2.25rem;
-    font-family: var(--mono);
-    font-size: 0.71875rem;
-    letter-spacing: 0.02em;
-    color: var(--fg-faint);
+  @media (max-width: 63.9em) {
+    .hero-grid { grid-template-columns: minmax(0, 1fr); }
+    .hero-artifact { max-width: 28rem; }
   }
-  .hero-meta span { color: var(--border-hover); padding-inline: 0.5rem; }
 
   /* ---- Hero terminal: the agent loop, replayed ---- */
   .term {
@@ -119,7 +129,7 @@
     animation: t-blink 1.1s steps(1) infinite;
   }
   @keyframes t-blink { 50% { opacity: 0; } }
-  .term-note { margin-top: 0.875rem; font-size: 0.75rem; color: var(--fg-faint); }
+  .term-note { margin-top: 0.875rem; font-size: 0.75rem; color: var(--fg-faint); text-align: center; }
   .term-note a { color: var(--fg-muted); }
   .term-note a:hover { color: var(--fg-strong); }
 
@@ -183,8 +193,7 @@
       <li><a href="/tools/">Tools</a></li>
       <li><a href="/docs/">Docs</a></li>
       <li><a href="/docs/#pricing">Pricing</a></li>
-      <li><a href="https://github.com/0200project">GitHub</a></li>
-      <li class="nav-kbd"><button class="kbd-hint" type="button" aria-label="Open command menu">&#8984;K</button></li>
+      <li class="nav-cta"><a class="btn btn-ghost btn-sm" href="https://github.com/0200project">GitHub</a></li>
       <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/docs/">Start building</a></li>
     </ul></nav>
   </div>
@@ -194,17 +203,20 @@
 
   <section class="hero">
     <div class="container hero-grid">
-      <div>
-        <p class="hero-pill"><a class="pill" href="/tools/"><span class="dot dot-live"></span>Now live: base-tx-explain<span class="pill-arrow" aria-hidden="true">&#8594;</span></a></p>
-        <h1 class="display">Tools for autonomous AI&nbsp;agents.</h1>
+      <div class="hero-copy">
+        <h1 class="display">Tools for autonomous<br> AI&nbsp;agents.</h1>
         <p class="lead">0200project builds machine-native infrastructure that allows AI agents to discover, use, and pay for reliable tools automatically.</p>
+        <ul class="checks hero-checks">
+          <li>Discovered and called over MCP</li>
+          <li>Deterministic &mdash; no LLM in the response path</li>
+          <li>Paid per call in USDC &mdash; no accounts, no API keys</li>
+        </ul>
         <div class="hero-actions">
           <a class="btn btn-primary" href="/tools/">Explore tools</a>
           <a class="btn btn-ghost" href="https://github.com/0200project">GitHub</a>
         </div>
-        <p class="hero-meta">MCP-native<span>/</span>deterministic decode<span>/</span>$0.02 per call</p>
       </div>
-      <div class="hero-rail">
+      <div class="hero-artifact">
         <div class="term panel">
           <div class="panel-head"><span>agent session</span><span>base mainnet &middot; replay</span></div>
           <div class="term-body">
@@ -346,8 +358,6 @@
           <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
           0200project
         </a>
-        <p>Machine-native tools for autonomous AI agents.</p>
-        <a class="pill footer-status" href="/status/"><span class="dot"></span><span id="ft-status">Checking status&hellip;</span></a>
       </div>
       <nav aria-label="Product">
         <h4>Product</h4>
@@ -363,6 +373,7 @@
       <nav aria-label="Developers">
         <h4>Developers</h4>
         <ul>
+          <li><a href="/playground/">Playground</a></li>
           <li><a href="https://github.com/0200project">GitHub</a></li>
           <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-tx-explain">MCP Registry</a></li>
           <li><a href="/status/">Status</a></li>
@@ -385,8 +396,8 @@
       </nav>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 0200project</span>
-      <span class="mono">base-tx-explain v0.1.2 &middot; Base mainnet</span>
+      <span>© 2026 0200project <span class="faint">&middot;</span> <span class="mono">base-tx-explain v0.1.2 &middot; Base mainnet</span></span>
+      <a class="pill footer-status" href="/status/"><span class="dot"></span><span id="ft-status">Checking status&hellip;</span></a>
     </div>
   </div>
 </footer>

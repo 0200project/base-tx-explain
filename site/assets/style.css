@@ -213,6 +213,7 @@ h1, h2, h3, h4 { color: var(--fg-strong); font-weight: 600; }
 .nav-links a:not(.btn)[aria-current="page"] { color: var(--fg-strong); }
 
 .nav-cta { margin-left: auto; }
+.nav-cta + .nav-cta { margin-left: 0.5rem; }
 
 .nav-toggle {
   display: none;
@@ -478,12 +479,9 @@ a.pill:hover .pill-arrow { transform: translateX(2px); color: var(--fg); }
 .footer-brand p { color: var(--fg-faint); max-width: 22rem; }
 
 .footer h4 {
-  font-family: var(--mono);
-  font-size: 0.71875rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--fg-faint);
+  color: var(--fg);
   margin-bottom: 1rem;
 }
 
@@ -495,7 +493,8 @@ a.pill:hover .pill-arrow { transform: translateX(2px); color: var(--fg); }
 .footer-bottom {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 2rem;
+  align-items: center;
+  gap: 0.75rem 2rem;
   justify-content: space-between;
   margin-top: clamp(2.5rem, 5vw, 3.5rem);
   padding-top: 1.75rem;
@@ -745,31 +744,9 @@ a.pill:hover .pill-arrow { transform: translateX(2px); color: var(--fg); }
   transform: translate(50%, -50%);
 }
 
-/* ---------- Nav command-menu hint ---------- */
-
-.nav-kbd { margin-left: auto; }
-.nav-cta { margin-left: 0.5rem; }
-
-.kbd-hint {
-  font-family: var(--mono);
-  font-size: 0.71875rem;
-  color: var(--fg-faint);
-  background: var(--bg-inset);
-  border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  padding: 0.3rem 0.55rem;
-  cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-.kbd-hint:hover { color: var(--fg); border-color: var(--border-hover); }
-
-@media (max-width: 47.9em) {
-  .nav-kbd { display: none; }
-}
-
 /* ---------- Footer live status ---------- */
 
-.footer-status { margin-top: 1.125rem; font-family: var(--mono); }
+.footer-status { font-family: var(--mono); }
 .footer-status .dot { background: var(--border-strong); }
 .footer-status.ft-ok .dot { background: var(--accent); }
 .footer-status.ft-bad .dot { background: transparent; border: 1.5px solid var(--fg-muted); }
