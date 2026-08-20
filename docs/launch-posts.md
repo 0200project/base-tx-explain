@@ -1,6 +1,6 @@
 # Launch posts, final paste-ready versions
 
-Post from the 0200project identity (Reddit: u/polaris28 is fine, aged + clean).
+Post from the 0200project identity (Reddit: u/polaris0028 is fine, aged + clean).
 Verify the exact handle spelling against the real accounts before posting.
 No emoji, no hype adjectives, no em-dashes. Show real output.
 Do not post to r/LocalLLaMA; do not pitch in the official MCP contributor Discord.
@@ -69,7 +69,7 @@ Endpoint + repo: https://github.com/0200project/base-tx-explain
 
 ---
 
-## 3. Community MCP Discord (discord.me/mcp, showcase/servers channel, from polaris28)
+## 3. Community MCP Discord (discord.me/mcp, showcase/servers channel, from polaris0028)
 
 Built a small paid MCP server and would appreciate eyes on it: base-tx-explain. One tool, explain_transaction(tx_hash) for Base mainnet. Plain-English summary plus strict JSON (assets moved, labeled counterparties, risk flags, gas in USD). Deterministic decode only, no LLM in the response path, so the output contract is stable enough to parse blind. 10 free calls, then $0.02/call via x402. Repo: https://github.com/0200project/base-tx-explain. Feedback on the schema very welcome, especially from anyone building trading or wallet agents.
 
