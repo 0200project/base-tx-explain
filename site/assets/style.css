@@ -535,67 +535,6 @@ a.pill:hover .pill-arrow { transform: translateX(2px); color: var(--fg); }
   html.js .reveal.in { opacity: 1; transform: none; }
 }
 
-/* ---------- Hero flow diagram ---------- */
-
-.flow-rail {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.flow-node {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.8125rem 1rem;
-  background: var(--bg-raised);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: var(--mono);
-  font-size: 0.8125rem;
-  color: var(--fg-muted);
-}
-.flow-node strong { color: var(--fg); font-weight: 500; }
-
-.flow-link {
-  width: 1px;
-  height: 1.375rem;
-  margin-left: 1.5rem;
-  background: var(--border-strong);
-  position: relative;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .flow-link::after {
-    content: "";
-    position: absolute;
-    left: -1px;
-    top: -30%;
-    width: 3px;
-    height: 30%;
-    border-radius: 2px;
-    background: var(--accent);
-    opacity: 0;
-    animation: flow-drop 3.6s linear infinite;
-    animation-delay: var(--d, 0s);
-  }
-  @keyframes flow-drop {
-    0% { top: -30%; opacity: 0; }
-    6% { opacity: 0.9; }
-    22% { top: 100%; opacity: 0.9; }
-    28% { opacity: 0; }
-    100% { top: 100%; opacity: 0; }
-  }
-
-  .flow-node { transition: border-color 0.3s ease; }
-  .flow-glow { animation: node-glow 3.6s linear infinite; animation-delay: var(--d, 0s); }
-  @keyframes node-glow {
-    0%, 30% { border-color: var(--border); }
-    8%, 18% { border-color: rgba(78, 158, 255, 0.55); }
-    40%, 100% { border-color: var(--border); }
-  }
-}
-
 /* ---------- Logo loading state ---------- */
 
 .logo-loader { display: inline-block; }

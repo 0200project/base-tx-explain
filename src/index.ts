@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { HTTPFacilitatorClient, x402ResourceServer } from '@x402/core/server';
@@ -122,8 +123,12 @@ app.get('/', (_req, res) => {
     .type('text/plain')
     .send(`base-tx-explain v${VERSION} - MCP server (streamable HTTP) at POST /mcp\nTool: ${TOOL_NAME}(tx_hash) - Base mainnet only.\n`);
 });
+// Since-boot demand counters: enough to see whether strangers are calling,
+// deliberately nothing that identifies them.
+const metrics = { tool_calls: 0, free: 0, paywalled: 0, booted_at: new Date().toISOString() };
+
 app.get('/healthz', (_req, res) => {
-  res.status(200).json({ ok: true, version: VERSION, payment_mode: PAYMENT_MODE });
+  res.status(200).json({ ok: true, version: VERSION, payment_mode: PAYMENT_MODE, metrics });
 });
 
 app.post('/mcp', async (req, res) => {
@@ -137,16 +142,23 @@ app.post('/mcp', async (req, res) => {
     return;
   }
 
+  const messages = Array.isArray(req.body) ? req.body : [req.body];
+  const isToolCall = messages.some((m) => m?.method === 'tools/call');
+
   let charge = false;
-  if (PAYMENT_MODE === 'x402') {
-    const messages = Array.isArray(req.body) ? req.body : [req.body];
-    const isToolCall = messages.some((m) => m?.method === 'tools/call');
-    if (isToolCall) {
-      // A retry that already carries a payment must charge (and must not burn
-      // a free call); otherwise a free call is consumed if any remain.
-      const hasPayment = messages.some((m) => m?.params?._meta?.['x402/payment'] !== undefined);
-      charge = hasPayment || !consumeFreeCall(ip);
-    }
+  if (PAYMENT_MODE === 'x402' && isToolCall) {
+    // A retry that already carries a payment must charge (and must not burn
+    // a free call); otherwise a free call is consumed if any remain.
+    const hasPayment = messages.some((m) => m?.params?._meta?.['x402/payment'] !== undefined);
+    charge = hasPayment || !consumeFreeCall(ip);
+  }
+
+  if (isToolCall) {
+    metrics.tool_calls++;
+    if (charge) metrics.paywalled++;
+    else metrics.free++;
+    const ipTag = createHash('sha256').update(`btx:${ip}`).digest('hex').slice(0, 8);
+    console.log(`[call] ${new Date().toISOString()} ${charge ? 'paywalled' : 'free'} client=${ipTag}`);
   }
 
   const server = getServer(charge);

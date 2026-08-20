@@ -73,6 +73,65 @@
   .hero .lead { margin-top: 1.5rem; max-width: 36rem; }
   .hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2.25rem; }
   .hero-pill { margin-bottom: 1.75rem; }
+  .hero-meta {
+    margin-top: 2.25rem;
+    font-family: var(--mono);
+    font-size: 0.71875rem;
+    letter-spacing: 0.02em;
+    color: var(--fg-faint);
+  }
+  .hero-meta span { color: var(--border-hover); padding-inline: 0.5rem; }
+
+  /* ---- Hero terminal: the agent loop, replayed ---- */
+  .term {
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+  }
+  .term-body {
+    padding: 1.125rem 1.25rem 1.25rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    line-height: 1.85;
+    min-height: 17.5rem;
+    overflow-x: auto;
+  }
+  .t-line {
+    white-space: pre;
+    opacity: 0;
+    animation: t-in 0.01s linear forwards;
+    animation-delay: var(--t, 0s);
+  }
+  @keyframes t-in { to { opacity: 1; } }
+  .t-prompt { color: var(--fg-faint); }
+  .t-cmd { color: var(--fg); }
+  .t-type {
+    display: inline-block;
+    overflow: hidden;
+    white-space: pre;
+    vertical-align: bottom;
+    width: 0;
+    animation: t-type 1.15s steps(43, end) 0.45s forwards;
+  }
+  @keyframes t-type { to { width: 43ch; } }
+  .t-dim { color: var(--fg-faint); }
+  .t-402 { color: var(--accent); }
+  .t-cursor {
+    display: inline-block;
+    width: 0.55em;
+    height: 1.05em;
+    vertical-align: text-bottom;
+    background: var(--fg-muted);
+    animation: t-blink 1.1s steps(1) infinite;
+  }
+  @keyframes t-blink { 50% { opacity: 0; } }
+  .term-note { margin-top: 0.875rem; font-size: 0.75rem; color: var(--fg-faint); }
+  .term-note a { color: var(--fg-muted); }
+  .term-note a:hover { color: var(--fg-strong); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .t-line { opacity: 1; animation: none; }
+    .t-type { width: 43ch; animation: none; }
+    .t-cursor { animation: none; }
+  }
 
   .demo-grid {
     display: grid;
@@ -146,17 +205,28 @@
           <a class="btn btn-primary" href="/tools/">Explore Tools</a>
           <a class="btn btn-ghost" href="https://github.com/0200project">GitHub</a>
         </div>
+        <p class="hero-meta">MCP-native<span>/</span>deterministic decode<span>/</span>$0.02 per call</p>
       </div>
-      <div class="hero-rail" aria-hidden="true">
-        <div class="flow-rail">
-          <div class="flow-node flow-glow" style="--d:0s"><strong>Agent request</strong><span class="mono faint">tools/call</span></div>
-          <div class="flow-link" style="--d:0.3s"></div>
-          <div class="flow-node flow-glow" style="--d:0.9s"><strong>0200project</strong><span class="mono faint">deterministic decode</span></div>
-          <div class="flow-link" style="--d:1.2s"></div>
-          <div class="flow-node flow-glow" style="--d:1.8s"><strong>Structured intelligence</strong><span class="mono faint">strict JSON</span></div>
-          <div class="flow-link" style="--d:2.1s"></div>
-          <div class="flow-node flow-glow" style="--d:2.7s"><strong>Agent action</strong><span class="mono faint">settled in USDC</span></div>
+      <div class="hero-rail">
+        <div class="term panel">
+          <div class="panel-head"><span>agent session</span><span>base mainnet &middot; replay</span></div>
+          <div class="term-body">
+            <div class="t-line t-cmd" style="--t:0.4s"><span class="t-prompt">$</span> <span class="t-type">tools/call explain_transaction 0x0c84&#8230;4c8c</span></div>
+            <div class="t-line t-dim" style="--t:1.9s">&#8592; <span class="t-402">402 Payment Required</span> &middot; $0.02 USDC on Base</div>
+            <div class="t-line t-dim" style="--t:2.6s">&#8594; paid via x402 &middot; retrying</div>
+            <div class="t-line tok-punc" style="--t:3.3s">{</div>
+            <div class="t-line" style="--t:3.45s">  <span class="tok-key">"summary"</span><span class="tok-punc">:</span> <span class="tok-str">"0x401d&#8230;f2c5 swapped</span></div>
+            <div class="t-line" style="--t:3.6s"><span class="tok-str">    0.03 ETH for 12,899,422 WNL</span></div>
+            <div class="t-line" style="--t:3.75s"><span class="tok-str">    via Uniswap V4 PoolManager."</span><span class="tok-punc">,</span></div>
+            <div class="t-line" style="--t:3.95s">  <span class="tok-key">"action_type"</span><span class="tok-punc">:</span> <span class="tok-str">"swap"</span><span class="tok-punc">,</span></div>
+            <div class="t-line" style="--t:4.15s">  <span class="tok-key">"status"</span><span class="tok-punc">:</span> <span class="tok-str">"success"</span><span class="tok-punc">,</span></div>
+            <div class="t-line" style="--t:4.35s">  <span class="tok-key">"risk_flags"</span><span class="tok-punc">:</span> <span class="tok-punc">[</span><span class="tok-flag">"unverified_contract"</span><span class="tok-punc">],</span></div>
+            <div class="t-line" style="--t:4.55s">  <span class="tok-key">"gas_paid_usd"</span><span class="tok-punc">:</span> <span class="tok-num">0.020562</span></div>
+            <div class="t-line" style="--t:4.75s"><span class="tok-punc">}</span></div>
+            <div class="t-line" style="--t:5.1s"><span class="t-prompt">$</span> <span class="t-cursor" aria-hidden="true"></span></div>
+          </div>
         </div>
+        <p class="term-note">Real output, replayed &mdash; from a <a href="https://basescan.org/tx/0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c">live Base transaction</a>.</p>
       </div>
     </div>
   </section>
