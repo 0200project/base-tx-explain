@@ -24,6 +24,11 @@
       { rootMargin: '0px 0px -8% 0px' }
     );
     document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+    /* Safety net: if the observer never fires (hidden tab, prerender,
+       screenshot tools), content must not stay invisible. */
+    setTimeout(function () {
+      document.querySelectorAll('.reveal:not(.in)').forEach(function (el) { el.classList.add('in'); });
+    }, 2000);
   } else {
     document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('in'); });
   }

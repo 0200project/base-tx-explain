@@ -49,6 +49,7 @@ body {
   font-family: var(--sans);
   font-size: 0.9375rem;
   line-height: 1.6;
+  letter-spacing: -0.008em;
   background: var(--bg);
   color: var(--fg);
   -webkit-font-smoothing: antialiased;
@@ -63,12 +64,11 @@ a:hover { color: var(--fg-strong); }
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 2px;
 }
 
 img, svg { display: block; max-width: 100%; }
 
-code, pre, kbd { font-family: var(--mono); }
+code, pre, kbd { font-family: var(--mono); letter-spacing: normal; }
 
 .container {
   max-width: var(--container);
@@ -82,6 +82,7 @@ h1, h2, h3, h4 { color: var(--fg-strong); font-weight: 600; }
 
 .display {
   font-size: clamp(2.5rem, 6.5vw, 4rem);
+  font-weight: 500;
   line-height: 1.06;
   letter-spacing: -0.028em;
   text-wrap: balance;
@@ -96,20 +97,8 @@ h1, h2, h3, h4 { color: var(--fg-strong); font-weight: 600; }
 
 .h-card {
   font-size: 1.0625rem;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: -0.01em;
-}
-
-/* Vercel-style headline finish: white ink falling off into grey. */
-.display, .h-section, .docs-content h1 {
-  background: linear-gradient(180deg, var(--fg-strong) 55%, #b4b4bb 125%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: var(--fg-strong); /* fallback when background-clip:text is unsupported */
-}
-@supports (-webkit-background-clip: text) or (background-clip: text) {
-  .display, .h-section, .docs-content h1 { color: transparent; }
 }
 
 .eyebrow {
@@ -119,7 +108,7 @@ h1, h2, h3, h4 { color: var(--fg-strong); font-weight: 600; }
   font-weight: 500;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--fg-muted);
   margin-bottom: 1rem;
 }
 
@@ -159,7 +148,8 @@ h1, h2, h3, h4 { color: var(--fg-strong); font-weight: 600; }
   background: var(--fg-strong);
   color: #050505;
 }
-.btn-primary:hover { background: #cccccc; color: #050505; }
+.btn-primary:hover { background: #e4e4e7; color: #050505; }
+.btn-primary:active { background: #d4d4d8; }
 
 .btn-ghost {
   background: var(--bg-raised);
@@ -167,6 +157,7 @@ h1, h2, h3, h4 { color: var(--fg-strong); font-weight: 600; }
   border-color: var(--border-strong);
 }
 .btn-ghost:hover { background: var(--bg-hover); border-color: var(--border-hover); color: var(--fg-strong); }
+.btn-ghost:active { background: var(--bg-panel); }
 
 .btn-sm { height: 2.125rem; padding-inline: 0.875rem; font-size: 0.8125rem; }
 
@@ -273,19 +264,9 @@ h1, h2, h3, h4 { color: var(--fg-strong); font-weight: 600; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.5rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
-.card::before {
-  content: "";
-  position: absolute;
-  top: -1px;
-  left: 15%;
-  right: 15%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
-  pointer-events: none;
-}
-.card:hover { border-color: var(--border-strong); }
 a.card:hover, .card-link:hover { border-color: var(--border-strong); background: var(--bg-panel); }
 
 .panel {
@@ -306,8 +287,8 @@ a.card:hover, .card-link:hover { border-color: var(--border-strong); background:
   font-size: 0.75rem;
   color: var(--fg-faint);
 }
-/* Terminal window chrome: three quiet dots, monochrome. */
-.panel-head::before {
+/* Terminal window chrome: three quiet dots, monochrome — only on the actual terminal. */
+.term .panel-head::before {
   content: "";
   flex: none;
   width: 0.5rem;
@@ -385,7 +366,7 @@ code.inline {
 /* ---------- Tables ---------- */
 
 .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+table { width: 100%; border-collapse: collapse; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
 th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
 tr:last-child td { border-bottom: none; }
 th {
@@ -436,10 +417,9 @@ a.pill:hover .pill-arrow { transform: translateX(2px); color: var(--fg); }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .dot-live { animation: pulse 2.4s ease-in-out infinite; }
+  .dot-live { animation: pulse 2.8s ease-in-out infinite; }
   @keyframes pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(78, 158, 255, 0.35); }
-    50% { box-shadow: 0 0 0 5px rgba(78, 158, 255, 0); }
+    50% { opacity: 0.45; }
   }
 }
 
@@ -529,11 +509,27 @@ a.pill:hover .pill-arrow { transform: translateX(2px); color: var(--fg); }
 @media (prefers-reduced-motion: no-preference) {
   html.js .reveal {
     opacity: 0;
-    transform: translateY(10px);
-    transition: opacity 0.55s ease, transform 0.55s ease;
+    transform: translateY(6px);
+    transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   }
   html.js .reveal.in { opacity: 1; transform: none; }
 }
+
+/* ---------- Skip link ---------- */
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  z-index: 200;
+  padding: 0.5rem 0.875rem;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-size: 0.875rem;
+}
+.skip-link:focus-visible { top: 0.75rem; }
 
 /* ---------- Logo loading state ---------- */
 
@@ -789,6 +785,13 @@ a.pill:hover .pill-arrow { transform: translateX(2px); color: var(--fg); }
   background: rgba(5, 5, 5, 0.65);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cmdk-panel { animation: cmdk-in 0.16s cubic-bezier(0.16, 1, 0.3, 1); }
+  @keyframes cmdk-in {
+    from { opacity: 0; transform: translateY(4px) scale(0.99); }
+  }
 }
 
 .cmdk-panel {

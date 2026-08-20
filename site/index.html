@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>0200project — Machine-Native Tools for AI Agents</title>
+<title>0200project — Machine-native tools for AI agents</title>
 <meta name="description" content="Machine-native tools for AI agents — starting with base-tx-explain, a deterministic Base transaction decoder with risk flags. Pay per call via x402, no API keys.">
 <meta name="theme-color" content="#050505">
 <meta property="og:title" content="0200project">
@@ -44,44 +44,8 @@
     position: relative;
     padding-block: clamp(4.5rem, 11vw, 8rem) clamp(4.5rem, 10vw, 7rem);
   }
-  .hero::before {
-    content: "";
-    position: absolute;
-    z-index: -1;
-    top: -10rem;
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(72rem, 100vw);
-    height: 34rem;
-    background: radial-gradient(46rem 22rem at 50% 0%, rgba(78, 158, 255, 0.075), rgba(255, 255, 255, 0.025) 45%, transparent 72%);
-    pointer-events: none;
-  }
-  .hero::after {
-    content: "";
-    position: absolute;
-    z-index: -2;
-    inset: 0;
-    background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1.4px);
-    background-size: 26px 26px;
-    -webkit-mask-image: radial-gradient(40rem 22rem at 50% 12%, black 15%, transparent 72%);
-    mask-image: radial-gradient(40rem 22rem at 50% 12%, black 15%, transparent 72%);
-    pointer-events: none;
-  }
   .grid-3 .card { display: flex; flex-direction: column; }
   .grid-3 .card p { margin: 0.5rem 0 1.25rem; }
-  .statement-band { position: relative; }
-  .statement-band::before {
-    content: "";
-    position: absolute;
-    z-index: -1;
-    bottom: -8rem;
-    left: 50%;
-    transform: translateX(-50%);
-    width: min(60rem, 100vw);
-    height: 24rem;
-    background: radial-gradient(34rem 16rem at 50% 100%, rgba(78, 158, 255, 0.05), transparent 70%);
-    pointer-events: none;
-  }
   .hero-grid {
     display: grid;
     grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
@@ -92,7 +56,17 @@
     .hero-grid { grid-template-columns: minmax(0, 1fr); }
     .hero-rail { max-width: 26rem; }
   }
-  .hero .lead { margin-top: 1.5rem; max-width: 36rem; }
+  /* One light source: a quiet monochrome halo behind the terminal. */
+  .hero-rail { position: relative; }
+  .hero-rail::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    inset: -5rem -4rem;
+    background: radial-gradient(30rem 19rem at 50% 42%, rgba(255, 255, 255, 0.05), transparent 68%);
+    pointer-events: none;
+  }
+  .hero .lead { margin-top: 1.5rem; max-width: 36rem; font-size: 1.125rem; }
   .hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2.25rem; }
   .hero-pill { margin-bottom: 1.75rem; }
   .hero-meta {
@@ -106,13 +80,13 @@
 
   /* ---- Hero terminal: the agent loop, replayed ---- */
   .term {
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+    border-color: var(--border-strong);
   }
   .term-body {
     padding: 1.125rem 1.25rem 1.25rem;
     font-family: var(--mono);
     font-size: 0.75rem;
-    line-height: 1.85;
+    line-height: 1.7;
     min-height: 17.5rem;
     overflow-x: auto;
   }
@@ -194,6 +168,7 @@
 </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
 
 <header class="nav">
   <div class="container nav-inner">
@@ -207,15 +182,15 @@
     <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
       <li><a href="/tools/">Tools</a></li>
       <li><a href="/docs/">Docs</a></li>
-      <li><a href="/status/">Status</a></li>
+      <li><a href="/docs/#pricing">Pricing</a></li>
       <li><a href="https://github.com/0200project">GitHub</a></li>
       <li class="nav-kbd"><button class="kbd-hint" type="button" aria-label="Open command menu">&#8984;K</button></li>
-      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/docs/">Get Started</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/docs/">Start building</a></li>
     </ul></nav>
   </div>
 </header>
 
-<main>
+<main id="main">
 
   <section class="hero">
     <div class="container hero-grid">
@@ -224,7 +199,7 @@
         <h1 class="display">Tools for autonomous AI&nbsp;agents.</h1>
         <p class="lead">0200project builds machine-native infrastructure that allows AI agents to discover, use, and pay for reliable tools automatically.</p>
         <div class="hero-actions">
-          <a class="btn btn-primary" href="/tools/">Explore Tools</a>
+          <a class="btn btn-primary" href="/tools/">Explore tools</a>
           <a class="btn btn-ghost" href="https://github.com/0200project">GitHub</a>
         </div>
         <p class="hero-meta">MCP-native<span>/</span>deterministic decode<span>/</span>$0.02 per call</p>
@@ -237,15 +212,15 @@
             <div class="t-line t-dim" style="--t:1.9s">&#8592; <span class="t-402">402 Payment Required</span> &middot; $0.02 USDC on Base</div>
             <div class="t-line t-dim" style="--t:2.6s">&#8594; paid via x402 &middot; retrying</div>
             <div class="t-line tok-punc" style="--t:3.3s">{</div>
-            <div class="t-line" style="--t:3.45s">  <span class="tok-key">"summary"</span><span class="tok-punc">:</span> <span class="tok-str">"0x401d&#8230;f2c5 swapped</span></div>
-            <div class="t-line" style="--t:3.6s"><span class="tok-str">    0.03 ETH for 12,899,422 WNL</span></div>
-            <div class="t-line" style="--t:3.75s"><span class="tok-str">    via Uniswap V4 PoolManager."</span><span class="tok-punc">,</span></div>
-            <div class="t-line" style="--t:3.95s">  <span class="tok-key">"action_type"</span><span class="tok-punc">:</span> <span class="tok-str">"swap"</span><span class="tok-punc">,</span></div>
-            <div class="t-line" style="--t:4.15s">  <span class="tok-key">"status"</span><span class="tok-punc">:</span> <span class="tok-str">"success"</span><span class="tok-punc">,</span></div>
-            <div class="t-line" style="--t:4.35s">  <span class="tok-key">"risk_flags"</span><span class="tok-punc">:</span> <span class="tok-punc">[</span><span class="tok-flag">"unverified_contract"</span><span class="tok-punc">],</span></div>
-            <div class="t-line" style="--t:4.55s">  <span class="tok-key">"gas_paid_usd"</span><span class="tok-punc">:</span> <span class="tok-num">0.020562</span></div>
-            <div class="t-line" style="--t:4.75s"><span class="tok-punc">}</span></div>
-            <div class="t-line" style="--t:5.1s"><span class="t-prompt">$</span> <span class="t-cursor" aria-hidden="true"></span></div>
+            <div class="t-line" style="--t:3.37s">  <span class="tok-key">"summary"</span><span class="tok-punc">:</span> <span class="tok-str">"0x401d&#8230;f2c5 swapped</span></div>
+            <div class="t-line" style="--t:3.42s"><span class="tok-str">    0.03 ETH for 12,899,422 WNL</span></div>
+            <div class="t-line" style="--t:3.47s"><span class="tok-str">    via Uniswap V4 PoolManager."</span><span class="tok-punc">,</span></div>
+            <div class="t-line" style="--t:3.55s">  <span class="tok-key">"action_type"</span><span class="tok-punc">:</span> <span class="tok-str">"swap"</span><span class="tok-punc">,</span></div>
+            <div class="t-line" style="--t:3.6s">  <span class="tok-key">"status"</span><span class="tok-punc">:</span> <span class="tok-str">"success"</span><span class="tok-punc">,</span></div>
+            <div class="t-line" style="--t:3.68s">  <span class="tok-key">"risk_flags"</span><span class="tok-punc">:</span> <span class="tok-punc">[</span><span class="tok-flag">"unverified_contract"</span><span class="tok-punc">],</span></div>
+            <div class="t-line" style="--t:3.74s">  <span class="tok-key">"gas_paid_usd"</span><span class="tok-punc">:</span> <span class="tok-num">0.020562</span></div>
+            <div class="t-line" style="--t:3.8s"><span class="tok-punc">}</span></div>
+            <div class="t-line" style="--t:4.25s"><span class="t-prompt">$</span> <span class="t-cursor" aria-hidden="true"></span></div>
           </div>
         </div>
         <p class="term-note">Real output, replayed &mdash; from a <a href="https://basescan.org/tx/0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c">live Base transaction</a>.</p>
@@ -260,24 +235,24 @@
         <h2 class="h-section">Machine-native infrastructure for autonomous agents.</h2>
         <p class="lead">AI agents need reliable tools to understand data, interact with systems, and complete tasks without a human in the loop. 0200project builds those tools.</p>
       </div>
-      <div class="grid-3">
-        <div class="card reveal">
+      <div class="grid-3 reveal">
+        <div class="card">
           <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="10" height="10" rx="2.5"/><rect x="7" y="7" width="10" height="10" rx="2.5"/></svg></span>
           <h3 class="h-card">Deterministic by design</h3>
           <p class="muted">Same input, same output. No model in the response path — nothing to hallucinate, nothing to drift.</p>
           <div class="card-mini" aria-hidden="true">decode 0x0c84&#8230;4c8c <span class="lit">&#8594;</span> swap<br>decode 0x0c84&#8230;4c8c <span class="lit">&#8594;</span> swap&nbsp;&nbsp;<span class="ok">= identical</span></div>
         </div>
-        <div class="card reveal">
+        <div class="card">
           <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16.2 10a6.2 6.2 0 1 1-1.9-4.5"/><path d="M16.5 2.8v3.1h-3.1"/></svg></span>
           <h3 class="h-card">No accounts. No API keys.</h3>
           <p class="muted">Tools are paid per call in USDC via the x402 protocol. An agent can discover, pay, and retry entirely on its own.</p>
           <div class="card-mini" aria-hidden="true"><span class="ok">402</span> <span class="lit">&#8594;</span> pay $0.02 USDC <span class="lit">&#8594;</span> <span class="lit">200 ok</span></div>
         </div>
-        <div class="card reveal">
+        <div class="card">
           <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3H5.5A1.5 1.5 0 0 0 4 4.5v11A1.5 1.5 0 0 0 5.5 17H7"/><path d="M13 3h1.5A1.5 1.5 0 0 1 16 4.5v11a1.5 1.5 0 0 1-1.5 1.5H13"/><path d="M7.5 8h5M7.5 12h5"/></svg></span>
           <h3 class="h-card">Stable contracts</h3>
           <p class="muted">Strict JSON schemas, versioned and documented. Output is designed to be parsed blind by software, not skimmed by humans.</p>
-          <div class="card-mini" aria-hidden="true">action_type <span class="lit">&#183;</span> assets_moved <span class="lit">&#183;</span> risk_flags <span class="lit">&#183;</span> 30 enums</div>
+          <div class="card-mini" aria-hidden="true">30 action types <span class="lit">&#183;</span> 6 risk flags <span class="lit">&#183;</span> strict JSON</div>
         </div>
       </div>
     </div>
@@ -330,7 +305,7 @@
 <span class="tok-punc">}</span></code></pre>
         </div>
       </div>
-      <p class="demo-note reveal" style="margin-top:1rem">Actual output for a <a href="https://basescan.org/tx/0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c">live Base transaction</a>, trimmed for width. Decoded deterministically from the receipt — byte-for-byte reproducible, no LLM in the response path.</p>
+      <p class="demo-note" style="margin-top:1rem">Actual output for a <a href="https://basescan.org/tx/0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c">live Base transaction</a>, trimmed for width. Decoded deterministically from the receipt — byte-for-byte reproducible, no LLM in the response path.</p>
     </div>
   </section>
 
@@ -379,9 +354,10 @@
         <ul>
           <li><a href="/tools/">Tools</a></li>
           <li><a href="/docs/">Documentation</a></li>
-          <li><a href="/faq/">FAQ</a></li>
-          <li><a href="/docs/#request-format">API</a></li>
+          <li><a href="/docs/#request-format">API reference</a></li>
+          <li><a href="/docs/#pricing">Pricing</a></li>
           <li><a href="/changelog/">Changelog</a></li>
+          <li><a href="/faq/">FAQ</a></li>
         </ul>
       </nav>
       <nav aria-label="Developers">
@@ -397,7 +373,7 @@
         <ul>
           <li><a href="/#about">About</a></li>
           <li><a href="/security/">Security</a></li>
-          <li><a href="https://github.com/0200project/base-tx-explain/issues">GitHub Issues</a></li>
+          <li><a href="https://github.com/0200project/base-tx-explain/issues">Support</a></li>
         </ul>
       </nav>
       <nav aria-label="Legal">
@@ -410,7 +386,7 @@
     </div>
     <div class="footer-bottom">
       <span>© 2026 0200project</span>
-      <span>Built for autonomous software.</span>
+      <span class="mono">base-tx-explain v0.1.2 &middot; Base mainnet</span>
     </div>
   </div>
 </footer>
