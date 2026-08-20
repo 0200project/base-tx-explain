@@ -1,0 +1,23 @@
+# 0200project / base-tx-explain
+
+> A paid MCP server with one tool, `explain_transaction(tx_hash)`: deterministic plain-English decode of any Base mainnet transaction as strict JSON. No LLM in the response path.
+
+## Documentation
+
+- [Docs](https://0200project.github.io/docs/): tool contract, field reference, connection instructions
+- [Playground](https://0200project.github.io/playground/): call the live server from the browser
+- [Tools index](https://0200project.github.io/tools/): all tools published by 0200project
+
+## API
+
+- MCP endpoint: POST https://base-tx-explain.fly.dev/mcp (streamable HTTP, stateless)
+- OpenAPI: https://base-tx-explain.fly.dev/openapi.json
+- MCP registry name: io.github.0200project/base-tx-explain
+
+## Source
+
+- [Repository](https://github.com/0200project/base-tx-explain): server source, self-host instructions
+
+## Pricing
+
+- 10 free calls per client IP, then $0.02 per call in USDC on Base via x402. No account, no API key.

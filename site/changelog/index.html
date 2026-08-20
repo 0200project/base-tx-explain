@@ -66,6 +66,20 @@
       <article class="log-entry">
         <div class="log-date"><time datetime="2026-08-20">August 20, 2026</time></div>
         <div class="log-body">
+          <h2>v0.1.1: live playground, usage ledger, agent discovery</h2>
+          <ul>
+            <li>Persistent usage ledger with lifetime counters, published on <code class="inline">/healthz</code> and a token-protected <code class="inline">/stats</code>.</li>
+            <li>CORS enabled on the endpoint, so the playground and status page now call production live from the browser.</li>
+            <li>Agent discovery surface: <code class="inline">llms.txt</code>, <code class="inline">robots.txt</code>, a sitemap, and an OpenAPI document with a servers block.</li>
+            <li>Free-tier hardening: spoofed-IP fix, batch-request guard, and free calls refunded on server-fault errors.</li>
+            <li>Paid-call settlement is now cancelled when a call errors — buyers never pay for failures.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="log-entry">
+        <div class="log-date"><time datetime="2026-08-20">August 20, 2026</time></div>
+        <div class="log-body">
           <h2>base-tx-explain v0.1.0</h2>
           <p>Our first tool is live: deterministic Base transaction decoding for AI agents. One MCP tool, <code class="inline">explain_transaction(tx_hash)</code>, returns a strict JSON explanation of any Base mainnet transaction — same input, same output, no LLM in the response path.</p>
           <ul>
@@ -110,7 +124,7 @@
         <h4>Developers</h4>
         <ul>
           <li><a href="https://github.com/0200project">GitHub</a></li>
-          <li><a href="https://registry.modelcontextprotocol.io">MCP Registry</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-tx-explain">MCP Registry</a></li>
           <li><a href="/status/">Status</a></li>
         </ul>
       </nav>
@@ -119,7 +133,7 @@
         <ul>
           <li><a href="/#about">About</a></li>
           <li><a href="/security/">Security</a></li>
-          <li><a href="mailto:contact@0200project.com">Contact</a></li>
+          <li><a href="https://github.com/0200project/base-tx-explain/issues">GitHub Issues</a></li>
         </ul>
       </nav>
       <nav aria-label="Legal">

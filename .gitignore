@@ -6,3 +6,5 @@ dist/
 data/drainers.local.json
 .claude/
 /data/
+outreach/
+.stats-token

@@ -71,15 +71,39 @@
     el.textContent = isMac ? '⌘K' : 'Ctrl K';
   });
 
-  /* ---- Footer status: real reachability probe of the production API. ---- */
+  /* ---- Footer status: live probe of the production API.
+     /healthz is CORS-enabled, so read the real health payload when we can;
+     fall back to an opaque reachability probe if the CORS fetch fails. ---- */
   var ft = document.querySelector('.footer-status');
   if (ft && window.fetch && window.AbortController) {
     var ftTxt = ft.querySelector('#ft-status');
+    var HEALTH = 'https://base-tx-explain.fly.dev/healthz';
+
+    var probeOpaque = function () {
+      var ctrl = new AbortController();
+      var to = setTimeout(function () { ctrl.abort(); }, 8000);
+      fetch(HEALTH, { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal })
+        .then(function () { clearTimeout(to); ft.classList.add('ft-ok'); ftTxt.textContent = 'All systems reachable'; })
+        .catch(function () { clearTimeout(to); ft.classList.add('ft-bad'); ftTxt.textContent = 'Status: endpoint unreachable'; });
+    };
+
     var ctrl = new AbortController();
     var to = setTimeout(function () { ctrl.abort(); }, 8000);
-    fetch('https://base-tx-explain.fly.dev/healthz', { mode: 'no-cors', cache: 'no-store', signal: ctrl.signal })
-      .then(function () { clearTimeout(to); ft.classList.add('ft-ok'); ftTxt.textContent = 'All systems reachable'; })
-      .catch(function () { clearTimeout(to); ft.classList.add('ft-bad'); ftTxt.textContent = 'Status: endpoint unreachable'; });
+    fetch(HEALTH, { mode: 'cors', cache: 'no-store', signal: ctrl.signal })
+      .then(function (res) {
+        clearTimeout(to);
+        if (!res.ok) throw new Error('bad status');
+        return res.json();
+      })
+      .then(function (h) {
+        if (!h || h.ok !== true) throw new Error('not ok');
+        ft.classList.add('ft-ok');
+        var calls = h.lifetime && typeof h.lifetime.calls === 'number' ? h.lifetime.calls : null;
+        ftTxt.textContent = calls !== null
+          ? 'Operational · ' + calls.toLocaleString() + ' calls served'
+          : 'Operational';
+      })
+      .catch(function () { clearTimeout(to); probeOpaque(); });
   }
 
   /* ---- Command palette ---- */
@@ -87,12 +111,13 @@
     { g: 'Navigate', t: 'Home', hint: '/', href: '/' },
     { g: 'Navigate', t: 'Tools', hint: '/tools', href: '/tools/' },
     { g: 'Navigate', t: 'Documentation', hint: '/docs', href: '/docs/' },
+    { g: 'Navigate', t: 'Pricing', hint: '/docs#pricing', href: '/docs/#pricing' },
     { g: 'Navigate', t: 'Playground', hint: '/playground', href: '/playground/' },
     { g: 'Navigate', t: 'Status', hint: '/status', href: '/status/' },
     { g: 'Navigate', t: 'Changelog', hint: '/changelog', href: '/changelog/' },
     { g: 'Navigate', t: 'Security', hint: '/security', href: '/security/' },
     { g: 'Resources', t: 'GitHub repository', hint: 'github.com', href: 'https://github.com/0200project/base-tx-explain' },
-    { g: 'Resources', t: 'MCP Registry', hint: 'registry', href: 'https://registry.modelcontextprotocol.io' },
+    { g: 'Resources', t: 'MCP Registry', hint: 'registry', href: 'https://registry.modelcontextprotocol.io/v0/servers?search=base-tx-explain' },
     { g: 'Actions', t: 'Copy MCP endpoint', hint: 'copy', copy: 'https://base-tx-explain.fly.dev/mcp' },
     { g: 'Actions', t: 'Copy MCP client config', hint: 'copy', copy: '{\n  "mcpServers": {\n    "base-tx-explain": {\n      "type": "streamable-http",\n      "url": "https://base-tx-explain.fly.dev/mcp"\n    }\n  }\n}' }
   ];

@@ -13,7 +13,8 @@
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "validate": "tsx scripts/validate.ts"
+    "validate": "tsx scripts/validate.ts",
+    "growth": "node scripts/growth-scan.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",

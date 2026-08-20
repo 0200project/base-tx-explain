@@ -91,6 +91,8 @@
         <span id="banner-text">Checking&hellip;</span>
       </div>
 
+      <p class="small faint" id="lifetime-line" style="margin:-0.25rem 0 1rem"></p>
+
       <div class="panel">
         <div class="service-row" id="row-mcp">
           <div>
@@ -120,7 +122,7 @@
         <span class="small faint" id="last-checked"></span>
       </div>
 
-      <p class="small faint method-note">These checks run from your browser against the production endpoints — no third-party monitoring service is involved. Reported latency is the round trip from your network location. A check confirms the host answered; cross-origin rules prevent this page from reading response bodies, so "reachable" means exactly that. The MCP endpoint and the transaction decoder are one deployment, so both rows derive from a single probe of <code class="inline">/healthz</code>.</p>
+      <p class="small faint method-note">These checks run from your browser against the production endpoints — no third-party monitoring service is involved. Reported latency is the round trip from your network location. The server permits reading <code class="inline">/healthz</code> cross-origin, so the MCP row reflects the actual health payload: reported version, payment mode, and lifetime call counters. The facilitator is a third-party host this page can only ping; cross-origin rules prevent reading its response body, so "reachable" means exactly that — the host answered. The MCP endpoint and the transaction decoder are one deployment, so both rows derive from a single probe of <code class="inline">/healthz</code>.</p>
 
       <noscript>
         <p class="small faint method-note">JavaScript is disabled, so live checks cannot run from this page. You can probe the endpoint directly: <code class="inline">curl https://base-tx-explain.fly.dev/healthz</code></p>
@@ -170,7 +172,7 @@
         <h4>Developers</h4>
         <ul>
           <li><a href="https://github.com/0200project">GitHub</a></li>
-          <li><a href="https://registry.modelcontextprotocol.io">MCP Registry</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-tx-explain">MCP Registry</a></li>
           <li><a href="/status/">Status</a></li>
         </ul>
       </nav>
@@ -179,7 +181,7 @@
         <ul>
           <li><a href="/#about">About</a></li>
           <li><a href="/security/">Security</a></li>
-          <li><a href="mailto:contact@0200project.com">Contact</a></li>
+          <li><a href="https://github.com/0200project/base-tx-explain/issues">GitHub Issues</a></li>
         </ul>
       </nav>
       <nav aria-label="Legal">
@@ -205,6 +207,7 @@
   var bannerDot = document.getElementById('banner-dot');
   var bannerText = document.getElementById('banner-text');
   var lastChecked = document.getElementById('last-checked');
+  var lifetimeLine = document.getElementById('lifetime-line');
   var btn = document.getElementById('recheck');
 
   function refs(id) {
@@ -235,19 +238,52 @@
       .catch(function () { clearTimeout(to); return { ok: false }; });
   }
 
+  // /healthz permits cross-origin reads, so fetch the real health payload:
+  // ok flag, version, payment mode, and lifetime demand counters. If the
+  // CORS fetch fails, fall back to the opaque reachability probe above
+  // before declaring the host down.
+  function probeHealth() {
+    var t0 = performance.now();
+    var ctrl = new AbortController();
+    var to = setTimeout(function () { ctrl.abort(); }, 10000);
+    return fetch(HEALTH, { mode: 'cors', cache: 'no-store', signal: ctrl.signal })
+      .then(function (res) {
+        clearTimeout(to);
+        if (!res.ok) throw new Error('bad status');
+        return res.json().then(function (data) {
+          return { ok: true, ms: Math.round(performance.now() - t0), data: data };
+        });
+      })
+      .catch(function () { clearTimeout(to); return probe(HEALTH); });
+  }
+
   function run() {
     btn.disabled = true;
     bannerDot.className = 'dot dot-wait';
     bannerText.textContent = 'Checking…';
+    lifetimeLine.textContent = '';
     setState(rows.mcp, 'dot-wait', 'Checking…');
     setState(rows.decoder, 'dot-wait', 'Checking…');
     setState(rows.pay, 'dot-wait', 'Checking…');
 
-    Promise.all([probe(HEALTH), probe(FACILITATOR)]).then(function (results) {
+    Promise.all([probeHealth(), probe(FACILITATOR)]).then(function (results) {
       var health = results[0];
       var facilitator = results[1];
+      var healthy = !!(health.ok && health.data && health.data.ok === true);
 
-      if (health.ok) {
+      if (healthy) {
+        var d = health.data;
+        setState(rows.mcp, 'dot-live', 'Operational · v' + d.version + ' · payments: ' + d.payment_mode, health.ms);
+        setState(rows.decoder, 'dot-live', 'Operational');
+        var lt = d.lifetime || {};
+        if (typeof lt.calls === 'number') {
+          var freeN = typeof lt.free === 'number' ? lt.free : 0;
+          var paidN = typeof lt.paid_calls === 'number' ? lt.paid_calls : 0;
+          lifetimeLine.textContent = lt.calls.toLocaleString() + ' tool calls served all-time (' +
+            freeN.toLocaleString() + ' free / ' + paidN.toLocaleString() + ' paid)';
+        }
+      } else if (health.ok) {
+        // The host answered but the health body could not be read.
         setState(rows.mcp, 'dot-live', 'Reachable', health.ms);
         setState(rows.decoder, 'dot-live', 'Reachable');
       } else {
@@ -263,7 +299,9 @@
 
       if (health.ok && facilitator.ok) {
         bannerDot.className = 'dot dot-live';
-        bannerText.textContent = 'All endpoints reachable from your browser';
+        bannerText.textContent = healthy
+          ? 'All systems operational'
+          : 'All endpoints reachable from your browser';
       } else {
         bannerDot.className = 'dot dot-down';
         bannerText.textContent = 'An endpoint is unreachable from your browser';

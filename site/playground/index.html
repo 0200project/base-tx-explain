@@ -5,10 +5,10 @@
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Playground — 0200project</title>
-<meta name="description" content="Paste a Base transaction hash and see the structured explanation base-tx-explain returns — five real pre-decoded samples, plus a ready-to-run curl for anything else.">
+<meta name="description" content="Paste a Base transaction hash and decode it live against the production base-tx-explain endpoint — plus five stored samples that replay instantly.">
 <meta name="theme-color" content="#050505">
 <meta property="og:title" content="Playground — 0200project">
-<meta property="og:description" content="Paste a Base transaction hash and see the structured explanation base-tx-explain returns.">
+<meta property="og:description" content="Paste a Base transaction hash and decode it live against the production base-tx-explain endpoint.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://0200project.github.io/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -94,6 +94,19 @@
   .pg-miss p { color: var(--fg-muted); font-size: 0.875rem; margin-bottom: 0.875rem; max-width: 40rem; }
   .pg-miss .codeblock pre { font-size: 0.78125rem; }
 
+  .pg-err-note { padding: 1.125rem 1.25rem 0; color: var(--fg-muted); font-size: 0.875rem; max-width: 42rem; }
+  .pg-err-note code { font-size: 0.8125rem; color: var(--fg); }
+
+  .pg-pay { padding: 1.25rem; border-bottom: 1px solid var(--border); }
+  .pg-pay-title { color: var(--fg-strong); font-weight: 600; font-size: 0.9375rem; margin-bottom: 0.5rem; }
+  .pg-pay p { color: var(--fg-muted); font-size: 0.875rem; max-width: 42rem; }
+  .pg-pay a { color: var(--accent); }
+  .pg-pay a:hover { color: var(--accent-strong); }
+  .pg-kv { margin-top: 1rem; display: grid; gap: 0.4rem; }
+  .pg-kv-row { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  .pg-kv dt { font-family: var(--mono); font-size: 0.71875rem; letter-spacing: 0.05em; color: var(--fg-faint); min-width: 6rem; padding-top: 0.1rem; }
+  .pg-kv dd { font-family: var(--mono); font-size: 0.78125rem; color: var(--fg); overflow-wrap: anywhere; }
+
   @media (max-width: 47.9em) {
     .pg-field { font-size: 1rem; }
   }
@@ -127,7 +140,7 @@
     <div class="container">
       <span class="eyebrow">Playground</span>
       <h1 class="h-section">Explain a Base transaction.</h1>
-      <p class="lead">See the structured explanation base-tx-explain returns — five real pre-decoded samples, plus a ready-to-run command for any other hash.</p>
+      <p class="lead">Paste any Base transaction hash and it is decoded live by the production endpoint, right from your browser. Five stored samples replay instantly without a network call.</p>
     </div>
   </section>
 
@@ -143,7 +156,7 @@
               <button id="pg-run" class="btn btn-primary" type="button">Explain</button>
             </div>
             <div class="pg-chips" role="group" aria-label="Sample transactions">
-              <span class="pg-chips-label">samples</span>
+              <span class="pg-chips-label">stored samples</span>
               <button class="chip" type="button" aria-pressed="false" data-hash="0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c">Swap</button>
               <button class="chip" type="button" aria-pressed="false" data-hash="0x8b246d458fd8b982455cdc172613272a090d1f84da559feb3392c152a09721c8">Reverted swap</button>
               <button class="chip" type="button" aria-pressed="false" data-hash="0x8f1e67833a72c7d2d82ff57731fefaf96fa17bdecb9da7f9ac3f4c6b5679fa12">Add liquidity</button>
@@ -153,16 +166,16 @@
           </div>
         </div>
 
-        <p class="pg-note">These five samples are real Base transactions decoded with the exact pipeline behind the production endpoint; the browser cannot call the MCP endpoint directly, so this page replays their stored output.</p>
+        <p class="pg-note">The sample chips replay stored output — real Base transactions decoded earlier by the production pipeline, shown instantly with no network call. The Explain button is live: it sends your hash to the production MCP endpoint from your browser, and each live call counts against your own free tier (10 calls per client, then $0.02 per call via x402).</p>
 
         <div class="panel pg-out">
           <div class="panel-head"><span>output</span><span id="pg-meta" aria-live="polite">explain_transaction</span></div>
           <div id="pg-body" role="region" aria-label="Tool output">
-            <div class="pg-state"><p class="pg-hint">Run a sample or paste a hash. Samples replay the exact JSON the tool returned; any other hash gets a ready-to-run command against the live endpoint.</p></div>
+            <div class="pg-state"><p class="pg-hint">Click a sample chip to replay stored output instantly, or paste a hash and hit Explain to decode it live against the production endpoint.</p></div>
           </div>
         </div>
 
-        <p class="pg-note">The full response schema — all 30 action types and 6 risk flags — is in the <a href="/docs/">docs</a>. First 10 calls per client are free; after that, $0.02 per call in USDC via x402.</p>
+        <p class="pg-note">The full response schema — all 30 action types and 6 risk flags — is in the <a href="/docs/">docs</a>. If your free tier runs out here, the response is the same x402 payment challenge an agent pays through; this page renders it so you can see what agents see.</p>
 
       </div>
     </div>
@@ -194,7 +207,7 @@
         <h4>Developers</h4>
         <ul>
           <li><a href="https://github.com/0200project">GitHub</a></li>
-          <li><a href="https://registry.modelcontextprotocol.io">MCP Registry</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-tx-explain">MCP Registry</a></li>
           <li><a href="/status/">Status</a></li>
         </ul>
       </nav>
@@ -203,7 +216,7 @@
         <ul>
           <li><a href="/#about">About</a></li>
           <li><a href="/security/">Security</a></li>
-          <li><a href="mailto:contact@0200project.com">Contact</a></li>
+          <li><a href="https://github.com/0200project/base-tx-explain/issues">Contact</a></li>
         </ul>
       </nav>
       <nav aria-label="Legal">
@@ -398,13 +411,15 @@
     }
   };
 
+  var ENDPOINT = 'https://base-tx-explain.fly.dev/mcp';
   var HASH_RE = /^0x[0-9a-fA-F]{64}$/;
   var input = document.getElementById('pg-hash');
   var runBtn = document.getElementById('pg-run');
   var body = document.getElementById('pg-body');
   var meta = document.getElementById('pg-meta');
   var chips = Array.prototype.slice.call(document.querySelectorAll('.chip'));
-  var timer = null;
+  var liveCtrl = null; /* AbortController of the in-flight live request */
+  var seq = 0;         /* run counter; stale async responses check it before rendering */
 
   function esc(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -460,22 +475,209 @@
       '</div>';
   }
 
+  function rpcBody(hash) {
+    return JSON.stringify({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'tools/call',
+      params: { name: 'explain_transaction', arguments: { tx_hash: hash } }
+    });
+  }
+
   function curlFor(hash) {
-    return "curl -X POST https://base-tx-explain.fly.dev/mcp \\\n" +
+    return "curl -X POST " + ENDPOINT + " \\\n" +
       "  -H 'Content-Type: application/json' \\\n" +
       "  -H 'Accept: application/json, text/event-stream' \\\n" +
       "  -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"explain_transaction\",\"arguments\":{\"tx_hash\":\"" + hash + "\"}}}'";
   }
 
-  function showMiss(hash) {
-    body.innerHTML =
-      '<div class="pg-miss">' +
-      '<p>This hash isn’t one of the pre-decoded samples. Decode it live against the production endpoint:</p>' +
-      '<div class="codeblock">' +
+  function curlBlock(hash) {
+    return '<div class="codeblock">' +
       '<div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#pg-curl">Copy</button></div>' +
       '<pre><code id="pg-curl">' + esc(curlFor(hash)) + '</code></pre>' +
-      '</div>' +
       '</div>';
+  }
+
+  function showUnreachable(hash) {
+    body.innerHTML =
+      '<div class="pg-miss">' +
+      '<p>The request never reached the server. Either you’re offline, or the server build that allows browser (CORS) access to the endpoint hasn’t rolled out yet — the endpoint itself may be fine. The same call works from any terminal:</p>' +
+      curlBlock(hash) +
+      '</div>';
+  }
+
+  function showHttpError(status, hash) {
+    var msg = (status === 429)
+      ? 'The server answered HTTP 429 — this client is being rate-limited right now. That is a burst limit, separate from the free tier. Wait a moment and try again, or run the call from a terminal:'
+      : 'The server answered HTTP ' + status + ' and no tool result could be read from the response. Try again, or run the call from a terminal:';
+    body.innerHTML = '<div class="pg-miss"><p>' + msg + '</p>' + curlBlock(hash) + '</div>';
+  }
+
+  /* Tool-level errors are real results with isError: true. Show the code and
+     message plainly, plus the raw payload. */
+  var ERROR_NOTES = {
+    invalid_hash: 'The server rejected the hash — it must be 0x followed by 64 hex characters.',
+    not_found: 'No transaction with this hash exists on Base mainnet. Check the hash, and that it isn’t from another network.',
+    pending: 'The transaction exists but hasn’t been mined yet. Try again once it lands in a block.',
+    upstream_error: 'A data source behind the server failed on this call. Trying again usually works.'
+  };
+
+  function showToolError(payload) {
+    var code = (payload && payload.code) ? String(payload.code) : 'error';
+    meta.textContent = 'error · ' + code;
+    var note = ERROR_NOTES[code] || 'The tool returned an error for this call.';
+    body.innerHTML =
+      '<p class="pg-err-note">' + esc(note) + '</p>' +
+      '<pre class="pg-json"><code>' + renderVal(payload, 0, false, null) + '</code></pre>';
+  }
+
+  /* The x402 payment challenge. Not an error: this is the paywall agents
+     pay through, rendered as-is so humans can see what agents see. */
+  function usdcFromAtomic(atomic) {
+    var n = Number(atomic);
+    if (!isFinite(n) || n < 0) return null;
+    var usd = n / 1e6; /* USDC has 6 decimals */
+    return '$' + (usd === Math.round(usd * 100) / 100 ? usd.toFixed(2) : String(usd)) + ' USDC';
+  }
+
+  function kvRow(k, v) {
+    return '<div class="pg-kv-row"><dt>' + esc(k) + '</dt><dd>' + v + '</dd></div>';
+  }
+
+  function showPaywall(challenge) {
+    meta.textContent = 'x402 · payment required';
+    var a = (challenge.accepts && challenge.accepts[0]) || {};
+    var amt = (a.maxAmountRequired != null) ? a.maxAmountRequired : a.amount;
+    var rows = '';
+    if (amt != null) {
+      var usd = usdcFromAtomic(amt);
+      rows += kvRow('amount', esc(String(amt)) + ' atomic units' + (usd ? ' = ' + usd : ''));
+    }
+    if (a.network) rows += kvRow('network', esc(String(a.network)) + (String(a.network) === 'eip155:8453' ? ' — Base mainnet' : ''));
+    if (a.payTo) rows += kvRow('payTo', esc(String(a.payTo)));
+    if (a.asset) rows += kvRow('asset', esc(String(a.asset)));
+    if (a.scheme) rows += kvRow('scheme', esc(String(a.scheme)));
+    body.innerHTML =
+      '<div class="pg-pay">' +
+      '<p class="pg-pay-title">Payment required — this browser’s free calls are used up.</p>' +
+      '<p>This is the paywall working, not an error. The response below is an x402 challenge: an agent reads it, attaches a signed USDC payment at <code class="inline">_meta["x402/payment"]</code>, and retries the same call. A browser stops here; an agent pays $0.02 and keeps going. <a href="/docs/#x402-payments">How agents pay →</a></p>' +
+      (rows ? '<dl class="pg-kv">' + rows + '</dl>' : '') +
+      '</div>' +
+      '<pre class="pg-json"><code>' + renderVal(challenge, 0, false, null) + '</code></pre>';
+  }
+
+  /* The endpoint answers either as plain JSON or as an SSE stream
+     ("event: message" / "data: {json}"). Return the JSON-RPC envelope. */
+  function parseEnvelope(text) {
+    var t = String(text || '').replace(/^\uFEFF/, '').trim();
+    if (!t) return null;
+    if (t.charAt(0) === '{' || t.charAt(0) === '[') {
+      try { return JSON.parse(t); } catch (e) { return null; }
+    }
+    var env = null;
+    var buf = [];
+    function flush() {
+      if (!buf.length) return;
+      try {
+        var obj = JSON.parse(buf.join('\n'));
+        if (obj && (obj.result !== undefined || obj.error !== undefined)) env = obj;
+      } catch (e) { /* not JSON — skip */ }
+      buf = [];
+    }
+    var lines = t.split(/\r?\n/);
+    for (var i = 0; i < lines.length; i++) {
+      var ln = lines[i];
+      if (ln === '') { flush(); continue; }
+      if (ln.indexOf('data:') === 0) buf.push(ln.slice(5).replace(/^ /, ''));
+    }
+    flush();
+    return env;
+  }
+
+  /* Prefer structuredContent; fall back to parsing content[0].text. */
+  function payloadFrom(result) {
+    if (result && result.structuredContent) return result.structuredContent;
+    if (result && result.content && result.content.length) {
+      var c0 = result.content[0];
+      if (c0 && typeof c0.text === 'string') {
+        try { return JSON.parse(c0.text); } catch (e) { return { text: c0.text }; }
+      }
+    }
+    return null;
+  }
+
+  function isX402(payload) {
+    return !!(payload && payload.x402Version !== undefined && payload.accepts);
+  }
+
+  function callLive(hash) {
+    var my = ++seq;
+    meta.textContent = 'live · decoding…';
+    showLoader();
+    var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    liveCtrl = ctrl;
+    var deadline = ctrl ? setTimeout(function () { ctrl.abort(); }, 60000) : null;
+
+    fetch(ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream'
+      },
+      body: rpcBody(hash),
+      signal: ctrl ? ctrl.signal : undefined
+    }).then(function (res) {
+      return res.text().then(function (text) { return { status: res.status, text: text }; });
+    }).then(function (r) {
+      if (my !== seq) return;
+      if (deadline) clearTimeout(deadline);
+      liveCtrl = null;
+
+      if (r.status === 429) {
+        meta.textContent = 'error · rate_limited';
+        showHttpError(429, hash);
+        return;
+      }
+
+      var env = parseEnvelope(r.text);
+      if (!env) {
+        meta.textContent = 'error · http_' + r.status;
+        showHttpError(r.status, hash);
+        return;
+      }
+      if (env.error) {
+        meta.textContent = 'error · rpc';
+        body.innerHTML =
+          '<p class="pg-err-note">The server returned a JSON-RPC error for this request.</p>' +
+          '<pre class="pg-json"><code>' + renderVal(env.error, 0, false, null) + '</code></pre>';
+        return;
+      }
+
+      var result = env.result || {};
+      var payload = payloadFrom(result);
+
+      if (isX402(payload)) {
+        showPaywall(payload);
+        return;
+      }
+      if (result.isError) {
+        showToolError(payload || { code: 'error', message: 'The tool returned an error with no readable body.' });
+        return;
+      }
+      if (payload) {
+        meta.textContent = 'explain_transaction · ' + (payload.action_type || 'result') + ' · live';
+        showJSON(payload);
+        return;
+      }
+      meta.textContent = 'error · unreadable_response';
+      showHttpError(r.status, hash);
+    }).catch(function () {
+      if (my !== seq) return;
+      if (deadline) clearTimeout(deadline);
+      liveCtrl = null;
+      meta.textContent = 'error · network';
+      showUnreachable(hash);
+    });
   }
 
   function showInvalid() {
@@ -493,9 +695,30 @@
     });
   }
 
+  function cancelPending() {
+    seq++;
+    if (liveCtrl) {
+      try { liveCtrl.abort(); } catch (e) { /* already settled */ }
+      liveCtrl = null;
+    }
+  }
+
+  /* Sample chips replay stored output instantly — no network call. */
+  function replay(hash) {
+    cancelPending();
+    var sample = SAMPLES[hash];
+    if (!sample) return;
+    input.value = hash;
+    setActiveChip(hash);
+    meta.textContent = 'explain_transaction · ' + sample.action_type + ' · stored sample';
+    showJSON(sample);
+  }
+
+  /* The Explain button and Enter always call the live endpoint —
+     validation is the only local step. */
   function explain() {
     var raw = input.value.trim();
-    if (timer) { clearTimeout(timer); timer = null; }
+    cancelPending();
 
     if (!HASH_RE.test(raw)) {
       setActiveChip(null);
@@ -504,24 +727,8 @@
       return;
     }
 
-    var hash = raw.toLowerCase();
-    var sample = SAMPLES[hash];
-    setActiveChip(sample ? hash : null);
-    meta.textContent = 'decoding…';
-    showLoader();
-
-    /* Fixed 500ms pause for legibility — the decode is replayed locally,
-       no network request is made. */
-    timer = setTimeout(function () {
-      timer = null;
-      if (sample) {
-        meta.textContent = 'explain_transaction · ' + sample.action_type;
-        showJSON(sample);
-      } else {
-        meta.textContent = 'not pre-decoded';
-        showMiss(hash);
-      }
-    }, 500);
+    setActiveChip(null);
+    callLive(raw.toLowerCase());
   }
 
   runBtn.addEventListener('click', explain);
@@ -539,8 +746,7 @@
 
   chips.forEach(function (chip) {
     chip.addEventListener('click', function () {
-      input.value = chip.getAttribute('data-hash');
-      explain();
+      replay(chip.getAttribute('data-hash'));
     });
   });
 

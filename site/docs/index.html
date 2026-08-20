@@ -39,6 +39,30 @@
   .docs-content .enum-list li + li { margin-top: 0; }
 
   .docs-content .docs-lead { font-size: 1.0625rem; line-height: 1.65; }
+
+  /* Quickstart client tabs */
+  .qs-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 1.25rem 0 0.25rem;
+  }
+  html:not(.js) .qs-tabs { display: none; }
+  .qs-tab {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.3rem 0.65rem;
+    font-family: var(--mono);
+    font-size: 0.71875rem;
+    color: var(--fg-muted);
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  }
+  .qs-tab:hover { color: var(--fg); background: var(--bg-hover); border-color: var(--border-strong); }
+  .qs-tab[aria-selected="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-dim); }
+  .js .qs-panel:not(.qs-active) { display: none; }
+  .js .qs-panel > h3:first-child { display: none; }
 </style>
 </head>
 <body>
@@ -58,7 +82,7 @@
       <li><a href="/status/">Status</a></li>
       <li><a href="https://github.com/0200project">GitHub</a></li>
       <li class="nav-kbd"><button class="kbd-hint" type="button" aria-label="Open command menu">&#8984;K</button></li>
-      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/docs/">Get Started</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="#quickstart">Get Started</a></li>
     </ul></nav>
   </div>
 </header>
@@ -88,6 +112,11 @@
         <li><a href="#usage">Usage</a></li>
         <li><a href="#pricing">Pricing</a></li>
       </ul>
+      <h4>For agents</h4>
+      <ul>
+        <li><a href="https://base-tx-explain.fly.dev/openapi.json">openapi.json</a></li>
+        <li><a href="https://base-tx-explain.fly.dev/llms.txt">llms.txt</a></li>
+      </ul>
     </aside>
 
     <article class="docs-content">
@@ -98,12 +127,37 @@
       <p>0200project builds machine-native tools for autonomous AI agents: narrowly scoped services with strict JSON contracts, designed to be called and parsed by software without a human in the loop. The first and currently only shipped tool is <strong>base-tx-explain</strong> v0.1.0, launched August 20, 2026. More tools are in development.</p>
       <p><strong>Deterministic by design.</strong> There is no LLM in the response path. Every response is produced by deterministic onchain decoding: the same input always produces the same output. Nothing is generated, so nothing can hallucinate or drift between calls.</p>
       <p><strong>MCP is the interface.</strong> Each tool is served over the <a href="https://registry.modelcontextprotocol.io">Model Context Protocol</a> as a streamable HTTP endpoint. Any MCP client can connect; any HTTP client can call it directly with a JSON-RPC request. The registry entry is <code class="inline">io.github.0200project/base-tx-explain</code>.</p>
+      <p><strong>For agents / machine-readable.</strong> The HTTP contract is published as OpenAPI at <a href="https://base-tx-explain.fly.dev/openapi.json">base-tx-explain.fly.dev/openapi.json</a>, and a plain-text guide for agents lives at <a href="https://base-tx-explain.fly.dev/llms.txt">base-tx-explain.fly.dev/llms.txt</a>.</p>
 
       <h2 id="quickstart">Quickstart</h2>
-      <p>Add the server to any MCP client that supports streamable HTTP transport:</p>
-      <div class="codeblock">
-        <div class="panel-head"><span>mcp config · json</span><button class="copy-btn" type="button" data-copy="#cfg-json">Copy</button></div>
-        <pre><code id="cfg-json"><span class="tok-punc">{</span>
+      <p>The server is one streamable-HTTP endpoint: <code class="inline">https://base-tx-explain.fly.dev/mcp</code>. Pick a client — every path calls the same tool.</p>
+
+      <div class="qs-tabs" role="tablist" aria-label="Quickstart by client">
+        <button class="qs-tab" role="tab" type="button" id="tab-qs-claude-code" data-panel="qs-claude-code" aria-controls="qs-claude-code" aria-selected="true" tabindex="0">Claude Code</button>
+        <button class="qs-tab" role="tab" type="button" id="tab-qs-claude-desktop" data-panel="qs-claude-desktop" aria-controls="qs-claude-desktop" aria-selected="false" tabindex="-1">Claude Desktop</button>
+        <button class="qs-tab" role="tab" type="button" id="tab-qs-cursor" data-panel="qs-cursor" aria-controls="qs-cursor" aria-selected="false" tabindex="-1">Cursor</button>
+        <button class="qs-tab" role="tab" type="button" id="tab-qs-typescript" data-panel="qs-typescript" aria-controls="qs-typescript" aria-selected="false" tabindex="-1">TypeScript</button>
+        <button class="qs-tab" role="tab" type="button" id="tab-qs-python" data-panel="qs-python" aria-controls="qs-python" aria-selected="false" tabindex="-1">Python</button>
+        <button class="qs-tab" role="tab" type="button" id="tab-qs-curl" data-panel="qs-curl" aria-controls="qs-curl" aria-selected="false" tabindex="-1">curl</button>
+        <button class="qs-tab" role="tab" type="button" id="tab-qs-x402" data-panel="qs-x402" aria-controls="qs-x402" aria-selected="false" tabindex="-1">x402 paid client</button>
+      </div>
+
+      <div class="qs-panel qs-active" role="tabpanel" id="qs-claude-code" aria-labelledby="tab-qs-claude-code">
+        <h3>Claude Code</h3>
+        <p>One command adds the server over streamable HTTP:</p>
+        <div class="codeblock">
+          <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#qs-claude-code-cmd">Copy</button></div>
+          <pre><code id="qs-claude-code-cmd">claude mcp add --transport http base-tx-explain https://base-tx-explain.fly.dev/mcp</code></pre>
+        </div>
+        <p>Then ask Claude about any Base transaction hash — it calls <code class="inline">explain_transaction</code> on its own.</p>
+      </div>
+
+      <div class="qs-panel" role="tabpanel" id="qs-claude-desktop" aria-labelledby="tab-qs-claude-desktop">
+        <h3>Claude Desktop</h3>
+        <p>Add the server under <code class="inline">mcpServers</code> in <code class="inline">claude_desktop_config.json</code>, then restart Claude Desktop:</p>
+        <div class="codeblock">
+          <div class="panel-head"><span>claude_desktop_config.json</span><button class="copy-btn" type="button" data-copy="#qs-desktop-json">Copy</button></div>
+          <pre><code id="qs-desktop-json"><span class="tok-punc">{</span>
   <span class="tok-key">"mcpServers"</span><span class="tok-punc">: {</span>
     <span class="tok-key">"base-tx-explain"</span><span class="tok-punc">: {</span>
       <span class="tok-key">"type"</span><span class="tok-punc">:</span> <span class="tok-str">"streamable-http"</span><span class="tok-punc">,</span>
@@ -111,26 +165,135 @@
     <span class="tok-punc">}</span>
   <span class="tok-punc">}</span>
 <span class="tok-punc">}</span></code></pre>
+        </div>
+        <p>The config file lives at:</p>
+        <ul>
+          <li>macOS — <code class="inline">~/Library/Application Support/Claude/claude_desktop_config.json</code></li>
+          <li>Windows — <code class="inline">%APPDATA%\Claude\claude_desktop_config.json</code></li>
+        </ul>
       </div>
-      <p>Or make a first <code class="inline">tools/call</code> directly:</p>
-      <div class="codeblock">
-        <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#curl-cmd">Copy</button></div>
-        <pre><code id="curl-cmd">curl -X POST https://base-tx-explain.fly.dev/mcp \
+
+      <div class="qs-panel" role="tabpanel" id="qs-cursor" aria-labelledby="tab-qs-cursor">
+        <h3>Cursor</h3>
+        <p>Create <code class="inline">.cursor/mcp.json</code> in the project root (or <code class="inline">~/.cursor/mcp.json</code> to enable it in every project):</p>
+        <div class="codeblock">
+          <div class="panel-head"><span>.cursor/mcp.json</span><button class="copy-btn" type="button" data-copy="#qs-cursor-json">Copy</button></div>
+          <pre><code id="qs-cursor-json"><span class="tok-punc">{</span>
+  <span class="tok-key">"mcpServers"</span><span class="tok-punc">: {</span>
+    <span class="tok-key">"base-tx-explain"</span><span class="tok-punc">: {</span>
+      <span class="tok-key">"type"</span><span class="tok-punc">:</span> <span class="tok-str">"streamable-http"</span><span class="tok-punc">,</span>
+      <span class="tok-key">"url"</span><span class="tok-punc">:</span> <span class="tok-str">"https://base-tx-explain.fly.dev/mcp"</span>
+    <span class="tok-punc">}</span>
+  <span class="tok-punc">}</span>
+<span class="tok-punc">}</span></code></pre>
+        </div>
+      </div>
+
+      <div class="qs-panel" role="tabpanel" id="qs-typescript" aria-labelledby="tab-qs-typescript">
+        <h3>TypeScript</h3>
+        <p>Uses the official <code class="inline">@modelcontextprotocol/sdk</code> (<code class="inline">npm install @modelcontextprotocol/sdk</code>). One free-tier call:</p>
+        <div class="codeblock">
+          <div class="panel-head"><span>client.ts</span><button class="copy-btn" type="button" data-copy="#qs-ts-code">Copy</button></div>
+          <pre><code id="qs-ts-code">import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+
+const client = new Client({ name: 'my-agent', version: '0.0.1' });
+await client.connect(
+  new StreamableHTTPClientTransport(new URL('https://base-tx-explain.fly.dev/mcp')),
+);
+
+const result = await client.callTool({
+  name: 'explain_transaction',
+  arguments: { tx_hash: '0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c' },
+});
+console.log(result.structuredContent);
+
+await client.close();</code></pre>
+        </div>
+      </div>
+
+      <div class="qs-panel" role="tabpanel" id="qs-python" aria-labelledby="tab-qs-python">
+        <h3>Python</h3>
+        <p>Uses the official <code class="inline">mcp</code> Python SDK (<code class="inline">pip install mcp</code>). One free-tier call:</p>
+        <div class="codeblock">
+          <div class="panel-head"><span>client.py</span><button class="copy-btn" type="button" data-copy="#qs-py-code">Copy</button></div>
+          <pre><code id="qs-py-code">import asyncio
+
+from mcp import ClientSession
+from mcp.client.streamable_http import streamablehttp_client
+
+TX = "0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c"
+
+async def main() -> None:
+    async with streamablehttp_client("https://base-tx-explain.fly.dev/mcp") as (read, write, _):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.call_tool("explain_transaction", {"tx_hash": TX})
+            print(result.structuredContent)
+
+asyncio.run(main())</code></pre>
+        </div>
+      </div>
+
+      <div class="qs-panel" role="tabpanel" id="qs-curl" aria-labelledby="tab-qs-curl">
+        <h3>curl</h3>
+        <p>No MCP client needed — POST a JSON-RPC <code class="inline">tools/call</code> envelope directly:</p>
+        <div class="codeblock">
+          <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#curl-cmd">Copy</button></div>
+          <pre><code id="curl-cmd">curl -X POST https://base-tx-explain.fly.dev/mcp \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"explain_transaction","arguments":{"tx_hash":"0x..."}}}'</code></pre>
-      </div>
-      <p>The response arrives as a server-sent-events frame — an <code class="inline">event: message</code> line followed by a <code class="inline">data:</code> line carrying the JSON-RPC result:</p>
-      <div class="codeblock">
-        <div class="panel-head"><span>response · text/event-stream</span></div>
-        <pre><code>event: message
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"explain_transaction","arguments":{"tx_hash":"0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c"}}}'</code></pre>
+        </div>
+        <p>The response arrives as a server-sent-events frame — an <code class="inline">event: message</code> line followed by a <code class="inline">data:</code> line carrying the JSON-RPC result:</p>
+        <div class="codeblock">
+          <div class="panel-head"><span>response · text/event-stream</span></div>
+          <pre><code>event: message
 data: {"jsonrpc":"2.0","id":1,"result":{ ... }}</code></pre>
+        </div>
       </div>
-      <p>The tool result carries the explanation twice: as <code class="inline">structuredContent</code>, and stringified in <code class="inline">content[0].text</code>. Parse whichever your client prefers. The first 10 calls per client are free — no signup.</p>
+
+      <div class="qs-panel" role="tabpanel" id="qs-x402" aria-labelledby="tab-qs-x402">
+        <h3>x402 paid client</h3>
+        <p>The autonomous-payment path: the client makes the call, catches the in-band 402 challenge, signs a USDC payment, and retries — no account, no API key. The wallet needs USDC on Base; the exact scheme uses an EIP-3009 authorization, so it needs no ETH for gas. Use a dedicated wallet holding a small balance, never a personal one.</p>
+        <p>Packages: <code class="inline">npm install @modelcontextprotocol/sdk @x402/mcp @x402/evm viem</code>. Excerpted from the runnable test client at <a href="https://github.com/0200project/base-tx-explain/blob/main/scripts/paid-call.ts">scripts/paid-call.ts</a>:</p>
+        <div class="codeblock">
+          <div class="panel-head"><span>paid-call.ts</span><button class="copy-btn" type="button" data-copy="#qs-x402-code">Copy</button></div>
+          <pre><code id="qs-x402-code">import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { ExactEvmScheme } from '@x402/evm/exact/client';
+import { createx402MCPClient } from '@x402/mcp';
+import { privateKeyToAccount } from 'viem/accounts';
+
+const account = privateKeyToAccount(process.env.X402_TEST_PRIVATE_KEY as `0x${string}`);
+
+const client = createx402MCPClient({
+  name: 'my-paying-agent',
+  version: '0.0.1',
+  schemes: [{ network: 'eip155:8453', client: new ExactEvmScheme(account) }],
+  onPaymentRequested: async ({ paymentRequired }) => {
+    const a = paymentRequired.accepts[0];
+    console.log(`402 received: ${a?.amount} units of ${a?.asset} to ${a?.payTo}. Paying...`);
+    return true; // approve the $0.02 payment
+  },
+});
+
+await client.connect(new StreamableHTTPClientTransport(new URL('https://base-tx-explain.fly.dev/mcp')));
+
+const result = await client.callTool('explain_transaction', {
+  tx_hash: '0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c',
+});
+console.log(`paid=${result.paymentMade} isError=${result.isError ?? false}`);
+
+await client.close();</code></pre>
+        </div>
+      </div>
+
+      <p>Whichever path you take, the tool result carries the explanation twice: as <code class="inline">structuredContent</code>, and stringified in <code class="inline">content[0].text</code>. Parse whichever your client prefers.</p>
+      <p><strong>The free tier is metered per client IP.</strong> The first 10 calls are free with no signup, counted per IP address — machines behind one NAT or a shared CI egress draw from a single counter, which is why the paywall can appear before 10 of your own calls. After that, each call is $0.02 via <a href="#x402-payments">x402</a>.</p>
 
       <h2 id="installation">Installation</h2>
       <h3>Hosted endpoint</h3>
-      <p>The hosted server at <code class="inline">https://base-tx-explain.fly.dev/mcp</code> works with any MCP client using the config above — nothing to install. It is also listed in the MCP registry as <code class="inline">io.github.0200project/base-tx-explain</code>, and available marketplace-hosted at a flat rate (marketplace billing applies there).</p>
+      <p>The hosted server at <code class="inline">https://base-tx-explain.fly.dev/mcp</code> works with any MCP client using the config in the <a href="#quickstart">quickstart</a> — nothing to install. It is also listed in the MCP registry as <code class="inline">io.github.0200project/base-tx-explain</code>.</p>
       <h3>Self-hosting</h3>
       <p>The server is open source under an MIT-style license and runs anywhere Docker runs. It is a stateless Express server — no database, no sessions — so it scales horizontally without coordination.</p>
       <div class="codeblock">
@@ -160,7 +323,7 @@ npm run dev</code></pre>
 
       <h2 id="authentication">Authentication</h2>
       <p>There is none, by design. No accounts, no API keys, no OAuth — nothing to provision, rotate, leak, or revoke.</p>
-      <p>Identity is replaced by payment. A free tier is metered per client, and beyond it each call is paid individually over <a href="#x402-payments">x402</a>. The server never needs to know who you are, only that the call is paid for.</p>
+      <p>Identity is replaced by payment. A free tier is metered per client IP, and beyond it each call is paid individually over <a href="#x402-payments">x402</a>. The server never needs to know who you are, only that the call is paid for.</p>
 
       <h2 id="base-tx-explain">base-tx-explain</h2>
       <p>One tool: <code class="inline">explain_transaction(tx_hash)</code> returns a strict JSON explanation of any Base mainnet transaction (chain id 8453) — a plain-English summary, a classified action type, every asset that moved, labeled counterparties, evidence-backed risk flags, and the total gas cost in USD.</p>
@@ -355,7 +518,7 @@ npm run dev</code></pre>
 
       <h2 id="usage">Usage</h2>
       <ul>
-        <li><strong>Free tier</strong> — the first 10 calls per client are free, with no signup. After that, each call is paid via x402.</li>
+        <li><strong>Free tier</strong> — the first 10 calls are free, with no signup. Metering is per client IP: machines behind the same NAT or a shared CI egress draw from one counter, so shared networks can hit the paywall early. After that, each call is paid via x402.</li>
         <li><strong>Rate limit</strong> — 60 requests per minute per client. Exceeding it returns JSON-RPC error <code class="inline">-32000</code> with HTTP 429.</li>
         <li><strong>Statelessness</strong> — the server keeps no sessions and no database, and a fresh MCP server is created per request. Calls are independent and deterministic, so parallelizing and retrying are always safe.</li>
       </ul>
@@ -367,9 +530,8 @@ npm run dev</code></pre>
             <tr><th>Tier</th><th>Price</th><th>Notes</th></tr>
           </thead>
           <tbody>
-            <tr><td>Free tier</td><td>$0</td><td>First 10 calls per client. No signup.</td></tr>
+            <tr><td>Free tier</td><td>$0</td><td>First 10 calls, metered per client IP. No signup.</td></tr>
             <tr><td>Per call</td><td>$0.02</td><td>USDC on Base via x402, paid per call.</td></tr>
-            <tr><td>Marketplace-hosted</td><td>Flat-rate</td><td>Marketplace billing applies.</td></tr>
           </tbody>
         </table>
       </div>
@@ -404,7 +566,7 @@ npm run dev</code></pre>
         <h4>Developers</h4>
         <ul>
           <li><a href="https://github.com/0200project">GitHub</a></li>
-          <li><a href="https://registry.modelcontextprotocol.io">MCP Registry</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-tx-explain">MCP Registry</a></li>
           <li><a href="/status/">Status</a></li>
         </ul>
       </nav>
@@ -413,7 +575,7 @@ npm run dev</code></pre>
         <ul>
           <li><a href="/#about">About</a></li>
           <li><a href="/security/">Security</a></li>
-          <li><a href="mailto:contact@0200project.com">Contact</a></li>
+          <li><a href="https://github.com/0200project/base-tx-explain/issues">Contact</a></li>
         </ul>
       </nav>
       <nav aria-label="Legal">
@@ -431,6 +593,34 @@ npm run dev</code></pre>
   </div>
 </footer>
 
+<script>
+/* Quickstart tabs. Without JS, all panels render stacked with their headings. */
+(function () {
+  'use strict';
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.qs-tab'));
+  var panels = Array.prototype.slice.call(document.querySelectorAll('.qs-panel'));
+  if (!tabs.length || !panels.length) return;
+  function select(name) {
+    tabs.forEach(function (t) {
+      var on = t.getAttribute('data-panel') === name;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.setAttribute('tabindex', on ? '0' : '-1');
+    });
+    panels.forEach(function (p) { p.classList.toggle('qs-active', p.id === name); });
+  }
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { select(t.getAttribute('data-panel')); });
+    t.addEventListener('keydown', function (e) {
+      var d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      var next = tabs[(i + d + tabs.length) % tabs.length];
+      next.focus();
+      select(next.getAttribute('data-panel'));
+    });
+  });
+})();
+</script>
 <script src="/assets/site.js" defer></script>
 </body>
 </html>

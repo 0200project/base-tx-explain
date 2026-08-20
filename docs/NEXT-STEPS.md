@@ -1,8 +1,22 @@
 # Morning checklist — what only you can do
 
-The code is done, validated against 100 live transactions (93% clean decode, 0 crashes),
-and both payment modes are tested end-to-end. Everything below needs your identity,
-accounts, or wallet — none of it is code. Rough total: 60–90 minutes.
+The code is done, validated against 100 live transactions (95/100 clean decode, 0 crashes,
+fresh run 2026-08-20), and both payment modes are tested end-to-end. Everything below needs
+your identity, accounts, or wallet — none of it is code. Rough total: 60–90 minutes.
+
+## Founder queue (updated 2026-08-20)
+
+Done: GitHub org + push; site live at https://0200project.github.io; Fly x402 rail live
+at https://base-tx-explain.fly.dev/mcp; MCP registry published 2026-08-20 as
+io.github.0200project/base-tx-explain.
+
+Open:
+
+- [ ] Republish the registry entry at 0.1.1 with mcp-publisher after the next deploy
+- [ ] Add GitHub repo topics: model-context-protocol, ai-agents, crypto-payments
+- [ ] Apify push (section 3 below, unchanged)
+- [ ] x402 ecosystem PR (section 5 below, unchanged)
+- [ ] Run `npm run growth` daily, or schedule it via cron (see docs/growth-assistant.md)
 
 ## 1. Payout wallet (5 min) — BEFORE anything else
 
@@ -11,7 +25,7 @@ Create a **fresh** wallet (Rabby / Coinbase Wallet / any EVM wallet). It only ev
 as `X402_PAY_TO`. Never reuse a personal wallet; the whole point is a clean pseudonymous
 payout path.
 
-## 2. GitHub org + push (10 min)
+## 2. GitHub org + push (10 min) [DONE 2026-08-20: repo and site are live]
 
 Branding research (collision-checked): keep the tool name **base-tx-explain**, publish
 everything under the handle **0200project** (GitHub org + npm scope were both free as of
@@ -45,7 +59,7 @@ don't double-charge.
 
 Your hosted MCP URL will be `https://<username>--base-tx-explain.apify.actor/mcp`.
 
-## 4. x402 rail (15 min) — the agent-native deploy
+## 4. x402 rail (15 min) — the agent-native deploy [DONE: live on Fly at base-tx-explain.fly.dev]
 
 Any Docker host works (Fly.io, Railway, a $5 VPS — keep inside the $25/mo infra cap).
 
@@ -64,7 +78,9 @@ second wallet — I can't make payments, so this verification is yours.
 
 ## 5. Listings (20 min)
 
-- **Official MCP registry**: `brew install mcp-publisher`, edit `server.json` (replace
+- **Official MCP registry** [DONE 2026-08-20: published as
+  io.github.0200project/base-tx-explain; republish at 0.1.1 after the next deploy]:
+  `brew install mcp-publisher`, edit `server.json` (replace
   the placeholder URL with the live host), `mcp-publisher login github` (the 0200project
   account), `mcp-publisher publish`. The `io.github.0200project/*` namespace binds to
   that GitHub login.

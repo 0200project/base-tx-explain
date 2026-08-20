@@ -6,6 +6,8 @@ Feed it a transaction hash. Get back what happened, in plain English, plus the s
 
 Base mainnet (chain id 8453) only.
 
+**Links:** [Live endpoint](https://base-tx-explain.fly.dev/mcp) · [Docs](https://0200project.github.io/docs/) · [OpenAPI](https://base-tx-explain.fly.dev/openapi.json) · MCP registry: `io.github.0200project/base-tx-explain` · [Site](https://0200project.github.io)
+
 ## For agents
 
 ```jsonc
@@ -74,7 +76,7 @@ Raw transaction + receipt from Base RPC → builtin decoders for ~40 event forma
 ## Self-host
 
 ```bash
-git clone <repo> && cd base-tx-explain
+git clone https://github.com/0200project/base-tx-explain.git && cd base-tx-explain
 npm install
 cp .env.example .env   # defaults work: free mode, public Base RPCs
 npm run dev            # or: npm run build && npm start
