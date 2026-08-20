@@ -1,5 +1,5 @@
 import { hexToString, isHex, type Address } from 'viem';
-import { DAY, FOREVER, TtlCache } from '../cache.js';
+import { DAY, FOREVER, NEGATIVE_TTL, TtlCache } from '../cache.js';
 import { LABELS } from '../labels.js';
 import { client } from '../rpc.js';
 
@@ -40,9 +40,11 @@ const BYTES32_SYMBOL_ABI = [
 ] as const;
 
 /**
- * symbol + decimals for an ERC-20, cached for the process lifetime.
- * Handles bytes32-symbol tokens (MKR-style). Returns null for contracts that
- * expose neither — callers fall back to a shortened address.
+ * symbol + decimals for an ERC-20. A resolved result is cached for the process
+ * lifetime; a null (the decimals read failed) is cached only briefly, so a
+ * transient RPC failure does not poison the token with the 18-decimal fallback
+ * for the whole process. Handles bytes32-symbol tokens (MKR-style); callers fall
+ * back to a shortened address when null.
  */
 export async function getTokenMeta(address: Address): Promise<TokenMeta | null> {
   return metaCache.getOrLoad(address.toLowerCase(), async () => {
@@ -67,7 +69,7 @@ export async function getTokenMeta(address: Address): Promise<TokenMeta | null> 
       }
       return { symbol: shortAddress(address), decimals };
     }
-  });
+  }, (v) => (v === null ? NEGATIVE_TTL : FOREVER));
 }
 
 /** NFT collection name (or symbol) for 721/1155 contracts; null when unavailable. */
@@ -85,7 +87,7 @@ export async function getContractName(address: Address): Promise<string | null> 
     } catch {
       return null;
     }
-  });
+  }, (v) => (v === null ? NEGATIVE_TTL : FOREVER));
 }
 
 // Cached ERC-20 totalSupply, used to judge whether an approval is effectively
@@ -103,7 +105,7 @@ export async function getTokenSupply(address: Address): Promise<bigint | null> {
     } catch {
       return null;
     }
-  });
+  }, (v) => (v === null ? NEGATIVE_TTL : DAY));
 }
 
 /**

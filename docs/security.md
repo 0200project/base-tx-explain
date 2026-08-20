@@ -8,7 +8,7 @@ old ground or reopens a closed question.
 Keep it current: when a finding is fixed, move it from **Open** to **Fixed**
 with the commit; when you clear a hypothesis, add it to **Checked and safe**.
 
-_Last reviewed: 2026-08-20, at commit `7ae1ff8` + the symbol-impersonation cross-check._
+_Last reviewed: 2026-08-20, at commit `85d48cc` + the metadata negative-cache fix._
 
 ---
 
@@ -90,6 +90,14 @@ data. Keep that list honest as fields change.
   with 0 crashes, and every partial was an app-specific unrecognized-event
   contract or a batch transfer hitting the 60-asset display cap — none came from
   the emitter gating. The safety-over-recall trade cost no measurable coverage._
+- **Metadata negative-cache poisoning** (per-result cache TTL). `getTokenMeta`,
+  `getContractName`, and `getTokenSupply` returned `null` on any read failure and
+  cached it FOREVER, so one transient RPC blip rendered a token's amounts at the
+  18-decimal fallback (10^n wrong for stablecoins) for the whole process life.
+  `TtlCache.getOrLoad` now accepts a per-result TTL; a `null` is cached for only
+  `NEGATIVE_TTL` (10 min) and self-heals, while a real result is still kept long.
+  The same mechanism is available to close the `verification.ts` / `drainers.ts`
+  negatives (Open #3).
 - **Token-symbol impersonation** (canonical cross-check). A contract that
   self-reports a valid ticker (e.g. "USDC") from an address that is not that
   token's canonical one is shown as its address, not the ticker, and carries a
@@ -130,26 +138,27 @@ data. Keep that list honest as fields change.
    forged token legs show as addresses. A swap is not a custody-safety claim, so
    this ranks below the closed cases. Candidate fix: require corroborating
    fungible movements before trusting a swap event.
-2. **`decimals()` failure negative-cached FOREVER** — one bad read renders a
-   token's amounts 10^n wrong for the process life. Don't cache transient nulls.
-3. **Reverted tx with value reports a phantom ETH movement**; ERC-1155 batch
+2. **Reverted tx with value reports a phantom ETH movement**; ERC-1155 batch
    truncates at 60 with `truncated:false`. Both make `assets_moved` assert
    something false.
-4. **Negative-cache poisoning of security signals** — `verificationStatus`
+3. **Negative-cache poisoning of security signals** — `verificationStatus`
    caches transient `unknown` for a day; `drainers.ts` disables `known_drainer`
-   for 12 h after a failed cold start. Both silently drop a risk flag.
-5. **Facilitator outage = total outage** — `app.listen()` is gated behind
+   for 12 h after a failed cold start. Both silently drop a risk flag. The
+   token-metadata instance is now Fixed; `TtlCache.getOrLoad` takes a per-result
+   TTL, so the same one-line pattern (`(v) => v === null ? NEGATIVE_TTL : …`)
+   closes these two — not yet applied to `verification.ts` / `drainers.ts`.
+4. **Facilitator outage = total outage** — `app.listen()` is gated behind
    `initPayments()`; a PayAI blip at boot crash-loops the whole service. Bind
    first, init payments in the background.
-6. **IPv6 /64 not normalized** — free-tier/rate-limit keyed on the full address;
+5. **IPv6 /64 not normalized** — free-tier/rate-limit keyed on the full address;
    a routed /64 mints many tiers. Mask to /64. (Bounded by machine throughput;
    the real harm is upstream-quota exhaustion.)
-7. **Phantom settlement** — a facilitator `200 {success:false}` still returns the
+6. **Phantom settlement** — a facilitator `200 {success:false}` still returns the
    decode and books $0.02. Gate `onAfterSettlement` on `settlement.success`.
-8. **Info/ops:** `/healthz` publishes lifetime revenue + funnel unauthenticated;
+7. **Info/ops:** `/healthz` publishes lifetime revenue + funnel unauthenticated;
    payer EIP-3009 signature written to logs on facilitator error; `ipTag` is a
    reversible 32-bit hash; unbounded usage-ledger Sets on a 256 MB box.
-9. **Free-tier enforcement is reset by every deploy** (business-logic, not a
+8. **Free-tier enforcement is reset by every deploy** (business-logic, not a
    security hole — nobody can _force_ a reset). The free-call counter lives only
    in memory (`freeTier.ts`) while the usage ledger persists to the volume, so a
    restart hands every client a fresh 10 free calls. At the current multi-session

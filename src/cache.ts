@@ -36,14 +36,24 @@ export class TtlCache<V> {
   /** Memoize an async producer under a key. Concurrent callers share one in-flight promise. */
   private inflight = new Map<string, Promise<V>>();
 
-  async getOrLoad(key: string, load: () => Promise<V>, ttlMs = this.defaultTtlMs): Promise<V> {
+  /**
+   * Memoize `load` under `key`. `ttlMs` may be a fixed number or a function of
+   * the resolved value — the latter lets callers cache a transient failure (e.g.
+   * a null from a timed-out contract read) briefly while keeping a real result
+   * long, so one blip does not poison the entry for the cache's lifetime.
+   */
+  async getOrLoad(
+    key: string,
+    load: () => Promise<V>,
+    ttlMs: number | ((value: V) => number) = this.defaultTtlMs,
+  ): Promise<V> {
     const hit = this.get(key);
     if (hit !== undefined) return hit;
     const pending = this.inflight.get(key);
     if (pending) return pending;
     const p = load()
       .then((v) => {
-        this.set(key, v, ttlMs);
+        this.set(key, v, typeof ttlMs === 'function' ? ttlMs(v) : ttlMs);
         return v;
       })
       .finally(() => this.inflight.delete(key));
@@ -52,6 +62,9 @@ export class TtlCache<V> {
   }
 }
 
+export const MINUTE = 60 * 1000;
 export const HOUR = 60 * 60 * 1000;
+/** How long to cache a transient negative (null) result before re-checking. */
+export const NEGATIVE_TTL = 10 * MINUTE;
 export const DAY = 24 * HOUR;
 export const FOREVER = 365 * DAY;
