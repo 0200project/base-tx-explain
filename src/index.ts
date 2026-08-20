@@ -8,6 +8,7 @@ import { createPaymentWrapper, type ToolResult } from '@x402/mcp';
 import express from 'express';
 import * as z from 'zod/v4';
 import { ExplainError, explainTransaction } from './explain.js';
+import { buildOpenApiDocument } from './openapi.js';
 import { consumeFreeCall, withinRateLimit } from './freeTier.js';
 
 const VERSION = '0.1.0';
@@ -168,6 +169,12 @@ const metrics = { tool_calls: 0, free: 0, paywalled: 0, booted_at: new Date().to
 
 app.get('/healthz', (_req, res) => {
   res.status(200).json({ ok: true, version: VERSION, payment_mode: PAYMENT_MODE, metrics });
+});
+
+// Canonical machine-readable contract for discovery indexers (x402scan et al.).
+const openApiDocument = buildOpenApiDocument(VERSION, PRICE_USD, PAYMENT_MODE === 'x402');
+app.get('/openapi.json', (_req, res) => {
+  res.status(200).json(openApiDocument);
 });
 
 /** MCP streamable-HTTP clients must accept SSE; anything else is a plain-HTTP caller. */
