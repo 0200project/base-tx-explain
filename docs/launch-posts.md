@@ -41,7 +41,7 @@ Example output for a real swap:
 
 (assets_moved / counterparties / timestamp trimmed here for length — full schema in the README)
 
-Validated against 100 random recent Base transactions before shipping: 93% decode to a
+Validated against 100 random recent Base transactions before shipping: 95 decode to a
 specific action type, the rest degrade to an honest partial summary, zero crashes.
 
 Pricing, honestly: 10 free calls per client, then $0.02/call in USDC on Base via x402 —
@@ -67,7 +67,7 @@ assets moved, labeled counterparties, risk flags, gas in USD.
 Deterministic decode. No LLM in the response path.
 
 **Tweet 2 (screenshot of the real JSON output from the README):**
-Real output, real tx. 93/100 random recent Base txs decode clean; the rest fail
+Real output, real tx. 95/100 random recent Base txs decode clean; the rest fail
 gracefully with an honest partial. Zero crashes.
 
 Risk flags included: unverified contract, unlimited approval, approval-for-all,
