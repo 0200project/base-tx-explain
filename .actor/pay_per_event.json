@@ -1,0 +1,7 @@
+{
+  "explain-transaction": {
+    "eventTitle": "Explain one Base transaction",
+    "eventDescription": "One explain_transaction tool call: deterministic plain-English decode of a Base mainnet transaction with risk flags.",
+    "eventPriceUsd": 0.02
+  }
+}

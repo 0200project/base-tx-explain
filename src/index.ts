@@ -14,6 +14,7 @@ import { FAVICON_PNG } from './favicon.js';
 import { withAcceptedFieldRepair } from './cdpCompat.js';
 import { buildOpenApiDocument } from './openapi.js';
 import { consumeFreeCall, refundFreeCall, withinRateLimit } from './freeTier.js';
+import { APIFY_BILLING_ACTIVE, initApifyBilling, chargeApifyCall } from './apifyBilling.js';
 import { initUsageLedger, recordEvent, usageSnapshot } from './usage.js';
 
 const VERSION = '0.1.2';
@@ -228,6 +229,9 @@ function getServer(charge: boolean, ip: string): McpServer {
   const server = new McpServer({ name: 'base-tx-explain', version: VERSION });
   const freeHandler = async (args: { tx_hash: string }): Promise<ToolResult> => {
     const result = await runExplain(args);
+    // Apify marketplace billing (pay-per-event): charge only after a clean
+    // decode - never for errors, ours or the user's. No-op off Apify.
+    if (!result.isError) await chargeApifyCall();
     if (PAYMENT_MODE === 'x402' && result.isError) {
       try {
         const code = JSON.parse((result.content[0] as { text: string }).text).code as string;
@@ -471,7 +475,10 @@ app.options('/mcp', (_req, res) => {
 app.post('/mcp', async (req, res) => {
   res.set(MCP_CORS);
   const ip = clientIpOf(req);
-  if (!withinRateLimit(ip)) {
+  // On Apify every standby run serves exactly one metered, billed customer,
+  // and req.ip resolves to Apify's proxy - one shared bucket would let one
+  // customer 429 another. The platform does its own metering there.
+  if (!APIFY_BILLING_ACTIVE && !withinRateLimit(ip)) {
     res.status(429).json({
       jsonrpc: '2.0',
       error: { code: -32000, message: 'Rate limit exceeded: max 60 requests/minute per client.' },
@@ -562,7 +569,8 @@ const port = Number.parseInt(
 
 initUsageLedger();
 
-initPayments()
+initApifyBilling()
+  .then(() => initPayments())
   .then(() => {
     app.listen(port, () => {
       console.log(`base-tx-explain v${VERSION} listening on :${port} (payment mode: ${PAYMENT_MODE})`);
