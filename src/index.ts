@@ -158,6 +158,19 @@ app.get('/healthz', (_req, res) => {
 const isMcpClient = (req: express.Request): boolean =>
   String(req.headers.accept ?? '').includes('text/event-stream');
 
+/** x402 v2 wire format: the PaymentRequired payload rides in a base64 response header. */
+function send402(res: express.Response): void {
+  if (!httpPaymentRequired) {
+    res.status(500).json({ error: 'payment configuration missing' });
+    return;
+  }
+  const { hint, ...paymentRequired } = httpPaymentRequired;
+  res
+    .status(402)
+    .set('PAYMENT-REQUIRED', Buffer.from(JSON.stringify(paymentRequired)).toString('base64'))
+    .json(httpPaymentRequired);
+}
+
 app.post('/mcp', async (req, res) => {
   const ip = req.ip ?? 'unknown';
   if (!withinRateLimit(ip)) {
@@ -172,7 +185,7 @@ app.post('/mcp', async (req, res) => {
   // Plain-HTTP callers (discovery probes, curl) get the x402 402 face
   // instead of the transport's 406.
   if (httpPaymentRequired && !isMcpClient(req)) {
-    res.status(402).json(httpPaymentRequired);
+    send402(res);
     return;
   }
 
@@ -222,7 +235,7 @@ const methodNotAllowed = (_req: express.Request, res: express.Response) => {
 };
 app.get('/mcp', (req, res) => {
   if (httpPaymentRequired && !isMcpClient(req)) {
-    res.status(402).json(httpPaymentRequired);
+    send402(res);
     return;
   }
   methodNotAllowed(req, res);
