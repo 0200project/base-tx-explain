@@ -13,6 +13,7 @@ import { ExplainError, explainTransaction } from './explain.js';
 import { FAVICON_PNG } from './favicon.js';
 import { withAcceptedFieldRepair } from './cdpCompat.js';
 import { buildOpenApiDocument } from './openapi.js';
+import { registerRestRoutes } from './rest.js';
 import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
 import { APIFY_BILLING_ACTIVE, initApifyBilling, chargeApifyCall } from './apifyBilling.js';
 import { initUsageLedger, recordEvent, usageSnapshot } from './usage.js';
@@ -67,6 +68,9 @@ let paidHandler: ((args: { tx_hash: string }, extra: unknown) => Promise<Record<
  * streamable transport would otherwise answer 406 and they give up.
  */
 let httpPaymentRequired: Record<string, unknown> | null = null;
+/** Shared with the REST rail so both charge through one configured server. */
+let sharedResourceServer: import('@x402/core/server').x402ResourceServer | null = null;
+let sharedPayTo = '';
 
 // An https resource URL: x402 indexers (Bazaar, x402scan) group and link
 // resources by URL and may drop non-https schemes.
@@ -197,6 +201,8 @@ async function initPayments(): Promise<void> {
       },
     },
   });
+  sharedResourceServer = resourceServer;
+  sharedPayTo = payTo;
   paidHandler = paid(runExplain) as typeof paidHandler;
   httpPaymentRequired = {
     x402Version: 2,
@@ -573,6 +579,29 @@ initFreeTier();
 initApifyBilling()
   .then(() => initPayments())
   .then(() => {
+    // REST rail. Registered after initPayments so it shares the same
+    // configured resource server; only in x402 mode, since without payments
+    // configured there is nothing to gate it with.
+    if (PAYMENT_MODE === 'x402' && sharedResourceServer) {
+      registerRestRoutes(app, {
+        resourceServer: sharedResourceServer,
+        payTo: sharedPayTo,
+        priceUsd: PRICE_USD,
+        network: NETWORK,
+        publicUrl: PUBLIC_URL,
+        tryFreeCall: (req) => consumeFreeCall(clientIpOf(req)),
+        refundFreeCall: (req) => refundFreeCall(clientIpOf(req)),
+        record: (req, charged, ok) => {
+          metrics.tool_calls++;
+          if (charged) metrics.paywalled++;
+          else metrics.free++;
+          const tag = createHash('sha256').update(`btx:${clientIpOf(req)}`).digest('hex').slice(0, 8);
+          console.log(`[rest] ${new Date().toISOString()} ${charged ? 'paid' : 'free'} ok=${ok} client=${tag}`);
+          recordEvent({ t: new Date().toISOString(), e: 'call', charge: charged, paid: charged, client: tag, ok });
+        },
+      });
+      console.log(`REST rail: POST ${PUBLIC_URL}/explain ($${PRICE_USD}/call via x402 HTTP)`);
+    }
     app.listen(port, () => {
       console.log(`base-tx-explain v${VERSION} listening on :${port} (payment mode: ${PAYMENT_MODE})`);
     });

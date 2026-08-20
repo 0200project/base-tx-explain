@@ -173,6 +173,49 @@ export function buildOpenApiDocument(
     };
   }
 
+
+  const restOperation: Record<string, unknown> = {
+    operationId: 'explain',
+    summary: 'Explain a Base mainnet transaction in plain English',
+    tags: ['Blockchain'],
+    description:
+      'Plain HTTP alternative to the MCP tool, for x402 clients that speak ordinary REST. Same decode, same price, same free tier.',
+    requestBody: {
+      required: true,
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              tx_hash: {
+                type: 'string',
+                pattern: '^0x[0-9a-fA-F]{64}$',
+                description: 'The Base mainnet transaction hash to explain',
+              },
+            },
+            required: ['tx_hash'],
+          },
+          example: { tx_hash: '0x' + 'ab'.repeat(32) },
+        },
+      },
+    },
+    responses: {
+      '200': {
+        description: 'The explanation',
+        content: { 'application/json': { schema: EXPLAIN_RESULT_SCHEMA } },
+      },
+      '400': { description: 'tx_hash missing or malformed' },
+      '402': { description: 'Payment Required (x402; challenge in the PAYMENT-REQUIRED header and the body)' },
+      '404': { description: 'No such transaction on Base mainnet' },
+    },
+  };
+  if (paid) {
+    restOperation['x-payment-info'] = {
+      price: { mode: 'fixed', currency: 'USD', amount: Number.parseFloat(priceUsd).toFixed(6) },
+      protocols: [{ x402: {} }],
+    };
+  }
+
   return {
     openapi: '3.1.0',
     servers: [{ url: publicUrl, description: 'Production' }],
@@ -185,10 +228,10 @@ export function buildOpenApiDocument(
       description:
         'Plain-English, deterministic decode of any Base mainnet transaction. Strict JSON: summary, action type, assets moved, labeled counterparties, risk flags, gas in USD. No LLM in the response path.',
       'x-guidance':
-        'This is an MCP server (streamable HTTP). POST a JSON-RPC 2.0 envelope to /mcp with header "Accept: application/json, text/event-stream". Call method tools/call with name "explain_transaction" and arguments {"tx_hash": "0x..."} where tx_hash is a Base mainnet (chain id 8453) transaction hash. The first 10 calls per client are free; afterwards the server returns an x402 payment challenge for $' +
+        'Two ways to call this. PLAIN HTTP: POST /explain with {"tx_hash":"0x..."} and read JSON back; it speaks x402, so an unpaid call returns a 402 challenge you pay and retry. MCP: this is also an MCP server (streamable HTTP). POST a JSON-RPC 2.0 envelope to /mcp with header "Accept: application/json, text/event-stream". Call method tools/call with name "explain_transaction" and arguments {"tx_hash": "0x..."} where tx_hash is a Base mainnet (chain id 8453) transaction hash. The first 10 calls per client are free; afterwards the server returns an x402 payment challenge for $' +
         priceUsd +
         ' USDC on Base — attach the payment payload at _meta["x402/payment"] per the x402 MCP transport and retry the same call. The result\'s structuredContent field carries the explanation object.',
     },
-    paths: { '/mcp': { post: operation } },
+    paths: { '/explain': { post: restOperation }, '/mcp': { post: operation } },
   };
 }
