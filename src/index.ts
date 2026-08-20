@@ -204,10 +204,12 @@ async function initPayments(): Promise<void> {
     accepts,
     extensions: BAZAAR_EXTENSIONS,
     hint:
+      `First ${process.env.FREE_CALLS_PER_IP ?? '10'} calls per client are free - no account, no API key. ` +
       'This is an MCP server (streamable HTTP). Connect an MCP client with header ' +
       '"Accept: application/json, text/event-stream" and call the explain_transaction tool; ' +
       'payment settles over the x402 MCP transport (_meta["x402/payment"]). ' +
-      'HTTP-header payment retries are not supported on this endpoint yet.',
+      'HTTP-header payment retries are not supported on this endpoint yet. ' +
+      `Deterministic decode: same hash, same JSON. Docs: ${SITE_URL}/docs/ | OpenAPI: ${PUBLIC_URL}/openapi.json | llms.txt: ${PUBLIC_URL}/llms.txt`,
   };
   console.log(
     `x402 payments enabled: $${PRICE_USD}/call USDC on Base to ${payTo} ` +
