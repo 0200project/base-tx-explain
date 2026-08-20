@@ -11,6 +11,7 @@ import * as z from 'zod/v4';
 import { dashboardPage, loginPage } from './dashboard.js';
 import { ExplainError, explainTransaction } from './explain.js';
 import { FAVICON_PNG } from './favicon.js';
+import { withAcceptedFieldRepair } from './cdpCompat.js';
 import { buildOpenApiDocument } from './openapi.js';
 import { consumeFreeCall, refundFreeCall, withinRateLimit } from './freeTier.js';
 import { initUsageLedger, recordEvent, usageSnapshot } from './usage.js';
@@ -112,13 +113,13 @@ async function initPayments(): Promise<void> {
   const preferCdp = process.env.X402_PREFER_CDP === '1';
 
   if (cdpAvailable && preferCdp) {
-    facilitators.push(createCdpFacilitatorClient());
+    facilitators.push(withAcceptedFieldRepair(createCdpFacilitatorClient()));
     facilitatorNames.push('cdp');
   }
   facilitators.push(new HTTPFacilitatorClient({ url: keylessUrl }));
   facilitatorNames.push(keylessUrl);
   if (cdpAvailable && !preferCdp) {
-    facilitators.push(createCdpFacilitatorClient());
+    facilitators.push(withAcceptedFieldRepair(createCdpFacilitatorClient()));
     facilitatorNames.push('cdp(fallback)');
   }
 
