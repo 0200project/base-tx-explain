@@ -8,7 +8,7 @@ old ground or reopens a closed question.
 Keep it current: when a finding is fixed, move it from **Open** to **Fixed**
 with the commit; when you clear a hypothesis, add it to **Checked and safe**.
 
-_Last reviewed: 2026-08-20, at commit `cbe62d6`._
+_Last reviewed: 2026-08-20, at commit `4d139ab` + the classifier emitter-gating change._
 
 ---
 
@@ -75,6 +75,17 @@ data. Keep that list honest as fields change.
 
 ## 4. Fixed
 
+- **Forged protocol events laundering a drain into a benign action** (classifier
+  emitter-gating). `decodeKnownLog` matches on `topic0` alone, but `log.address`
+  (the emitter) is _not_ forgeable — a contract can only emit logs from itself.
+  `classify` now trusts a protocol-semantic event (Aave lending, OP bridge,
+  Seaport sale, EAS attestation, Basenames registration) only when the emitter
+  carries the matching label, so a counterfeit event from a random contract no
+  longer produces "supplied to Aave" / "bridged into Base" / "claimed". A drain
+  fronted by a `claim()` selector is also caught: the claim rule is now
+  subordinate to net flows (a real claim receives value; a sender that only
+  parted with value is described as the transfer it is). Real, labeled protocols
+  are unaffected. Residuals in Open #1.
 - **Token-metadata prompt injection** (`cbe62d6`). Hostile token symbols/names
   and third-party event/function names reached `summary`. Now: `sanitizeSymbol`
   hardened (NFKC, strips control/format/line-separator/mark chars incl.
@@ -94,13 +105,21 @@ data. Keep that list honest as fields change.
 
 ## 5. Open (known, unfixed) — ranked
 
-1. **Confidently-wrong decodes from spoofed evidence** (correctness = security
-   here). `decodeKnownLog` matches on `topic0` alone with no emitter allowlist,
-   so a hostile contract can forge Aave/bridge/swap/Transfer events and steer the
-   summary (e.g. a `transferFrom` drain fronted by a `claim()` selector renders
-   as "claimed rewards"; a counterfeit token prints as canonical "USDC"). Fix:
-   gate protocol-event classification on `getLabel(emitter)` category / verified
-   emitter, and make selector hints subordinate to observed net flows.
+1. **Residual spoofed-evidence cases.** The main forged-event vectors are now
+   closed (see Fixed: emitter-gating). What remains, lower-severity:
+   - **Swap events** (`univ3_swap` etc.) are still trusted on the event alone —
+     the emitter is the pool, which is not labeled, so emitter-gating does not
+     apply. A bare forged Swap event mislabels as `swap` ("executed a token
+     swap"); with the token-identity fix, forged token legs show as addresses.
+     A swap is not a custody-safety claim, so this ranks below the closed cases.
+     Candidate fix: require corroborating fungible movements before trusting a
+     swap event.
+   - **Fullwidth symbol impersonation** — `sanitizeSymbol` NFKC-folds ＵＳＤＣ to
+     "USDC" for _name_ display; `displaySymbol` already rejects it for the token
+     ticker (raw check), but a token whose symbol legitimately equals a known
+     ticker while its address is not the canonical one is not yet cross-checked
+     against `getLabel(token_address)`. Fix: validate a symbol that collides with
+     a known label against that label's canonical address.
 2. **`decimals()` failure negative-cached FOREVER** — one bad read renders a
    token's amounts 10^n wrong for the process life. Don't cache transient nulls.
 3. **Reverted tx with value reports a phantom ETH movement**; ERC-1155 batch
@@ -141,6 +160,12 @@ findings that produced `3a13cde` / `cbe62d6`.
 - **JSON-envelope breakout in `summary`** — `JSON.stringify` escapes quotes; the
   only injection is _within_ the string value (that is the token-name vector,
   Fixed).
+- **Script injection (XSS) via decoded output in the site playground** — the
+  playground renders results with `innerHTML`, but every value goes through
+  `esc()` (escapes `& < >`) in `renderVal`/`curlBlock`, and the `tx_hash` comes
+  from a text input (not a URL param), also escaped. Belt-and-suspenders with the
+  source-level `sanitizeSymbol` strip of `<>"'`. Re-check if any site page ever
+  renders a decoded field without `esc()`.
 - **Secrets in git / scripts / dashboard** — `.env`, `.stats-token`, `/data/`
   gitignored; history clean; `scripts/*` make only unauthenticated GETs and log
   no keys; the dashboard embeds no token. `X402_PAY_TO` in `fly.toml` is public

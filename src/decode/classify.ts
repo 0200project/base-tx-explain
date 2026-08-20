@@ -1,5 +1,5 @@
 import type { Address } from 'viem';
-import { getLabel, WETH_ADDRESS } from '../labels.js';
+import { getLabel, WETH_ADDRESS, type LabelCategory } from '../labels.js';
 import type { ActionType, AssetMovement } from '../types.js';
 import { netFlows } from './assets.js';
 import type { DecodedEvent } from './events.js';
@@ -53,6 +53,22 @@ export function classify(input: ClassifyInput): Classification {
   const has = (kind: DecodedEvent['kind']) => events.some((e) => e.kind === kind);
   const all = (kind: DecodedEvent['kind']) => events.filter((e) => e.kind === kind);
 
+  // A protocol-semantic event only proves what it claims when its EMITTER is the
+  // genuine protocol. `log.address` is not forgeable — a contract can only emit
+  // logs from itself — so a real Aave/bridge/Seaport/registry event carries the
+  // matching label, while a hostile contract emitting a counterfeit one carries
+  // its own (unlabeled) address. Gating on the emitter's label rejects forged
+  // events that would otherwise launder a drain into a benign "supplied/bridged/
+  // claimed" summary, while still trusting the labeled protocols we know.
+  const fromCategory = (kind: DecodedEvent['kind'], category: LabelCategory) =>
+    events.some((e) => e.kind === kind && getLabel(e.emitter)?.category === category);
+
+  // Net fungible flow for the sender: did they part with value / receive value?
+  // Used to keep a selector-named "claim" from hiding an actual outflow.
+  const senderFlowValues = [...netFlows(movements, sender).values()];
+  const senderSent = value > 0n || senderFlowValues.some((f) => f.net < -1e-12);
+  const senderReceived = senderFlowValues.some((f) => f.net > 1e-12);
+
   // 1. Deployment
   if (!to) return { action: 'contract_deployment', detail };
 
@@ -67,23 +83,34 @@ export function classify(input: ClassifyInput): Classification {
     return { action: classifyIntentOnly(input), detail };
   }
 
-  // 3. Attestations (EAS)
-  if (has('eas_attested') || (toLabel?.category === 'attestation' && fnHint === 'attest')) {
+  // 3. Attestations (EAS) — the Attested event must come from the EAS contract
+  if (fromCategory('eas_attested', 'attestation') || (toLabel?.category === 'attestation' && fnHint === 'attest')) {
     return { action: 'attestation', detail };
   }
 
-  // 4. Name registration (Basenames / ENS-style controllers)
-  const nameEv = all('name_registered')[0];
+  // 4. Name registration (Basenames / ENS-style controllers). The NameRegistered
+  // event carries an attacker-chosen `name` string that flows into the summary,
+  // so only trust it from a labeled registry — a counterfeit event from a random
+  // contract must not set the action or the registered name.
+  const nameEv = all('name_registered').find((e) => getLabel(e.emitter)?.category === 'registry');
   if (nameEv || (toLabel?.category === 'registry' && fnHint === 'register')) {
     const registeredName = nameEv ? String(nameEv.args.name ?? '') : undefined;
     return { action: 'name_registration', detail: { ...detail, registeredName } };
   }
 
-  // 5. Bridges — explicit events first, then bridge-labeled targets by flow direction
-  if (has('bridge_withdrawal_initiated') || has('bridge_eth_initiated') || has('bridge_erc20_initiated')) {
+  // 5. Bridges — explicit events (from a labeled bridge) first, then bridge-labeled targets
+  if (
+    fromCategory('bridge_withdrawal_initiated', 'bridge') ||
+    fromCategory('bridge_eth_initiated', 'bridge') ||
+    fromCategory('bridge_erc20_initiated', 'bridge')
+  ) {
     return { action: 'bridge_out', detail };
   }
-  if (has('bridge_deposit_finalized') || has('bridge_eth_finalized') || has('bridge_erc20_finalized')) {
+  if (
+    fromCategory('bridge_deposit_finalized', 'bridge') ||
+    fromCategory('bridge_eth_finalized', 'bridge') ||
+    fromCategory('bridge_erc20_finalized', 'bridge')
+  ) {
     return { action: 'bridge_in', detail };
   }
   if (toLabel?.category === 'bridge' || fnHint === 'bridge') {
@@ -102,18 +129,18 @@ export function classify(input: ClassifyInput): Classification {
 
   // 7. NFT sales (Seaport events, or marketplace-labeled targets moving NFTs)
   const nftMoves = movements.filter((m) => m.standard === 'erc721' || m.standard === 'erc1155');
-  if (has('seaport_order') || fnHint === 'nft_trade') {
+  if (fromCategory('seaport_order', 'nft_marketplace') || fnHint === 'nft_trade') {
     return { action: 'nft_sale', detail: { ...detail, protocol: detail.protocol ?? 'Seaport' } };
   }
   if (toLabel?.category === 'nft_marketplace' && nftMoves.length > 0) {
     return { action: 'nft_sale', detail };
   }
 
-  // 8. Lending (event-grounded)
-  if (has('aave_supply')) return { action: 'lending_supply', detail };
-  if (has('aave_borrow')) return { action: 'lending_borrow', detail };
-  if (has('aave_repay')) return { action: 'lending_repay', detail };
-  if (has('aave_withdraw')) return { action: 'lending_withdraw', detail };
+  // 8. Lending (event-grounded) — the Aave event must come from a labeled lending pool
+  if (fromCategory('aave_supply', 'lending')) return { action: 'lending_supply', detail };
+  if (fromCategory('aave_borrow', 'lending')) return { action: 'lending_borrow', detail };
+  if (fromCategory('aave_repay', 'lending')) return { action: 'lending_repay', detail };
+  if (fromCategory('aave_withdraw', 'lending')) return { action: 'lending_withdraw', detail };
   if (toLabel?.category === 'lending') {
     if (has('comet_supply') || fnHint === 'lending' || fnHint === 'stake') {
       const flows = netFlows(movements, sender);
@@ -154,8 +181,11 @@ export function classify(input: ClassifyInput): Classification {
     };
   }
 
-  // 11. Claims / rewards
-  if (fnHint === 'claim' || has('reward_paid') || has('merkle_claimed')) {
+  // 11. Claims / rewards. A real claim RECEIVES value. If the sender only parted
+  // with value and got nothing back (e.g. a drainer whose entrypoint is named
+  // claim() to exploit the selector hint), do not let it be summarized as a
+  // reward claim — fall through so the actual outflow is described instead.
+  if ((fnHint === 'claim' || has('reward_paid') || has('merkle_claimed')) && !(senderSent && !senderReceived)) {
     return { action: 'claim', detail };
   }
 

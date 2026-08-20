@@ -212,7 +212,7 @@ export function buildSummary(ctx: SummaryContext): string {
       return `${sender} unstaked ${receivedStr || 'assets'}${via}.`;
     case 'claim':
       if (reverted) return attempted(`claim rewards${via}`);
-      return `${sender} claimed ${receivedStr || 'rewards'}${via}.`;
+      return `${sender} claimed ${receivedStr || 'rewards'}${via}${sentStr ? `, paying ${sentStr}` : ''}.`;
     case 'batch_transfer': {
       if (reverted) return attempted('send a batch of transfers');
       const recipients = new Set(
