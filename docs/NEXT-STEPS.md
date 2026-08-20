@@ -17,6 +17,9 @@ Open:
 - [ ] Apify push (section 3 below, unchanged)
 - [ ] x402 ecosystem PR (section 5 below, unchanged)
 - [ ] Run `npm run growth` daily, or schedule it via cron (see docs/growth-assistant.md)
+- [ ] Google Search Console: submit https://0200project.github.io (URL-prefix verify,
+      needs your Google login); re-verify via DNS once 0200project.com lands. The SEO
+      groundwork (sitemap, FAQ, structured data) is live and waiting on this.
 
 Blocked (not on you): **Coinbase Bazaar indexing** — CDP's facilitator rejects the
 payment payloads our @x402/core 2.23 emits (400 "must match one of x402V2Pay...");
