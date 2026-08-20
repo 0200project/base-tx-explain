@@ -1,0 +1,6 @@
+{
+  "actorOutputSchemaVersion": 1,
+  "title": "Output of the Base Transaction Explainer (MCP server)",
+  "description": "This Actor is a standby MCP server: explanations are returned in-band over the MCP protocol to the connected client, not written to storage. Runs produce no dataset output; an empty output here means the run completed normally.",
+  "properties": {}
+}
