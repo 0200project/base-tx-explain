@@ -102,10 +102,21 @@ async function initPayments(): Promise<void> {
   // ORDER MATTERS AND IS REVENUE-CRITICAL. The resource server routes a payment
   // to the first facilitator supporting the scheme/network and does NOT retry
   // the next one on rejection, so a facilitator that refuses our payloads must
-  // never be first. CDP's facilitator currently 400s the payload that
-  // @x402/core 2.23 produces ("'paymentPayload' is invalid") while the keyless
-  // facilitator settles it, so the keyless one leads. Flipping this trades all
-  // revenue for a Bazaar listing; set X402_PREFER_CDP=1 only to retest CDP.
+  // never be first.
+  //
+  // CDP's facilitator rejects the payment payload that @x402/mcp 2.23 clients
+  // produce, with 400 "'paymentPayload' is invalid: must match one of
+  // [x402V2Pay...]" (message truncated by the SDK). Tested 2026-08-20; the
+  // keyless facilitator settles the identical payload. Filling in the missing
+  // `accepted` field (see cdpCompat.ts) did NOT resolve it, so the mismatch is
+  // deeper than that one field and the full CDP message is needed to go
+  // further.
+  //
+  // Do not put CDP first "just to try": the payload comes from the PAYER's
+  // client, so this rejects real strangers' payments too, not just our test
+  // client. Until the incompatibility is understood, CDP-first means taking no
+  // money at all. X402_PREFER_CDP=1 exists solely for a deliberate, supervised
+  // retest with someone watching the logs.
   const facilitators: FacilitatorClient[] = [];
   const facilitatorNames: string[] = [];
   const keylessUrl = process.env.X402_FACILITATOR_URL || 'https://facilitator.payai.network';

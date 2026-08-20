@@ -15,6 +15,13 @@ import type { PaymentPayload, PaymentRequirements } from '@x402/core/types';
  * which is why CDP-settled payments (and therefore CDP Bazaar indexing) were
  * impossible while every other facilitator worked.
  *
+ * STATUS: this repair alone does NOT make CDP accept the payment - tested
+ * against CDP on 2026-08-20 and the 400 was unchanged. So the payload is
+ * missing or misshaping something beyond `accepted`, and the SDK truncates
+ * CDP's message before the offending field is named. Kept because emitting a
+ * spec-shaped payload is correct regardless, but do not read its presence as
+ * "CDP works now".
+ *
  * SAFETY: `accepted` means "the requirement the payer chose to satisfy". This
  * shim fills it from the requirement the resource server is verifying against,
  * which is only unambiguous while exactly ONE payment option is advertised.
