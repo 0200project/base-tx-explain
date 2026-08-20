@@ -67,6 +67,37 @@ const EXPLAIN_RESULT_SCHEMA = {
   required: ['summary', 'action_type', 'status', 'assets_moved', 'counterparties', 'risk_flags', 'gas_paid_usd', 'timestamp', 'basescan_url', 'provenance'],
 } as const;
 
+const PASS_OPERATION = (publicUrl: string): Record<string, unknown> => ({
+  operationId: 'buy_pass',
+  summary: 'Buy a 30-day pass: 10,000 explain calls for $9, no account',
+  tags: ['Blockchain'],
+  description:
+    'Pays via the standard x402 HTTP flow. Returns a bearer pass token; present it as the X-BTX-Pass header on POST /explain or at _meta["btx/pass"] on MCP tools/call. Transferable; lost token = lost pass. Renew by buying a new pass after expiry.',
+  responses: {
+    '200': {
+      description: 'Pass minted',
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            properties: {
+              pass_token: { type: 'string' },
+              expires_at: { type: 'string' },
+              call_cap: { type: 'number' },
+            },
+            required: ['pass_token', 'expires_at', 'call_cap'],
+          },
+        },
+      },
+    },
+    '402': { description: `Payment Required: $9 USDC on Base via x402. Pay and retry ${publicUrl}/pass.` },
+  },
+  'x-payment-info': {
+    price: { mode: 'fixed', currency: 'USD', amount: '9.000000' },
+    protocols: [{ x402: {} }],
+  },
+});
+
 export function buildOpenApiDocument(
   version: string,
   priceUsd: string,
@@ -232,6 +263,10 @@ export function buildOpenApiDocument(
         priceUsd +
         ' USDC on Base — attach the payment payload at _meta["x402/payment"] per the x402 MCP transport and retry the same call. The result\'s structuredContent field carries the explanation object.',
     },
-    paths: { '/explain': { post: restOperation }, '/mcp': { post: operation } },
+    paths: {
+      '/explain': { post: restOperation },
+      ...(paid ? { '/pass': { post: PASS_OPERATION(publicUrl) } } : {}),
+      '/mcp': { post: operation },
+    },
   };
 }
