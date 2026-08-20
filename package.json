@@ -17,11 +17,13 @@
     "growth": "node scripts/growth-scan.mjs"
   },
   "dependencies": {
+    "@coinbase/cdp-sdk": "^1.55.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@x402/core": "^2.23.0",
     "@x402/evm": "^2.23.0",
     "@x402/extensions": "^2.23.0",
     "@x402/mcp": "^2.23.0",
+    "@x402/svm": "^2.23.0",
     "express": "^5.2.1",
     "viem": "^2",
     "zod": "^4.4.3"

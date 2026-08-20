@@ -1,7 +1,8 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { HTTPFacilitatorClient, x402ResourceServer } from '@x402/core/server';
+import { createCdpFacilitatorClient } from '@coinbase/cdp-sdk/x402';
+import { HTTPFacilitatorClient, x402ResourceServer, type FacilitatorClient } from '@x402/core/server';
 import { ExactEvmScheme } from '@x402/evm/exact/server';
 import { declareDiscoveryExtension } from '@x402/extensions/bazaar';
 import { createPaymentWrapper, type ToolResult } from '@x402/mcp';
@@ -91,18 +92,48 @@ async function initPayments(): Promise<void> {
   if (!/^0x[0-9a-fA-F]{40}$/.test(payTo) || /^0x0{40}$/.test(payTo)) {
     throw new Error('PAYMENT_MODE=x402 requires X402_PAY_TO to be set to a real receiving address.');
   }
-  const facilitatorUrl = process.env.X402_FACILITATOR_URL || 'https://facilitator.payai.network';
-  const facilitator = new HTTPFacilitatorClient({ url: facilitatorUrl });
-  const resourceServer = new x402ResourceServer(facilitator).register(NETWORK, new ExactEvmScheme());
-  // Payment-path visibility: a rejected payment must never be silent.
-  resourceServer
-    .onVerifyFailure(async (ctx: unknown) => {
-      console.error('[x402] VERIFY FAILED:', JSON.stringify(ctx).slice(0, 600));
-    })
-    .onSettleFailure(async (ctx: unknown) => {
-      console.error('[x402] SETTLE FAILED:', JSON.stringify(ctx).slice(0, 600));
-    });
-  await resourceServer.initialize();
+  // Facilitators verify and settle payments. Catalogs are per-facilitator with
+  // no cross-aggregation: a settlement only lists this resource in the catalog
+  // of the facilitator that processed it. CDP first (its Bazaar is the catalog
+  // agents query, and it indexes only CDP-settled resources), PayAI second as a
+  // keyless fallback so payments still work if CDP credentials lapse.
+  const facilitators: FacilitatorClient[] = [];
+  const facilitatorNames: string[] = [];
+  if (process.env.CDP_API_KEY_ID && process.env.CDP_API_KEY_SECRET) {
+    facilitators.push(createCdpFacilitatorClient());
+    facilitatorNames.push('cdp');
+  }
+  const fallbackUrl = process.env.X402_FACILITATOR_URL || 'https://facilitator.payai.network';
+  facilitators.push(new HTTPFacilitatorClient({ url: fallbackUrl }));
+  facilitatorNames.push(fallbackUrl);
+
+  const buildResourceServer = (clients: typeof facilitators) => {
+    const server = new x402ResourceServer(clients).register(NETWORK, new ExactEvmScheme());
+    // Payment-path visibility: a rejected payment must never be silent.
+    server
+      .onVerifyFailure(async (ctx: unknown) => {
+        console.error('[x402] VERIFY FAILED:', JSON.stringify(ctx).slice(0, 600));
+      })
+      .onSettleFailure(async (ctx: unknown) => {
+        console.error('[x402] SETTLE FAILED:', JSON.stringify(ctx).slice(0, 600));
+      });
+    return server;
+  };
+
+  // Bad or expired CDP credentials must degrade to the keyless facilitator,
+  // never take the paid endpoint down: losing Bazaar indexing is recoverable,
+  // a crash-looping revenue server is not.
+  let resourceServer = buildResourceServer(facilitators);
+  try {
+    await resourceServer.initialize();
+  } catch (err) {
+    if (facilitatorNames[0] !== 'cdp') throw err;
+    console.error('[x402] CDP facilitator unavailable, falling back to keyless facilitator:', err);
+    facilitators.shift();
+    facilitatorNames.shift();
+    resourceServer = buildResourceServer(facilitators);
+    await resourceServer.initialize();
+  }
   const accepts = await resourceServer.buildPaymentRequirements({
     scheme: 'exact',
     network: NETWORK,
@@ -143,7 +174,10 @@ async function initPayments(): Promise<void> {
       'payment settles over the x402 MCP transport (_meta["x402/payment"]). ' +
       'HTTP-header payment retries are not supported on this endpoint yet.',
   };
-  console.log(`x402 payments enabled: $${PRICE_USD}/call USDC on Base to ${payTo} (facilitator: ${facilitatorUrl})`);
+  console.log(
+    `x402 payments enabled: $${PRICE_USD}/call USDC on Base to ${payTo} ` +
+      `(facilitators: ${facilitatorNames.join(' -> ')})`,
+  );
 }
 
 /**
