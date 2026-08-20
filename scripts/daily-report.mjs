@@ -130,6 +130,7 @@ const checks = [
   ['Site sitemap', 'https://0200project.com/sitemap.xml', null],
   ['Site (custom domain)', 'https://0200project.com/', null],
   ['Glama listing', 'https://glama.ai/mcp/servers/0200project/base-tx-explain', null],
+  ['Apify Store listing', 'https://apify.com/0200project/base-tx-explain', null],
 ];
 for (const [name, url, parse] of checks) {
   try {

@@ -18,9 +18,10 @@ Open:
       PERSONAL X account is — the pseudonymous accounts (u/polaris28, X handle)
       must be created/logged in by you first; never post 0200project content
       from the personal account.
-- [ ] Apify console steps: the actor is PUSHED AND BUILT (id gcj5xAJ0vpAx8Uf2s,
-      https://console.apify.com/actors/gcj5xAJ0vpAx8Uf2s) — remaining: enable
-      Standby mode, set monetization, publish to the Store.
+- [x] Apify Store: LIVE 2026-08-20 at https://apify.com/0200project/base-tx-explain
+      (standby MCP mode, build 0.1.4). Published unmonetized: Apify discontinued
+      rental pricing; pay-per-event needs Actor.charge() code plus a 14-day
+      activation window. Decide later whether PPE is worth the build.
 - [ ] Google Search Console: submit https://0200project.github.io (URL-prefix verify,
       needs your Google login); re-verify via DNS once 0200project.com lands. The SEO
       groundwork (sitemap, FAQ, structured data) is live and waiting on this.

@@ -375,6 +375,7 @@ async function collectKpi(seen) {
     const data = await fetchJson(REGISTRY_URL);
     const list = data?.servers || [];
     const entry = list
+      .filter((e) => e?._meta?.["io.modelcontextprotocol.registry/official"]?.isLatest !== false)
       .map((e) => e?.server || e)
       .find((s) => (s?.name || "").includes("base-tx-explain"));
     kpi.registry = entry
