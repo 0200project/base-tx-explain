@@ -22,6 +22,10 @@ Open:
       (standby MCP mode, build 0.1.4). Published unmonetized: Apify discontinued
       rental pricing; pay-per-event needs Actor.charge() code plus a 14-day
       activation window. Decide later whether PPE is worth the build.
+- [ ] Apify console: flip monetization to Pay per event, add event
+      `explain-transaction` at $0.02 (decided; parity with x402), fill payout/
+      billing details. Submitting starts the 14-day notice — billing begins
+      ~Sept 3. Price is sticky once set (Apify cooldown between changes).
 - [ ] Google Search Console: submit https://0200project.github.io (URL-prefix verify,
       needs your Google login); re-verify via DNS once 0200project.com lands. The SEO
       groundwork (sitemap, FAQ, structured data) is live and waiting on this.
@@ -133,6 +137,13 @@ bait) and never pitch in the official MCP contributor Discord.
 Signal: any stranger's paid call (watch USDC arrivals at the payout address on
 Basescan, or x402scan). Target: +$25 cumulative. Per the plan: zero paid calls by
 day 14 → ship xrpl-intel in this same wrapper and rails, don't iterate this one.
+
+**Gate caveat (decided 2026-08-20): judge the day-14 gate on the x402 rail and
+usage signals only.** Apify pay-per-event billing carries a mandatory 14-day
+notice period, so it cannot produce a single cent before ~Sept 3 no matter how
+well the listing performs — an Apify $0 at gate time is structural, not a
+failed channel. Usage signals that DO count: unique strangers, free-tier burn,
+wall hits, and Apify listing runs.
 
 ## Notes / cautions
 

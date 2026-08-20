@@ -132,6 +132,16 @@ const checks = [
   ['Glama listing', 'https://glama.ai/mcp/servers/0200project/base-tx-explain', null],
   ['Apify Store listing', 'https://apify.com/0200project/base-tx-explain', null],
 ];
+// PPE pricing visibility: once the founder flips the model and the 14-day
+// notice elapses (~Sept 3), the listing should show per-event pricing. Until
+// then an Apify $0 is structural - the day-14 gate is judged on x402 only.
+try {
+  const page = await (await fetch('https://apify.com/0200project/base-tx-explain', { signal: AbortSignal.timeout(15_000) })).text();
+  const ppeVisible = /pay per event|per event|\$0\.02/i.test(page);
+  say(`- Apify PPE pricing visible on listing: ${ppeVisible ? 'YES' : 'not yet (billing cannot start before ~Sept 3; structural, not a failed channel)'}`);
+} catch {
+  say(`- Apify PPE pricing check failed this run.`);
+}
 for (const [name, url, parse] of checks) {
   try {
     if (parse) {
