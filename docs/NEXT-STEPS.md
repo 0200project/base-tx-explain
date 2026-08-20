@@ -8,15 +8,23 @@ your identity, accounts, or wallet — none of it is code. Rough total: 60–90 
 
 Done: GitHub org + push; site live at https://0200project.github.io; Fly x402 rail live
 at https://base-tx-explain.fly.dev/mcp; MCP registry published 2026-08-20 as
-io.github.0200project/base-tx-explain.
+io.github.0200project/base-tx-explain and republished at 0.1.1 the same day (enriched
+metadata: website, repo, icon); GitHub repo topics added.
 
 Open:
 
-- [ ] Republish the registry entry at 0.1.1 with mcp-publisher after the next deploy
-- [ ] Add GitHub repo topics: model-context-protocol, ai-agents, crypto-payments
+- [ ] Post the launch drafts (section 6 below) — the highest-value remaining item
 - [ ] Apify push (section 3 below, unchanged)
 - [ ] x402 ecosystem PR (section 5 below, unchanged)
 - [ ] Run `npm run growth` daily, or schedule it via cron (see docs/growth-assistant.md)
+
+Blocked (not on you): **Coinbase Bazaar indexing** — CDP's facilitator rejects the
+payment payloads our @x402/core 2.23 emits (400 "must match one of x402V2Pay...");
+the same payloads settle fine on the keyless facilitator. A paid call does NOT fix
+this — one was tried through the CDP path 2026-08-20 and failed, and the server was
+reverted to keyless-first (X402_PREFER_CDP=1 flips it back for retesting). Needs a
+payload-format diagnosis (suspects: @x402 2.21 vs 2.23 version skew, or the echoed
+bazaar extensions block failing CDP's stricter schema) before it's worth retrying.
 
 ## 1. Payout wallet (5 min) — BEFORE anything else
 
@@ -79,7 +87,7 @@ second wallet — I can't make payments, so this verification is yours.
 ## 5. Listings (20 min)
 
 - **Official MCP registry** [DONE 2026-08-20: published as
-  io.github.0200project/base-tx-explain; republish at 0.1.1 after the next deploy]:
+  io.github.0200project/base-tx-explain; republished at 0.1.1 with enriched metadata]:
   `brew install mcp-publisher`, edit `server.json` (replace
   the placeholder URL with the live host), `mcp-publisher login github` (the 0200project
   account), `mcp-publisher publish`. The `io.github.0200project/*` namespace binds to
@@ -87,9 +95,11 @@ second wallet — I can't make payments, so this verification is yours.
 - **x402 ecosystem page**: PR to the x402 repo — `app/ecosystem/partners-data/
   base-tx-explain/metadata.json` (name, description, websiteUrl, category
   "Services/Endpoints") + logo. Review ~5 business days.
-- **x402 Bazaar**: nothing to submit — the payment responses already carry the Bazaar
-  discovery extension; CDP's crawler indexes live sellers. x402scan picks up on-chain
-  settlements automatically once real payments flow.
+- **x402 Bazaar**: BLOCKED as of 2026-08-20 — indexing requires a CDP-settled payment
+  and CDP's facilitator 400s our payment payloads (see the Blocked note at the top).
+  The Bazaar discovery extension stays in our responses so indexing starts working the
+  moment the incompatibility is resolved. x402scan still picks up on-chain settlements
+  automatically once real payments flow (unaffected — it reads the chain, not CDP).
 - **MCPize**: thinner/less verifiable platform per research — try `npx mcpize init` +
   `deploy` only if it takes <15 minutes; don't sink time here.
 - **Smithery**: optional; hosted streamable-HTTP listing, low effort, do it last.
