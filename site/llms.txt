@@ -6,6 +6,7 @@
 
 - [Docs](https://0200project.github.io/docs/): tool contract, field reference, connection instructions
 - [Playground](https://0200project.github.io/playground/): call the live server from the browser
+- [FAQ](https://0200project.github.io/faq/): decoding Base transactions, MCP, x402 pay-per-call, risk flags, comparisons
 - [Tools index](https://0200project.github.io/tools/): all tools published by 0200project
 
 ## API

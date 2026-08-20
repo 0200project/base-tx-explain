@@ -4,12 +4,13 @@
 <meta charset="utf-8">
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tools — 0200project</title>
-<meta name="description" content="Machine-native tools with stable contracts and per-call pricing. First tool: base-tx-explain — deterministic Base transaction decoding for AI agents over MCP.">
+<title>base-tx-explain — Base Transaction Decoder API with Risk Flags</title>
+<meta name="description" content="Decode any Base mainnet transaction into plain English and strict JSON — action type, assets moved, risk flags. MCP server, 10 free calls, then $0.02 via x402.">
 <meta name="theme-color" content="#050505">
-<meta property="og:title" content="Tools — 0200project">
-<meta property="og:description" content="Machine-native tools with stable contracts and per-call pricing, built to be called by autonomous agents.">
+<meta property="og:title" content="base-tx-explain — Base Transaction Decoder API">
+<meta property="og:description" content="Decode any Base transaction into plain English and strict JSON — action types, assets moved, risk flags. MCP + x402, no API key.">
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="0200project">
 <meta property="og:url" content="https://0200project.github.io/tools/">
 <meta property="og:image" content="https://0200project.github.io/assets/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -26,10 +27,18 @@
   "name": "base-tx-explain",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "Any",
-  "url": "https://base-tx-explain.fly.dev/mcp",
+  "url": "https://0200project.github.io/tools/",
   "description": "Deterministic Base mainnet transaction decoding for AI agents over MCP. One tool, explain_transaction(tx_hash), returns strict JSON.",
   "author": { "@type": "Organization", "name": "0200project", "url": "https://0200project.github.io/" },
-  "offers": { "@type": "Offer", "price": "0.02", "priceCurrency": "USD" }
+  "offers": { "@type": "Offer", "price": "0.02", "priceCurrency": "USD", "description": "10 free calls per client, then $0.02 per call in USDC on Base via x402. No account, no API key." },
+  "softwareVersion": "0.1.1",
+  "featureList": [
+    "Plain-English summary of any Base mainnet transaction",
+    "Strict JSON with 30 action types: swaps, transfers, NFT mints and sales, bridges, lending, staking, ERC-4337 bundles, attestations",
+    "Six evidence-based risk flags: unverified contract, unlimited approval, approval-for-all, known drainer match, first-time counterparty, reverted transaction",
+    "Deterministic decode — no LLM in the response path",
+    "MCP streamable-HTTP endpoint, pay-per-call via x402"
+  ]
 }
 </script>
 <style>
@@ -77,6 +86,11 @@
   .tool-sample-note { margin-top: 0.75rem; }
   .tool-sample-note a { color: var(--fg-muted); }
   .tool-sample-note a:hover { color: var(--fg-strong); }
+
+  .decode-scope { padding: 0.5rem 0 1rem; max-width: 44rem; }
+  .decode-scope h2 { font-size: 1.375rem; letter-spacing: -0.015em; margin-bottom: 0.75rem; }
+  .decode-scope a { color: var(--accent); }
+  .decode-scope a:hover { color: var(--accent-strong); }
 
   .more-note {
     border: 1px dashed var(--border-strong);
@@ -137,7 +151,7 @@
             <li>Agent-ready responses (MCP + x402)</li>
           </ul>
           <div class="tool-meta">
-            <span class="pill">v0.1.0</span>
+            <span class="pill">v0.1.1</span>
             <span class="pill">Base mainnet</span>
             <span class="pill">$0.02 per call</span>
             <span class="pill">10 free calls</span>
@@ -172,6 +186,11 @@
         </div>
       </article>
 
+      <section class="decode-scope reveal" aria-labelledby="scope-h">
+        <h2 id="scope-h">What it decodes</h2>
+        <p class="muted">Swaps on Uniswap V2, V3, and V4 and Aerodrome; ERC-20, ERC-721, and ERC-1155 token transfers; NFT mints, transfers, and Seaport sales; OP-stack bridge deposits and withdrawals; Aave V3 and Compound V3 lending; staking, wrapping, and claims; ERC-4337 account-abstraction bundles; EAS attestations; Basename registrations; and contract deployments — 30 action types from roughly 40 builtin event formats, with app-specific events named via verified ABIs on Sourcify. When a transaction can&rsquo;t be fully decoded, the output says so instead of guessing. Full enum in the <a href="/docs/#response-schema">response schema</a>, common questions in the <a href="/faq/">FAQ</a>.</p>
+      </section>
+
       <p class="more-note reveal">More tools are in development. New releases are announced on the <a href="/changelog/">changelog</a> and on <a href="https://github.com/0200project">GitHub</a>.</p>
 
     </div>
@@ -195,6 +214,7 @@
         <ul>
           <li><a href="/tools/">Tools</a></li>
           <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/faq/">FAQ</a></li>
           <li><a href="/docs/#request-format">API</a></li>
           <li><a href="/changelog/">Changelog</a></li>
         </ul>

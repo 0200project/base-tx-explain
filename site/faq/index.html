@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>document.documentElement.classList.add('js')</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAQ — Base Transaction Decoding, MCP &amp; x402 | 0200project</title>
+<meta name="description" content="How to decode Base transactions, what an MCP server is, how AI agents pay per call with x402, what the risk flags mean, and honest API comparisons.">
+<meta name="theme-color" content="#050505">
+<meta property="og:title" content="FAQ — Base Transaction Decoding, MCP &amp; x402">
+<meta property="og:description" content="Decoding Base transactions, MCP, x402 pay-per-call, risk flags, and honest comparisons.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="0200project">
+<meta property="og:image" content="https://0200project.github.io/assets/og.png">
+<meta property="og:url" content="https://0200project.github.io/faq/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://0200project.github.io/faq/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+  .prose h2:first-of-type { margin-top: 0; }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="0200project home">
+      <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+      0200project
+    </a>
+    <button class="nav-toggle" aria-expanded="false" aria-label="Menu" aria-controls="site-menu">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/docs/">Docs</a></li>
+      <li><a href="/status/">Status</a></li>
+      <li><a href="https://github.com/0200project">GitHub</a></li>
+      <li class="nav-kbd"><button class="kbd-hint" type="button" aria-label="Open command menu">&#8984;K</button></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/docs/">Get Started</a></li>
+    </ul></nav>
+  </div>
+</header>
+
+<main>
+
+  <section class="page-hero">
+    <div class="container">
+      <span class="eyebrow">FAQ</span>
+      <h1 class="h-section">Frequently asked questions</h1>
+      <p class="lead">Straight answers about decoding Base transactions, MCP, x402 pay-per-call, and what this tool does and doesn&rsquo;t promise.</p>
+    </div>
+  </section>
+
+  <div class="container">
+    <div class="prose">
+
+      <h2 id="what-is-it">What is base-tx-explain?</h2>
+      <p>base-tx-explain is a Base transaction decoder API built for AI agents. It exposes one MCP tool, <code class="inline">explain_transaction(tx_hash)</code>: you send a Base mainnet transaction hash and get back strict JSON — a plain-English summary, a classified action type, every asset that moved, counterparties labeled where known, evidence-based risk flags, and the gas cost in USD. It is built by <a href="/">0200project</a> and the <a href="https://github.com/0200project/base-tx-explain">source is public</a>.</p>
+
+      
+      <h2 id="what-is-mcp">What is an MCP server?</h2>
+      <p>MCP — the Model Context Protocol — is an open standard that lets AI assistants and agents discover and call external tools in a uniform way. An MCP server exposes one or more tools over a standard transport; the client (Claude, an agent framework, or your own code) lists the tools and calls them with structured arguments. base-tx-explain is a deliberately minimal MCP server: one tool, <code class="inline">explain_transaction</code>, served over streamable HTTP and listed in the official MCP registry as <code class="inline">io.github.0200project/base-tx-explain</code>.</p>
+
+      <h2 id="how-to-decode">How do I decode a Base transaction programmatically?</h2>
+      <p>Connect any MCP client to the hosted endpoint at <code class="inline">https://base-tx-explain.fly.dev/mcp</code> (streamable HTTP), or send a plain JSON-RPC <code class="inline">tools/call</code> request with curl. The response is strict JSON with a stable schema, so software can parse it blind. The <a href="/docs/#quickstart">quickstart</a> has the exact config and curl command, and the <a href="/playground/">playground</a> decodes hashes live in your browser.</p>
+
+      <h2 id="api-key">Do I need an API key or an account?</h2>
+      <p>No. There are no accounts, no signup, and no API keys. Every client gets 10 free calls; after that, each call costs $0.02 in USDC on Base, paid through the x402 protocol. The payment challenge arrives inside the response, so an autonomous agent can pay and retry without a human ever filling in a form.</p>
+
+      <h2 id="x402">What is x402 and how does pay-per-call work?</h2>
+      <p>x402 is an open protocol that puts the HTTP <code class="inline">402 Payment Required</code> status to work: when a call needs payment, the response carries the exact price, asset, and recipient. The caller pays in USDC on Base from its own wallet, attaches proof of payment, and retries — the whole loop is machine-to-machine. Settlement is verified by a non-custodial facilitator that cannot move or redirect funds, and the server never holds assets or asks for keys. Details in the <a href="/docs/#x402-payments">payment docs</a>.</p>
+
+      <h2 id="what-it-detects">What kinds of transactions can it decode?</h2>
+      <p>The decoder classifies 30 action types from ~40 builtin event formats: swaps on Uniswap V2, V3, and V4 and Aerodrome; ERC-20, ERC-721, and ERC-1155 transfers; NFT mints, transfers, and Seaport sales; OP-stack bridge deposits and withdrawals; Aave V3 and Compound V3 lending; staking, wrapping, and claims; ERC-4337 account-abstraction bundles; EAS attestations; Basename registrations; and contract deployments. When a transaction can&rsquo;t be fully decoded, the output says so honestly instead of guessing. The full enum is in the <a href="/docs/#response-schema">response schema</a>.</p>
+
+      <h2 id="risk-flags">What are the risk flags — and are they a safety guarantee?</h2>
+      <p>Six flags, each raised only when evidence was found: <code class="inline">unverified_contract</code>, <code class="inline">unlimited_approval</code>, <code class="inline">approval_for_all</code>, <code class="inline">known_drainer</code> (matched against the ScamSniffer and MyEtherWallet public blocklists), <code class="inline">first_time_counterparty</code>, and <code class="inline">transaction_reverted</code>. A failed lookup never produces a flag — and the absence of a flag is not a safety guarantee. The tool reports what a transaction did, not whether it was a good idea; it is not financial advice.</p>
+
+      <h2 id="deterministic">Why is the decode deterministic — where&rsquo;s the LLM?</h2>
+      <p>There is no LLM anywhere in the response path, by design. Every response is produced by deterministic onchain decoding: the same transaction decoded against the same chain state yields the same JSON. Nothing can hallucinate, the schema never drifts, and your agent doesn&rsquo;t burn tokens reasoning over raw event logs when the decode is mechanical.</p>
+
+      <h2 id="vs-etherscan-blockscout">How is this different from the Etherscan or Blockscout APIs?</h2>
+      <p>Different jobs. Etherscan and Blockscout are excellent block explorers that return raw or lightly enriched data — logs, traces, token balances — and Etherscan moved Base API access to its paid plans in 2026. Blockscout&rsquo;s transaction summary is display-oriented prose with an LLM fallback, so it isn&rsquo;t guaranteed deterministic and doesn&rsquo;t carry a stable schema contract or risk flags. base-tx-explain does one narrow thing those don&rsquo;t: a single call that turns a transaction into an explanation-level, deterministic, strict-JSON answer with risk signals — no account, no key, priced per call. If you need raw chain data, use an explorer API; if your agent needs to know what a transaction <em>did</em>, that&rsquo;s what this is for.</p>
+
+      <h2 id="chains">Which chains are supported?</h2>
+      <p>Base mainnet (chain id 8453) only, today. More machine-native tools are in development — new releases are announced on the <a href="/changelog/">changelog</a>.</p>
+
+      <h2 id="self-host">Can I self-host it?</h2>
+      <p>Yes. The server is open source, stateless, and runs anywhere Docker runs — clone the <a href="https://github.com/0200project/base-tx-explain">repository</a>, <code class="inline">npm install</code>, and start it in free mode with public Base RPCs. Self-hosting instructions and every environment variable are in the <a href="/docs/#installation">docs</a>.</p>
+
+      <h2 id="agents-pay">Can AI agents really pay for API calls by themselves?</h2>
+      <p>Yes — that is the point of this whole stack. An x402-capable agent holds its own wallet, reads the 402 payment challenge from the response, pays $0.02 in USDC on Base, and retries with proof of payment attached. No card on file, no subscription, no human in the loop. You can watch the loop replayed on the <a href="/">home page</a>, or decode transactions live in the <a href="/playground/">playground</a>.</p>
+
+      <p style="margin-top:3rem"><a class="btn btn-primary" href="/playground/">Try the playground</a>&nbsp;&nbsp;<a class="btn btn-ghost" href="/docs/">Read the docs</a></p>
+
+    </div>
+  </div>
+
+</main>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is base-tx-explain?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "base-tx-explain is a Base transaction decoder API built for AI agents. It exposes one MCP tool, explain_transaction(tx_hash): you send a Base mainnet transaction hash and get back strict JSON — a plain-English summary, a classified action type, every asset that moved, counterparties labeled where known, evidence-based risk flags, and the gas cost in USD. It is built by 0200project and the source is public."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is an MCP server?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "MCP — the Model Context Protocol — is an open standard that lets AI assistants and agents discover and call external tools in a uniform way. An MCP server exposes one or more tools over a standard transport; the client (Claude, an agent framework, or your own code) lists the tools and calls them with structured arguments. base-tx-explain is a deliberately minimal MCP server: one tool, explain_transaction, served over streamable HTTP and listed in the official MCP registry as io.github.0200project/base-tx-explain."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I decode a Base transaction programmatically?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Connect any MCP client to the hosted endpoint at https://base-tx-explain.fly.dev/mcp (streamable HTTP), or send a plain JSON-RPC tools/call request with curl. The response is strict JSON with a stable schema, so software can parse it blind. The quickstart has the exact config and curl command, and the playground decodes hashes live in your browser."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I need an API key or an account?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. There are no accounts, no signup, and no API keys. Every client gets 10 free calls; after that, each call costs $0.02 in USDC on Base, paid through the x402 protocol. The payment challenge arrives inside the response, so an autonomous agent can pay and retry without a human ever filling in a form."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is x402 and how does pay-per-call work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "x402 is an open protocol that puts the HTTP 402 Payment Required status to work: when a call needs payment, the response carries the exact price, asset, and recipient. The caller pays in USDC on Base from its own wallet, attaches proof of payment, and retries — the whole loop is machine-to-machine. Settlement is verified by a non-custodial facilitator that cannot move or redirect funds, and the server never holds assets or asks for keys. Details in the payment docs."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What kinds of transactions can it decode?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The decoder classifies 30 action types from ~40 builtin event formats: swaps on Uniswap V2, V3, and V4 and Aerodrome; ERC-20, ERC-721, and ERC-1155 transfers; NFT mints, transfers, and Seaport sales; OP-stack bridge deposits and withdrawals; Aave V3 and Compound V3 lending; staking, wrapping, and claims; ERC-4337 account-abstraction bundles; EAS attestations; Basename registrations; and contract deployments. When a transaction can’t be fully decoded, the output says so honestly instead of guessing. The full enum is in the response schema."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What are the risk flags — and are they a safety guarantee?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Six flags, each raised only when evidence was found: unverified_contract, unlimited_approval, approval_for_all, known_drainer (matched against the ScamSniffer and MyEtherWallet public blocklists), first_time_counterparty, and transaction_reverted. A failed lookup never produces a flag — and the absence of a flag is not a safety guarantee. The tool reports what a transaction did, not whether it was a good idea; it is not financial advice."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why is the decode deterministic — where’s the LLM?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "There is no LLM anywhere in the response path, by design. Every response is produced by deterministic onchain decoding: the same transaction decoded against the same chain state yields the same JSON. Nothing can hallucinate, the schema never drifts, and your agent doesn’t burn tokens reasoning over raw event logs when the decode is mechanical."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How is this different from the Etherscan or Blockscout APIs?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Different jobs. Etherscan and Blockscout are excellent block explorers that return raw or lightly enriched data — logs, traces, token balances — and Etherscan moved Base API access to its paid plans in 2026. Blockscout’s transaction summary is display-oriented prose with an LLM fallback, so it isn’t guaranteed deterministic and doesn’t carry a stable schema contract or risk flags. base-tx-explain does one narrow thing those don’t: a single call that turns a transaction into an explanation-level, deterministic, strict-JSON answer with risk signals — no account, no key, priced per call. If you need raw chain data, use an explorer API; if your agent needs to know what a transaction did, that’s what this is for."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which chains are supported?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Base mainnet (chain id 8453) only, today. More machine-native tools are in development — new releases are announced on the changelog."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I self-host it?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. The server is open source, stateless, and runs anywhere Docker runs — clone the repository, npm install, and start it in free mode with public Base RPCs. Self-hosting instructions and every environment variable are in the docs."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can AI agents really pay for API calls by themselves?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes — that is the point of this whole stack. An x402-capable agent holds its own wallet, reads the 402 payment challenge from the response, pays $0.02 in USDC on Base, and retries with proof of payment attached. No card on file, no subscription, no human in the loop. You can watch the loop replayed on the home page, or decode transactions live in the playground."
+      }
+    }
+  ]
+}
+</script>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/" aria-label="0200project home">
+          <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+          0200project
+        </a>
+        <p>Machine-native tools for autonomous AI agents.</p>
+        <a class="pill footer-status" href="/status/"><span class="dot"></span><span id="ft-status">Checking status&hellip;</span></a>
+      </div>
+      <nav aria-label="Product">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/tools/">Tools</a></li>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/faq/">FAQ</a></li>
+          <li><a href="/docs/#request-format">API</a></li>
+          <li><a href="/changelog/">Changelog</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Developers">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="https://github.com/0200project">GitHub</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-tx-explain">MCP Registry</a></li>
+          <li><a href="/status/">Status</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Company">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/#about">About</a></li>
+          <li><a href="/security/">Security</a></li>
+          <li><a href="https://github.com/0200project/base-tx-explain/issues">GitHub Issues</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 0200project</span>
+      <span>Built for autonomous software.</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/site.js" defer></script>
+</body>
+</html>
