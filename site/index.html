@@ -34,6 +34,19 @@
     background: radial-gradient(46rem 22rem at 50% 0%, rgba(78, 158, 255, 0.075), rgba(255, 255, 255, 0.025) 45%, transparent 72%);
     pointer-events: none;
   }
+  .hero::after {
+    content: "";
+    position: absolute;
+    z-index: -2;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1.4px);
+    background-size: 26px 26px;
+    -webkit-mask-image: radial-gradient(40rem 22rem at 50% 12%, black 15%, transparent 72%);
+    mask-image: radial-gradient(40rem 22rem at 50% 12%, black 15%, transparent 72%);
+    pointer-events: none;
+  }
+  .grid-3 .card { display: flex; flex-direction: column; }
+  .grid-3 .card p { margin: 0.5rem 0 1.25rem; }
   .statement-band { position: relative; }
   .statement-band::before {
     content: "";
@@ -115,6 +128,7 @@
       <li><a href="/docs/">Docs</a></li>
       <li><a href="/status/">Status</a></li>
       <li><a href="https://github.com/0200project">GitHub</a></li>
+      <li class="nav-kbd"><button class="kbd-hint" type="button" aria-label="Open command menu">&#8984;K</button></li>
       <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/docs/">Get Started</a></li>
     </ul></nav>
   </div>
@@ -156,16 +170,22 @@
       </div>
       <div class="grid-3">
         <div class="card reveal">
+          <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="10" height="10" rx="2.5"/><rect x="7" y="7" width="10" height="10" rx="2.5"/></svg></span>
           <h3 class="h-card">Deterministic by design</h3>
-          <p class="muted" style="margin-top:0.5rem">Same input, same output. No model in the response path — nothing to hallucinate, nothing to drift.</p>
+          <p class="muted">Same input, same output. No model in the response path — nothing to hallucinate, nothing to drift.</p>
+          <div class="card-mini" aria-hidden="true">decode 0x0c84&#8230;4c8c <span class="lit">&#8594;</span> swap<br>decode 0x0c84&#8230;4c8c <span class="lit">&#8594;</span> swap&nbsp;&nbsp;<span class="ok">= identical</span></div>
         </div>
         <div class="card reveal">
+          <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16.2 10a6.2 6.2 0 1 1-1.9-4.5"/><path d="M16.5 2.8v3.1h-3.1"/></svg></span>
           <h3 class="h-card">No accounts. No API keys.</h3>
-          <p class="muted" style="margin-top:0.5rem">Tools are paid per call in USDC via the x402 protocol. An agent can discover, pay, and retry entirely on its own.</p>
+          <p class="muted">Tools are paid per call in USDC via the x402 protocol. An agent can discover, pay, and retry entirely on its own.</p>
+          <div class="card-mini" aria-hidden="true"><span class="ok">402</span> <span class="lit">&#8594;</span> pay $0.02 USDC <span class="lit">&#8594;</span> <span class="lit">200 ok</span></div>
         </div>
         <div class="card reveal">
+          <span class="card-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3H5.5A1.5 1.5 0 0 0 4 4.5v11A1.5 1.5 0 0 0 5.5 17H7"/><path d="M13 3h1.5A1.5 1.5 0 0 1 16 4.5v11a1.5 1.5 0 0 1-1.5 1.5H13"/><path d="M7.5 8h5M7.5 12h5"/></svg></span>
           <h3 class="h-card">Stable contracts</h3>
-          <p class="muted" style="margin-top:0.5rem">Strict JSON schemas, versioned and documented. Output is designed to be parsed blind by software, not skimmed by humans.</p>
+          <p class="muted">Strict JSON schemas, versioned and documented. Output is designed to be parsed blind by software, not skimmed by humans.</p>
+          <div class="card-mini" aria-hidden="true">action_type <span class="lit">&#183;</span> assets_moved <span class="lit">&#183;</span> risk_flags <span class="lit">&#183;</span> 30 enums</div>
         </div>
       </div>
     </div>
@@ -260,6 +280,7 @@
           0200project
         </a>
         <p>Machine-native tools for autonomous AI agents.</p>
+        <a class="pill footer-status" href="/status/"><span class="dot"></span><span id="ft-status">Checking status&hellip;</span></a>
       </div>
       <nav aria-label="Product">
         <h4>Product</h4>
