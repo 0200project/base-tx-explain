@@ -51,6 +51,32 @@ async function runExplain({ tx_hash }: { tx_hash: string }): Promise<ToolResult>
 
 // --- x402 payment plumbing (initialized only in x402 mode) ---
 let paidHandler: ((args: { tx_hash: string }, extra: unknown) => Promise<Record<string, unknown>>) | null = null;
+/**
+ * Plain-HTTP 402 body for non-MCP callers. Discovery crawlers (CDP's
+ * validator, x402scan's registration probe) send Accept: application/json
+ * and expect an HTTP 402 with the x402 payment requirements; the MCP
+ * streamable transport would otherwise answer 406 and they give up.
+ */
+let httpPaymentRequired: Record<string, unknown> | null = null;
+
+const RESOURCE_INFO = {
+  url: `mcp://tool/${TOOL_NAME}`,
+  description: TOOL_DESCRIPTION,
+  mimeType: 'application/json',
+  serviceName: 'base-tx-explain',
+  tags: ['base', 'transaction', 'decoder', 'blockchain', 'risk'],
+};
+
+const BAZAAR_EXTENSIONS = declareDiscoveryExtension({
+  toolName: TOOL_NAME,
+  description: TOOL_DESCRIPTION,
+  inputSchema: {
+    type: 'object',
+    properties: { tx_hash: { type: 'string', description: 'Base mainnet transaction hash (0x + 64 hex chars)' } },
+    required: ['tx_hash'],
+  },
+  example: { tx_hash: '0x' + 'ab'.repeat(32) },
+});
 
 async function initPayments(): Promise<void> {
   if (PAYMENT_MODE !== 'x402') return;
@@ -70,25 +96,22 @@ async function initPayments(): Promise<void> {
   });
   const paid = createPaymentWrapper(resourceServer, {
     accepts,
-    resource: {
-      url: `mcp://tool/${TOOL_NAME}`,
-      description: TOOL_DESCRIPTION,
-      mimeType: 'application/json',
-      serviceName: 'base-tx-explain',
-      tags: ['base', 'transaction', 'decoder', 'blockchain', 'risk'],
-    },
-    extensions: declareDiscoveryExtension({
-      toolName: TOOL_NAME,
-      description: TOOL_DESCRIPTION,
-      inputSchema: {
-        type: 'object',
-        properties: { tx_hash: { type: 'string', description: 'Base mainnet transaction hash (0x + 64 hex chars)' } },
-        required: ['tx_hash'],
-      },
-      example: { tx_hash: '0x' + 'ab'.repeat(32) },
-    }),
+    resource: RESOURCE_INFO,
+    extensions: BAZAAR_EXTENSIONS,
   });
   paidHandler = paid(runExplain) as typeof paidHandler;
+  httpPaymentRequired = {
+    x402Version: 2,
+    error: 'Payment required to access this tool',
+    resource: RESOURCE_INFO,
+    accepts,
+    extensions: BAZAAR_EXTENSIONS,
+    hint:
+      'This is an MCP server (streamable HTTP). Connect an MCP client with header ' +
+      '"Accept: application/json, text/event-stream" and call the explain_transaction tool; ' +
+      'payment settles over the x402 MCP transport (_meta["x402/payment"]). ' +
+      'HTTP-header payment retries are not supported on this endpoint yet.',
+  };
   console.log(`x402 payments enabled: $${PRICE_USD}/call USDC on Base to ${payTo} (facilitator: ${facilitatorUrl})`);
 }
 
@@ -131,6 +154,10 @@ app.get('/healthz', (_req, res) => {
   res.status(200).json({ ok: true, version: VERSION, payment_mode: PAYMENT_MODE, metrics });
 });
 
+/** MCP streamable-HTTP clients must accept SSE; anything else is a plain-HTTP caller. */
+const isMcpClient = (req: express.Request): boolean =>
+  String(req.headers.accept ?? '').includes('text/event-stream');
+
 app.post('/mcp', async (req, res) => {
   const ip = req.ip ?? 'unknown';
   if (!withinRateLimit(ip)) {
@@ -139,6 +166,13 @@ app.post('/mcp', async (req, res) => {
       error: { code: -32000, message: 'Rate limit exceeded: max 60 requests/minute per client.' },
       id: null,
     });
+    return;
+  }
+
+  // Plain-HTTP callers (discovery probes, curl) get the x402 402 face
+  // instead of the transport's 406.
+  if (httpPaymentRequired && !isMcpClient(req)) {
+    res.status(402).json(httpPaymentRequired);
     return;
   }
 
@@ -186,7 +220,13 @@ app.post('/mcp', async (req, res) => {
 const methodNotAllowed = (_req: express.Request, res: express.Response) => {
   res.status(405).json({ jsonrpc: '2.0', error: { code: -32000, message: 'Method not allowed.' }, id: null });
 };
-app.get('/mcp', methodNotAllowed);
+app.get('/mcp', (req, res) => {
+  if (httpPaymentRequired && !isMcpClient(req)) {
+    res.status(402).json(httpPaymentRequired);
+    return;
+  }
+  methodNotAllowed(req, res);
+});
 app.delete('/mcp', methodNotAllowed);
 
 const port = Number.parseInt(
