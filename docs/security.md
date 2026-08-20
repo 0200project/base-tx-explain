@@ -8,7 +8,7 @@ old ground or reopens a closed question.
 Keep it current: when a finding is fixed, move it from **Open** to **Fixed**
 with the commit; when you clear a hypothesis, add it to **Checked and safe**.
 
-_Last reviewed: 2026-08-20, at commit `4d139ab` + the classifier emitter-gating change._
+_Last reviewed: 2026-08-20, at commit `7ae1ff8` + the symbol-impersonation cross-check._
 
 ---
 
@@ -85,7 +85,23 @@ data. Keep that list honest as fields change.
   fronted by a `claim()` selector is also caught: the claim rule is now
   subordinate to net flows (a real claim receives value; a sender that only
   parted with value is described as the transfer it is). Real, labeled protocols
-  are unaffected. Residuals in Open #1.
+  are unaffected. Residuals in Open #1. _Recall cost measured, not assumed: a
+  120-transaction sweep of live Base traffic after the change was 93.3% clean
+  with 0 crashes, and every partial was an app-specific unrecognized-event
+  contract or a batch transfer hitting the 60-asset display cap — none came from
+  the emitter gating. The safety-over-recall trade cost no measurable coverage._
+- **Token-symbol impersonation** (canonical cross-check). A contract that
+  self-reports a valid ticker (e.g. "USDC") from an address that is not that
+  token's canonical one is shown as its address, not the ticker, and carries a
+  distinct `impersonated_token` risk flag (separate from `nonstandard_token_symbol`,
+  which is a merely non-standard symbol — the first is active deception, the
+  second could be an honest quirk). **Bounded mitigation, not a closed class:**
+  the catch is only as wide as the token label table (`src/labels.ts`, ~8 tokens
+  today). A fake "USDC" is caught; a fake "USDT" or "EURC" is not until that
+  token's canonical address is added. Expanding the token label table widens this
+  mitigation and improves decode quality at the same time — the table is the
+  product's closest thing to a compounding asset. Unknown symbols are a
+  deliberate allow (most tokens are legitimate and unlabeled).
 - **Token-metadata prompt injection** (`cbe62d6`). Hostile token symbols/names
   and third-party event/function names reached `summary`. Now: `sanitizeSymbol`
   hardened (NFKC, strips control/format/line-separator/mark chars incl.
@@ -105,21 +121,15 @@ data. Keep that list honest as fields change.
 
 ## 5. Open (known, unfixed) — ranked
 
-1. **Residual spoofed-evidence cases.** The main forged-event vectors are now
-   closed (see Fixed: emitter-gating). What remains, lower-severity:
-   - **Swap events** (`univ3_swap` etc.) are still trusted on the event alone —
-     the emitter is the pool, which is not labeled, so emitter-gating does not
-     apply. A bare forged Swap event mislabels as `swap` ("executed a token
-     swap"); with the token-identity fix, forged token legs show as addresses.
-     A swap is not a custody-safety claim, so this ranks below the closed cases.
-     Candidate fix: require corroborating fungible movements before trusting a
-     swap event.
-   - **Fullwidth symbol impersonation** — `sanitizeSymbol` NFKC-folds ＵＳＤＣ to
-     "USDC" for _name_ display; `displaySymbol` already rejects it for the token
-     ticker (raw check), but a token whose symbol legitimately equals a known
-     ticker while its address is not the canonical one is not yet cross-checked
-     against `getLabel(token_address)`. Fix: validate a symbol that collides with
-     a known label against that label's canonical address.
+1. **Residual spoofed-evidence: swap events.** The main forged-event vectors are
+   closed (see Fixed: emitter-gating) and token-symbol impersonation is now a
+   bounded mitigation (also Fixed). What remains, lower-severity: `univ3_swap`
+   etc. are still trusted on the event alone — the emitter is the pool, which is
+   not labeled, so emitter-gating does not apply. A bare forged Swap event
+   mislabels as `swap` ("executed a token swap"); with the token-identity fix,
+   forged token legs show as addresses. A swap is not a custody-safety claim, so
+   this ranks below the closed cases. Candidate fix: require corroborating
+   fungible movements before trusting a swap event.
 2. **`decimals()` failure negative-cached FOREVER** — one bad read renders a
    token's amounts 10^n wrong for the process life. Don't cache transient nulls.
 3. **Reverted tx with value reports a phantom ETH movement**; ERC-1155 batch

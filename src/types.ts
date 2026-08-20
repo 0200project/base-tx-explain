@@ -54,6 +54,7 @@ export type RiskFlagCode =
   | 'unlimited_approval'
   | 'known_drainer'
   | 'nonstandard_token_symbol'
+  | 'impersonated_token'
   | 'transaction_reverted';
 
 export interface RiskFlag {

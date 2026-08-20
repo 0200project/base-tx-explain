@@ -20,7 +20,7 @@ interface TxContext {
 export async function buildAssetsMoved(
   events: DecodedEvent[],
   tx: TxContext,
-): Promise<{ movements: AssetMovement[]; truncated: boolean; nonStandardSymbols: string[] }> {
+): Promise<{ movements: AssetMovement[]; truncated: boolean; flaggedSymbols: Array<{ address: string; status: 'nonstandard' | 'impersonation' }> }> {
   const movements: AssetMovement[] = [];
 
   if (tx.value > 0n && tx.to) {
@@ -52,17 +52,18 @@ export async function buildAssetsMoved(
   const metaByAddress = new Map(erc20Metas);
   const nameByAddress = new Map(nftNames);
 
-  // Tokens whose self-reported symbol was not a standard ticker (shown as their
-  // address instead). Surfaced as a risk flag by the caller.
-  const nonStandardSymbols = [...metaByAddress.entries()]
-    .filter(([, m]) => m && m.standardSymbol === false)
-    .map(([a]) => a as string);
+  // Tokens whose self-reported symbol could not be trusted as an identity (shown
+  // as their address instead). Surfaced as risk flags by the caller, split by
+  // reason: a non-standard symbol vs. an impersonation of a known token.
+  const flaggedSymbols = [...metaByAddress.entries()]
+    .filter(([, m]) => m && m.symbolStatus && m.symbolStatus !== 'ok')
+    .map(([a, m]) => ({ address: a as string, status: (m as { symbolStatus: 'nonstandard' | 'impersonation' }).symbolStatus }));
 
   const wethLower = tx.wethAddress.toLowerCase();
 
   for (const e of events) {
     if (movements.length >= MAX_MOVEMENTS) {
-      return { movements, truncated: true, nonStandardSymbols };
+      return { movements, truncated: true, flaggedSymbols };
     }
     const a = e.args;
     switch (e.kind) {
@@ -157,7 +158,7 @@ export async function buildAssetsMoved(
     }
   }
 
-  return { movements, truncated: false, nonStandardSymbols };
+  return { movements, truncated: false, flaggedSymbols };
 }
 
 /**

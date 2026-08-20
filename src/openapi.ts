@@ -41,7 +41,7 @@ const EXPLAIN_RESULT_SCHEMA = {
       items: {
         type: 'object',
         properties: {
-          flag: { type: 'string', enum: ['unverified_contract', 'first_time_counterparty', 'approval_for_all', 'unlimited_approval', 'known_drainer', 'nonstandard_token_symbol', 'transaction_reverted'] },
+          flag: { type: 'string', enum: ['unverified_contract', 'first_time_counterparty', 'approval_for_all', 'unlimited_approval', 'known_drainer', 'nonstandard_token_symbol', 'impersonated_token', 'transaction_reverted'] },
           detail: { type: 'string' },
         },
         required: ['flag', 'detail'],

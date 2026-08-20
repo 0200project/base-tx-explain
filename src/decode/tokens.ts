@@ -1,12 +1,31 @@
 import { hexToString, isHex, type Address } from 'viem';
 import { DAY, FOREVER, TtlCache } from '../cache.js';
+import { LABELS } from '../labels.js';
 import { client } from '../rpc.js';
+
+// Ticker -> canonical address for the tokens we label, so a contract cannot
+// impersonate a known token (e.g. render as "USDC") by self-reporting a famous
+// symbol from an address that is not the real one.
+const KNOWN_TOKEN_ADDRESSES = new Map<string, string>(
+  Object.entries(LABELS)
+    .filter(([, l]) => l.category === 'token')
+    .map(([addr, l]) => [l.label.replace(/\s*\(.*$/, '').trim().toLowerCase(), addr.toLowerCase()] as const),
+);
+
+/**
+ * Trust status of a token's self-reported symbol:
+ *  - `ok`            — a plausible ticker we are willing to show.
+ *  - `nonstandard`   — not a standard ticker (emoji/homoglyph/promo/instruction
+ *                      text); `symbol` shows the address instead.
+ *  - `impersonation` — a valid ticker that matches a KNOWN token, but from a
+ *                      non-canonical address (active deception); shows the address.
+ */
+export type SymbolStatus = 'ok' | 'nonstandard' | 'impersonation';
 
 export interface TokenMeta {
   symbol: string;
   decimals: number;
-  /** False when the contract's self-reported symbol was not a standard ticker (so `symbol` shows the address). */
-  standardSymbol?: boolean;
+  symbolStatus?: SymbolStatus;
 }
 
 const metaCache = new TtlCache<TokenMeta | null>(10_000, FOREVER);
@@ -35,13 +54,13 @@ export async function getTokenMeta(address: Address): Promise<TokenMeta | null> 
     }
     try {
       const symbol = await client.readContract({ address, abi: ERC20_META_ABI, functionName: 'symbol' });
-      return { symbol: displaySymbol(symbol, address), decimals, standardSymbol: isStandardTicker(symbol) };
+      return { symbol: displaySymbol(symbol, address), decimals, symbolStatus: symbolStatus(symbol, address) };
     } catch {
       try {
         const raw = await client.readContract({ address, abi: BYTES32_SYMBOL_ABI, functionName: 'symbol' });
         if (isHex(raw)) {
           const symbol = hexToString(raw).replace(/ +$/g, '');
-          if (symbol) return { symbol: displaySymbol(symbol, address), decimals, standardSymbol: isStandardTicker(symbol) };
+          if (symbol) return { symbol: displaySymbol(symbol, address), decimals, symbolStatus: symbolStatus(symbol, address) };
         }
       } catch {
         // fall through
@@ -122,13 +141,30 @@ export function isStandardTicker(raw: string): boolean {
 }
 
 /**
- * Symbol to show for a token. A genuine ERC-20 symbol is a short ASCII ticker;
- * anything else the contract self-reports (emoji, homoglyphs, fullwidth forms,
- * spaces, promotional or instruction-shaped text) is not trustworthy as an
- * identity, so we show the contract address instead of echoing the string.
+ * Classify a contract's self-reported symbol. A non-ticker is `nonstandard`; a
+ * valid ticker that collides with a token we label but comes from a different
+ * address is `impersonation` (active deception). NOTE: this catch is only as
+ * wide as the label table — a fake "USDC" is caught, a fake "USDT" is not, until
+ * that token's canonical address is added. Everything else is a deliberate `ok`:
+ * most tokens are legitimate and unlabeled, and we show their symbol as given.
+ */
+export function symbolStatus(raw: string, address: string): SymbolStatus {
+  const t = raw.trim();
+  if (!isStandardTicker(t)) return 'nonstandard';
+  const canonical = KNOWN_TOKEN_ADDRESSES.get(t.toLowerCase());
+  if (canonical && canonical !== address.toLowerCase()) return 'impersonation';
+  return 'ok';
+}
+
+/**
+ * Symbol to show for a token. A genuine ERC-20 symbol is a short ASCII ticker
+ * and, when it names a token we know, must come from that token's canonical
+ * address. Anything else (emoji, homoglyphs, fullwidth forms, spaces,
+ * promotional or instruction-shaped text, or a famous ticker from the wrong
+ * address) is not trustworthy as an identity, so we show the contract address.
  */
 export function displaySymbol(raw: string, address: string): string {
-  return isStandardTicker(raw) ? raw.trim() : shortAddress(address);
+  return symbolStatus(raw, address) === 'ok' ? raw.trim() : shortAddress(address);
 }
 
 export function shortAddress(address: string): string {

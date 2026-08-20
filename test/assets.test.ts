@@ -32,20 +32,24 @@ const tx = { from: SENDER, to: OTHER, value: 0n, wethAddress: WETH };
 
 beforeEach(() => meta.map.clear());
 
-describe('buildAssetsMoved — nonstandard token symbol surfacing', () => {
-  it('reports a token whose symbol is not a standard ticker and shows the address', async () => {
-    // getTokenMeta already resolves the display symbol to the address for a
-    // non-ticker name and marks standardSymbol:false.
-    meta.map.set(SCAM.toLowerCase(), { symbol: shortAddress(SCAM), decimals: 18, standardSymbol: false });
-    const { movements, nonStandardSymbols } = await buildAssetsMoved([transfer(SCAM)], tx);
-    expect(nonStandardSymbols.map((a) => a.toLowerCase())).toContain(SCAM.toLowerCase());
+describe('buildAssetsMoved — untrusted token symbol surfacing', () => {
+  it('reports a non-standard symbol and shows the address', async () => {
+    meta.map.set(SCAM.toLowerCase(), { symbol: shortAddress(SCAM), decimals: 18, symbolStatus: 'nonstandard' });
+    const { movements, flaggedSymbols } = await buildAssetsMoved([transfer(SCAM)], tx);
+    expect(flaggedSymbols).toEqual([{ address: SCAM.toLowerCase(), status: 'nonstandard' }]);
     expect(movements[0]?.token).toBe(shortAddress(SCAM)); // address, not the scam name
   });
 
-  it('does not report a token with a standard ticker', async () => {
-    meta.map.set(SCAM.toLowerCase(), { symbol: 'USDC', decimals: 6, standardSymbol: true });
-    const { movements, nonStandardSymbols } = await buildAssetsMoved([transfer(SCAM)], tx);
-    expect(nonStandardSymbols).toHaveLength(0);
+  it('reports an impersonation distinctly from a non-standard symbol', async () => {
+    meta.map.set(SCAM.toLowerCase(), { symbol: shortAddress(SCAM), decimals: 6, symbolStatus: 'impersonation' });
+    const { flaggedSymbols } = await buildAssetsMoved([transfer(SCAM)], tx);
+    expect(flaggedSymbols).toEqual([{ address: SCAM.toLowerCase(), status: 'impersonation' }]);
+  });
+
+  it('does not report a token with a trusted (ok) symbol', async () => {
+    meta.map.set(SCAM.toLowerCase(), { symbol: 'USDC', decimals: 6, symbolStatus: 'ok' });
+    const { movements, flaggedSymbols } = await buildAssetsMoved([transfer(SCAM)], tx);
+    expect(flaggedSymbols).toHaveLength(0);
     expect(movements[0]?.token).toBe('USDC');
   });
 });

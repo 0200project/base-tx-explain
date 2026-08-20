@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { displaySymbol, isStandardTicker, sanitizeSymbol, shortAddress } from '../src/decode/tokens.js';
+import { displaySymbol, isStandardTicker, sanitizeSymbol, shortAddress, symbolStatus } from '../src/decode/tokens.js';
 
 // Real Base-mainnet scam token surfaced in a validation sweep: its name is
 // promotional copy with emoji. Kept as a permanent fixture — the address is
@@ -40,10 +40,21 @@ describe('sanitizeSymbol — character hygiene', () => {
 });
 
 describe('displaySymbol — ticker validation', () => {
-  it('passes through genuine short ASCII tickers', () => {
-    for (const t of ['USDC', 'WETH', 'cbBTC', 'USDbC', 'AERO', 'DEGEN']) {
+  it('passes through a genuine ticker for an unlabeled token at any address', () => {
+    for (const t of ['ZZZ', 'FOOBAR', 'XYZ1', 'ABCDEF']) {
       expect(displaySymbol(t, SCAM_ADDR)).toBe(t);
     }
+  });
+
+  it('shows a KNOWN ticker only from its canonical address (impersonation guard)', () => {
+    const USDC = '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'; // canonical USDC in labels.ts
+    expect(displaySymbol('USDC', USDC)).toBe('USDC'); // real USDC
+    expect(displaySymbol('USDC', SCAM_ADDR)).toBe(shortAddress(SCAM_ADDR)); // impostor -> address
+    expect(displaySymbol('WETH', SCAM_ADDR)).toBe(shortAddress(SCAM_ADDR));
+    expect(symbolStatus('USDC', SCAM_ADDR)).toBe('impersonation');
+    expect(symbolStatus('USDC', USDC)).toBe('ok');
+    expect(symbolStatus(SCAM_NAME, SCAM_ADDR)).toBe('nonstandard');
+    expect(symbolStatus('ZZZ', SCAM_ADDR)).toBe('ok'); // unknown ticker: deliberate allow
   });
 
   it('shows the contract address instead of echoing a scam/injection name', () => {

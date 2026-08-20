@@ -131,7 +131,7 @@ export async function explainTransaction(txHashRaw: string): Promise<ExplainResu
   const selectorInfo = selector ? await lookupSelector(selector) : null;
 
   // --- Asset movements ---
-  const { movements, truncated, nonStandardSymbols } = await buildAssetsMoved(events, {
+  const { movements, truncated, flaggedSymbols } = await buildAssetsMoved(events, {
     from: tx.from,
     to: tx.to ?? null,
     value: tx.value,
@@ -165,14 +165,26 @@ export async function explainTransaction(txHashRaw: string): Promise<ExplainResu
     ethUsdAtBlock(receipt.blockNumber),
   ]);
 
-  // A token whose self-reported symbol was not a standard ticker is shown by its
-  // address; flag that factually so a consuming agent knows the identity string
-  // could not be trusted (this is where token-name injection attempts surface).
-  for (const addr of [...new Set(nonStandardSymbols)].slice(0, 3)) {
-    riskFlags.push({
-      flag: 'nonstandard_token_symbol',
-      detail: `Token ${shortAddress(addr)} reports a symbol that is not a standard ticker (it failed an ASCII ticker check); its contract address is shown in place of the self-reported name.`,
-    });
+  // A token whose self-reported symbol could not be trusted is shown by its
+  // address; flag it factually so a consuming agent knows the identity string
+  // could not be trusted. Impersonation (a known ticker from the wrong address)
+  // is called out separately from a merely non-standard symbol — the first is
+  // active deception, the second could be an honest but quirky token.
+  const seenFlagged = new Set<string>();
+  for (const { address: addr, status } of flaggedSymbols) {
+    if (seenFlagged.has(addr) || seenFlagged.size >= 3) continue;
+    seenFlagged.add(addr);
+    if (status === 'impersonation') {
+      riskFlags.push({
+        flag: 'impersonated_token',
+        detail: `Token ${shortAddress(addr)} reports the symbol of a known token but is not that token's canonical contract address; its address is shown instead of the claimed name.`,
+      });
+    } else {
+      riskFlags.push({
+        flag: 'nonstandard_token_symbol',
+        detail: `Token ${shortAddress(addr)} reports a symbol that is not a standard ticker (it failed an ASCII ticker check); its contract address is shown in place of the self-reported name.`,
+      });
+    }
   }
 
   // --- Gas in USD (execution fee + OP-stack L1 data fee) ---
