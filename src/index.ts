@@ -13,7 +13,7 @@ import { ExplainError, explainTransaction } from './explain.js';
 import { FAVICON_PNG } from './favicon.js';
 import { withAcceptedFieldRepair } from './cdpCompat.js';
 import { buildOpenApiDocument } from './openapi.js';
-import { consumeFreeCall, refundFreeCall, withinRateLimit } from './freeTier.js';
+import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
 import { APIFY_BILLING_ACTIVE, initApifyBilling, chargeApifyCall } from './apifyBilling.js';
 import { initUsageLedger, recordEvent, usageSnapshot } from './usage.js';
 
@@ -568,6 +568,7 @@ const port = Number.parseInt(
 );
 
 initUsageLedger();
+initFreeTier();
 
 initApifyBilling()
   .then(() => initPayments())
