@@ -137,7 +137,10 @@ const checks = [
 // then an Apify $0 is structural - the day-14 gate is judged on x402 only.
 try {
   const page = await (await fetch('https://apify.com/0200project/base-tx-explain', { signal: AbortSignal.timeout(15_000) })).text();
-  const ppeVisible = /pay per event|per event|\$0\.02/i.test(page);
+  // Only markers Apify's own pricing UI produces: our README (embedded on the
+  // page) says "$0.02" and "explain_transaction" with an underscore, so those
+  // would false-positive; the PPE event name uses a hyphen.
+  const ppeVisible = /pay per event/i.test(page) || page.includes('explain-transaction');
   say(`- Apify PPE pricing visible on listing: ${ppeVisible ? 'YES' : 'not yet (billing cannot start before ~Sept 3; structural, not a failed channel)'}`);
 } catch {
   say(`- Apify PPE pricing check failed this run.`);
