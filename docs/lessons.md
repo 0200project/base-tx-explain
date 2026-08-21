@@ -63,6 +63,41 @@ subtle bugs. A lower call cap for unconfirmed passes was proposed and rejected f
 this reason — the downside was already bounded and queryable, and the third bug
 gets written where the second and fourth rules interact.
 
+## Rank by how much harm is open, not by how interesting the fix is
+
+_2026-08-21, named by the session that made the call._
+
+Two items sat open on the same two files:
+
+- **Splitting a status enum** so "upstream unreachable" and "history truncated"
+  stop reporting as the same thing. A return-type change touching cache
+  semantics. Intellectually the more satisfying problem.
+- **Two TTL arguments**, so a transient failure stops being cached for a day.
+
+The first got picked up first. The second was the one that mattered: a
+16-minute Blockscout outage that evening poisoned cache keys for **24 hours**,
+silently suppressing a safety check long after the upstream recovered. The
+first is a labelling inaccuracy that *under-claims*, and under-claiming harms
+nobody. Cheapness and importance pointed the same way and the more interesting
+change still won.
+
+**Practice:** rank by (harm currently open) x (how long it stays open), not by
+how satisfying the fix is. When two candidates disagree, the boring one is
+usually the one with a live victim. A useful tell: if the fix is one argument
+and you are still reaching for the other item, check what that other item
+actually costs anyone right now.
+
+**The sharper half, and the reason this entry exists.** The same session already
+had the outage timestamps in hand — 22:04 failing, 22:20 recovered — and used
+them to argue for *alerting*. They were also, unnoticed, a worked example of a
+16-minute outage causing 24 hours of degradation. The evidence was already
+collected; only the smaller conclusion was drawn from it.
+
+So: when you produce a concrete measurement, ask what **else** it proves before
+filing it. Most of the value in a number sits in the second question you ask of
+it, and the cost of not asking is that the finding looks like context rather
+than a finding.
+
 ## The deploy does not build what you committed
 
 _2026-08-21._
