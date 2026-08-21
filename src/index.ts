@@ -29,7 +29,7 @@ import {
   verifyStripeSignature,
   type StripeEvent,
 } from './stripe.js';
-import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, passSnapshot, refundPassUse, activatePass, revokePass, revokePendingPass, usePass } from './passes.js';
+import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, renewPass, passSnapshot, refundPassUse, activatePass, revokePass, revokePendingPass, usePass } from './passes.js';
 import { HOUR, TtlCache } from './cache.js';
 import { APIFY_BILLING_ACTIVE, initApifyBilling, chargeApifyCall } from './apifyBilling.js';
 import { checkHealthSnapshot } from './checkHealth.js';
@@ -693,10 +693,41 @@ function handleStripeWebhook(req: express.Request, res: express.Response): void 
         revokePass(existing.token);
         console.log(`[stripe] subscription ${subId.slice(0, 12)}... ended, pass revoked`);
       }
+    } else if (event.type === 'invoice.paid') {
+      // Renewal. Without this a subscriber is charged a second month and their
+      // pass expires on day 31 anyway — money taken, service not delivered,
+      // which is the invariant the x402 rail goes to real lengths to protect.
+      // The card rail reaches the same failure by a duller route.
+      //
+      // Only the RENEWAL invoice matters: the first invoice of a subscription
+      // arrives alongside checkout.session.completed, which already minted, and
+      // renewing there would reset a brand-new pass to zero calls used. Stripe
+      // marks that first one billing_reason 'subscription_create'.
+      const reason = typeof obj.billing_reason === 'string' ? obj.billing_reason : '';
+      const subId = typeof obj.subscription === 'string' ? obj.subscription : '';
+      if (reason === 'subscription_cycle' && subId) {
+        const existing = passForSubscription(subId);
+        if (existing && renewPass(existing.token)) {
+          if (event.livemode === true) {
+            recordEvent({
+              t: new Date().toISOString(),
+              e: 'settled',
+              client: 'stripe',
+              amount_usd: typeof obj.amount_paid === 'number' ? obj.amount_paid / 100 : 0,
+            });
+          }
+          console.log(`[stripe] subscription ${subId.slice(0, 12)}... renewed, pass extended`);
+        } else {
+          // Stripe billed for a pass we cannot find. Do NOT mint a replacement:
+          // that would paper over a divergence between their records and ours,
+          // which is exactly the thing worth seeing.
+          console.error(
+            `[stripe] RENEWAL PAID for subscription ${subId.slice(0, 12)}... but no pass found. ` +
+              'Customer has been charged and holds no working pass. Needs manual repair.',
+          );
+        }
+      }
     }
-    // invoice.paid on renewal is deliberately NOT handled yet: extending an
-    // existing pass needs a mutation the pass store does not expose, and
-    // silently doing nothing is better than pretending to renew. Filed.
   } catch (err) {
     // The payment already happened; a failure on our side must not tell Stripe
     // to retry forever. Log loudly and accept.

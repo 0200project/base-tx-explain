@@ -180,6 +180,36 @@ export function revokePendingPass(nonce: string, reason: string): boolean {
   return existed;
 }
 
+/**
+ * Renew a pass for another period: push the expiry out and reset the call count.
+ *
+ * Exists because a subscription that charges a second month and delivers nothing
+ * is money taken and service not delivered — the invariant this codebase goes to
+ * real lengths to protect on the x402 rail, where settlement ambiguity
+ * deliberately fails toward the customer. A recurring card charge reaches the
+ * same failure by a duller route: the pass simply expires on day 31 while Stripe
+ * keeps billing. The customer notices before we do, because nothing on our side
+ * is watching.
+ *
+ * Resets calls_used rather than accumulating, because the cap is per period and
+ * a renewed subscriber is buying another period's allowance, not a lifetime one.
+ *
+ * Returns false when there is nothing to renew — an unknown or already-reaped
+ * token. The caller must log that loudly rather than mint a replacement: a
+ * renewal for a pass we cannot find means our record and Stripe's disagree, and
+ * quietly minting would paper over exactly the divergence worth seeing.
+ */
+export function renewPass(token: string, days = PASS_DAYS): boolean {
+  const entry = passes.get(hashToken(token));
+  if (!entry) return false;
+  entry.expires = Date.now() + days * 86_400_000;
+  entry.calls_used = 0;
+  entry.active = true;
+  flush();
+  console.log(`[pass] RENEWED ${hashToken(token).slice(0, 12)} until ${new Date(entry.expires).toISOString()}`);
+  return true;
+}
+
 export type PassCheck =
   | { ok: true; remaining: number }
   | { ok: false; reason: 'invalid' | 'not_activated' | 'expired' | 'cap_exhausted' | 'rate_limited' };

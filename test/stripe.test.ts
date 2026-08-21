@@ -190,3 +190,37 @@ describe('test-mode events must not book revenue', () => {
     expect(shouldBookRevenue({ livemode: undefined })).toBe(false);
   });
 });
+
+describe('subscription renewal must extend the pass', () => {
+  /**
+   * Without renewal handling a subscriber is charged a second month and their
+   * pass expires on day 31 regardless — money taken, service not delivered.
+   * That is the invariant the x402 rail goes to real lengths to protect, and
+   * the card rail reaches the same failure by a duller route.
+   */
+  const shouldRenew = (e: { type?: string; obj?: { billing_reason?: string; subscription?: string } }) =>
+    e.type === 'invoice.paid' &&
+    e.obj?.billing_reason === 'subscription_cycle' &&
+    typeof e.obj?.subscription === 'string' &&
+    e.obj.subscription.length > 0;
+
+  it('renews on a recurring cycle invoice', () => {
+    expect(shouldRenew({ type: 'invoice.paid', obj: { billing_reason: 'subscription_cycle', subscription: 'sub_1' } })).toBe(true);
+  });
+
+  it('does NOT renew on the invoice that accompanies the first checkout', () => {
+    // That invoice arrives alongside checkout.session.completed, which already
+    // minted. Renewing there would reset a brand-new pass's call count.
+    expect(shouldRenew({ type: 'invoice.paid', obj: { billing_reason: 'subscription_create', subscription: 'sub_1' } })).toBe(false);
+  });
+
+  it('ignores invoices with no subscription attached', () => {
+    expect(shouldRenew({ type: 'invoice.paid', obj: { billing_reason: 'subscription_cycle' } })).toBe(false);
+    expect(shouldRenew({ type: 'invoice.paid', obj: { billing_reason: 'subscription_cycle', subscription: '' } })).toBe(false);
+  });
+
+  it('ignores unrelated invoice events', () => {
+    expect(shouldRenew({ type: 'invoice.payment_failed', obj: { billing_reason: 'subscription_cycle', subscription: 'sub_1' } })).toBe(false);
+    expect(shouldRenew({ type: 'checkout.session.completed', obj: { subscription: 'sub_1' } })).toBe(false);
+  });
+});
