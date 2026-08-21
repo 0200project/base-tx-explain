@@ -45,7 +45,7 @@ const KNOWN_PAYMENT_TXS = new Set([
  * settles, with the same comment discipline as above.
  */
 const KNOWN_FAVOR_TXS = new Set([
-  // '0x...', // Circadian-agent in-band settlement probe, unprompted, not a sale
+  '0x6ce5e3948c9c6b8e0ef8413f3c29623163bb7b58155eda90a67464f3bb119110', // Circadian-agent in-band settlement probe, 2026-08-21 17:14:49Z, unprompted, not a sale - confirmed by them directly
 ]);
 
 const today = new Date().toISOString().slice(0, 10);
