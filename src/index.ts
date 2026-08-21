@@ -816,6 +816,11 @@ function handleStripeWebhook(req: express.Request, res: express.Response): void 
               e: 'settled',
               client: 'stripe',
               amount_usd: typeof obj.amount_paid === 'number' ? obj.amount_paid / 100 : 0,
+              // The invoice id: a recurring payment from an established paying
+              // customer had NEITHER tx nor id, so it was permanently
+              // unattributable — the one settlement shape guaranteed to come
+              // from a real customer could never be recorded as one.
+              id: typeof obj.id === 'string' ? obj.id : `sub-renewal-${subId}-${Date.now()}`,
             });
           }
           console.log(`[stripe] subscription ${subId.slice(0, 12)}... renewed, pass extended`);

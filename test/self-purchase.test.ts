@@ -284,6 +284,41 @@ describe('settlement attribution in the ledger', () => {
     expect(lt(usage).revenue_from_customers_usd).toBe(9);
   });
 
+  /**
+   * An x402 sale is identified by `tx` and carries no `id`. The write-off
+   * predicate checks BOTH fields; the promotion predicate checked only `id` —
+   * three lines apart in the same function.
+   *
+   * So the rail most likely to produce a first sale is the one the attribution
+   * mechanism could not reach: money would sit in `unattributed` forever and
+   * the founder would see $0 on the night he is watching for a first sale, with
+   * no fix short of a deploy. Found by Security checking whether finance's
+   * stated plan — "I will promote it by hand" — would actually work.
+   */
+  it('promotes an x402 settlement, which is identified by tx and has no id', async () => {
+    const { usage, attribution } = await load();
+    const txhash = '0x' + 'ab'.repeat(32);
+    settle(usage, { amount_usd: 9, tx: txhash });      // exactly what index.ts emits
+    expect(lt(usage).unattributed_revenue_usd).toBe(9);
+
+    attribution.attribute(txhash);
+
+    expect(lt(usage).revenue_from_customers_usd).toBe(9);
+    expect(lt(usage).unattributed_revenue_usd).toBe(0);
+  });
+
+  it('tells the operator WHICH handle to paste for each unattributed settlement', async () => {
+    // An endpoint that is correct but unusable is one we have already shipped
+    // once tonight. Widening the predicate means either field can work, so the
+    // operator has to be told which one this settlement actually carries.
+    const { usage } = await load();
+    settle(usage, { amount_usd: 9, tx: '0xfeed' });
+    settle(usage, { amount_usd: 9, id: 'cs_abc' });
+    const snap = usage.usageSnapshot() as { unattributed: Array<{ handle: string; amount_usd: number }> };
+    const handles = snap.unattributed.map((u) => u.handle).sort();
+    expect(handles).toEqual(['0xfeed', 'cs_abc']);
+  });
+
   it('never reports a negative customer figure', async () => {
     const { usage } = await load();
     settle(usage, { amount_usd: 0.01, self: true, id: 'x' });

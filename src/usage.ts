@@ -110,7 +110,7 @@ const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0
  * there is exactly one place the split is decided so the sum invariant cannot
  * drift. Volume is one settlement lifetime, so retaining them costs nothing.
  */
-const settlements: Array<{ id?: string; tx?: string; amount_usd: number; self?: boolean }> = [];
+const settlements: Array<{ id?: string; tx?: string; amount_usd: number; self?: boolean; at: string }> = [];
 const lifetimeExternalClients = new Set<string>();
 const lifetimeClients = new Set<string>();
 /** External calls per channel, lifetime. */
@@ -211,7 +211,7 @@ function absorb(ev: LedgerEvent): void {
     // after the settlement still moves the number.
     agg.revenue_usd += ev.amount_usd;
     lifetime.revenue_usd += ev.amount_usd;
-    settlements.push({ id: ev.id, tx: ev.tx, amount_usd: ev.amount_usd, self: ev.self });
+    settlements.push({ id: ev.id, tx: ev.tx, amount_usd: ev.amount_usd, self: ev.self, at: ev.t });
   }
 }
 
@@ -276,11 +276,40 @@ function revenueSplit(): {
     // promotion set so a written record outranks a click.
     else if (isKnownNonRevenue(s.tx) || isKnownNonRevenue(s.id)) knownNonRevenue += s.amount_usd;
     // Resolved: a human said it came from a customer.
-    else if (isAttributed(s.id)) attributed += s.amount_usd;
+    // BOTH fields, matching the write-off predicate three lines above. An x402
+    // settlement is identified by `tx` and carries no `id`, so checking only
+    // `id` meant the rail with the demonstrated end-to-end path — and the one
+    // our first interested party has said they want — could be written off but
+    // never promoted. The money would sit in `unattributed` forever and the
+    // founder would read $0 on the night he is watching for a first sale.
+    else if (isAttributed(s.id) || isAttributed(s.tx)) attributed += s.amount_usd;
     // PENDING: money arrived, nobody has said whose it is.
     else unattributed += s.amount_usd;
   }
   return { self, attributed, knownNonRevenue, unattributed };
+}
+
+/**
+ * Which handle to paste to promote each settlement still awaiting a human.
+ *
+ * Widening the predicate means either `tx` or `id` works — but only one of them
+ * EXISTS on any given settlement, and the operator cannot know which without
+ * being told. An endpoint that is correct and unusable is one we shipped once
+ * already tonight, so the answer travels with the question.
+ */
+function unattributedHandles(): Array<{ handle: string; amount_usd: number; at: string }> {
+  const out: Array<{ handle: string; amount_usd: number; at: string }> = [];
+  for (const s of settlements) {
+    if (s.self) continue;
+    if (isKnownNonRevenue(s.tx) || isKnownNonRevenue(s.id)) continue;
+    if (isAttributed(s.id) || isAttributed(s.tx)) continue;
+    const handle = s.id ?? s.tx;
+    // No handle at all means no way to promote it. Reported as such rather than
+    // omitted, because a settlement nobody can act on is exactly the one that
+    // must not disappear from the list.
+    out.push({ handle: handle ?? '(none — this settlement cannot be promoted)', amount_usd: s.amount_usd, at: s.at });
+  }
+  return out;
 }
 
 /** How often to look for check-health buckets due to be persisted. */
@@ -377,6 +406,7 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
     persisted: ledgerReady,
     first_event_at: firstEventAt,
     channels: channelSnapshot(),
+    unattributed: unattributedHandles(),
     lifetime: {
       ...lifetime,
       // `paid_calls` counts calls that ARRIVED carrying a payment payload, not
