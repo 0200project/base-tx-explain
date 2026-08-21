@@ -17,7 +17,7 @@ Mission: one real stranger discovers, understands, uses, and pays. Updated live.
 - The one population where Base-only is a *feature* not a compromise: Base-native builders (Base App mini-apps, Farcaster/Zora/Clanker ecosystem) — unexplored tonight, worth a live sweep.
 - Live, acute-need search (someone asking "what did this tx do" *today*) is untested and free — the fastest path to a real want, not a cold pitch to a company that likely self-hosts.
 
-| SCVD General Store (Record Creative Co. LLC, solo-run) | Their core product is independent attestation of what other people's x402 payments actually did, settling on Base among other chains — literally our decode's job, one layer up. Already runs real x402 payments in production, so paying $0.02 is inside their comfort zone (unlike segment-research targets who'd never paid for a data source). | Drafted, awaiting approval | — | — | Send as GitHub issue on seancrecord/scvd-general-store-repo, honest question not a pitch | No |
+| SCVD General Store (Record Creative Co. LLC, solo-run) | Their core product is independent attestation of what other people's x402 payments actually did, settling on Base among other chains — literally our decode's job, one layer up. Already runs real x402 payments in production, so paying $0.02 is inside their comfort zone (unlike segment-research targets who'd never paid for a data source). | Sent: github.com/seancrecord/scvd-general-store-repo/issues/188 | Pending | — | Wait; check thread periodically | No |
 
 ## Log
 
