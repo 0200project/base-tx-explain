@@ -187,6 +187,36 @@ owned. Remove this note once resolved.
 Finance's position while it is open: Stripe-side `settled` rows are booked but
 treated as **unreconciled** until verified against Stripe itself.
 
+## Flagged discrepancies — open
+
+**D-1. `/stats` reconciliation reports `unbooked_revenue` that does not exist.**
+Raised 2026-08-21 by Finance. `src/reconcile.ts` compares wallet balance against
+booked revenue and labels any positive delta as unbooked revenue. Today it
+returns `status: unbooked_revenue`, `delta_usd: 0.02`, and a note reading "Real
+money, unrecorded." Every figure is arithmetically correct and the conclusion is
+wrong: that $0.02 is our own internal transfer, and it predates the ledger. The
+reconciler has no concept of a *known non-revenue inbound*, so it cannot read
+`reconciled` while our own test money sits in the wallet — and the only way it
+clears is if someone wrongly books $0.02.
+
+Escalates when the Circadian favour lands: delta becomes $0.04 from a genuinely
+external address, removing the one clue a careful reader has today.
+
+Fix specified to the platform session — subtract a known-non-revenue baseline
+(by tx hash) so the comparison is *received from customers* vs *booked*; keep the
+raw received figure, just stop labelling it revenue. Same three-bucket shape the
+daily report adopted. Also flagged: `unbooked_paid_calls: 4` /
+`unbooked_notional_usd: 0.08` sit adjacent to the delta and read as its
+explanation. They are unrelated — those 4 attempts moved no money, and the $0.02
+predates them. Notional, not owed, not received.
+
+**D-2. A failed read was recorded as a clean $0.** The 2026-08-21 daily report
+ran during a production restart window, could not reach `/stats`, and published
+usage as unreadable while the revenue section still rendered. Production
+recovered (machine booted 16:50:15Z, `/healthz` 200). No money impact — revenue
+was and is $0.00 — but the principle stands: **unknown must never render as
+zero.** Numbers read after recovery are recorded below.
+
 ## Known corrections to the record
 
 - **Phantom $9 Stripe settlement, removed 2026-08-21** (by the platform
@@ -215,7 +245,7 @@ These are recorded on the pass entry with the reason and enumerable via
 `listUnconfirmed()` in `src/passes.ts`. Standing line item — it is a known
 category, not a leak, and it is exactly the thing that would otherwise surface
 later as an unexplained gap between service delivered and revenue booked.
-Current count: to be read at each daily close.
+Current count: to be read at each daily close. Lifetime `pass_calls`: 1.
 
 ## Reconciliation notes
 
