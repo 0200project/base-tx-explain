@@ -14,6 +14,7 @@ import { FAVICON_PNG } from './favicon.js';
 import { withAcceptedFieldRepair } from './cdpCompat.js';
 import { buildOpenApiDocument } from './openapi.js';
 import { registerPassRoutes, registerRestRoutes } from './rest.js';
+import { getTreasury } from './treasury.js';
 import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
 import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, passSnapshot, refundPassUse, usePass } from './passes.js';
 import { APIFY_BILLING_ACTIVE, initApifyBilling, chargeApifyCall } from './apifyBilling.js';
@@ -495,7 +496,7 @@ app.post('/dashboard/logout', (_req, res) => {
     .redirect(303, '/dashboard');
 });
 
-app.get('/stats', (req, res) => {
+app.get('/stats', async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*').set('Cache-Control', 'no-store');
   if (!STATS_TOKEN) {
     res.status(404).json({ error: 'stats not enabled' });
@@ -511,11 +512,15 @@ app.get('/stats', (req, res) => {
     res.status(401).json({ error: 'bad token' });
     return;
   }
+  // Read the payout balance server-side: the dashboard should not depend on a
+  // third-party explorer being up to show the number that matters most.
+  const treasury = await getTreasury(process.env.X402_PAY_TO ?? '');
   res.status(200).json({
     version: VERSION,
     payment_mode: PAYMENT_MODE,
     price_usd: PRICE_USD,
     since_boot: metrics,
+    treasury,
     ...usageSnapshot(30),
     passes: passSnapshot(),
   });
