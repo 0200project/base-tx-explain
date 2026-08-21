@@ -17,4 +17,10 @@ Mission: one real stranger discovers, understands, uses, and pays. Updated live.
 - The one population where Base-only is a *feature* not a compromise: Base-native builders (Base App mini-apps, Farcaster/Zora/Clanker ecosystem) — unexplored tonight, worth a live sweep.
 - Live, acute-need search (someone asking "what did this tx do" *today*) is untested and free — the fastest path to a real want, not a cold pitch to a company that likely self-hosts.
 
+| SCVD General Store (Record Creative Co. LLC, solo-run) | Their core product is independent attestation of what other people's x402 payments actually did, settling on Base among other chains — literally our decode's job, one layer up. Already runs real x402 payments in production, so paying $0.02 is inside their comfort zone (unlike segment-research targets who'd never paid for a data source). | Drafted, awaiting approval | — | — | Send as GitHub issue on seancrecord/scvd-general-store-repo, honest question not a pitch | No |
+
 ## Log
+
+- 2026-08-21: Broad discovery search (Reddit r/ethdev, r/CryptoCurrency, r/base; HN Algolia) confirmed the research's core finding live — acute "I need this now" posts don't exist; what exists is builders making their own decoders (criteria-2/3 tension) or off-topic noise. Pivoted to precision search inside the x402/MCP ecosystem itself, the one population that already trusts this payment model.
+- Checked pollar-xyz (recently very active Base-adjacent-looking repo): disqualified, they're live on Stellar/Solana, not Base, brand-new repo.
+- Found SCVD General Store: strong structural fit, drafting outreach.
