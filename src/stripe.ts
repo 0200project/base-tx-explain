@@ -121,6 +121,12 @@ export function verifyStripeSignature(
 export interface StripeEvent {
   id?: string;
   type?: string;
+  /**
+   * False for test-mode events. Load-bearing: a test purchase must mint a
+   * working pass (that is what testing the flow means) while booking no
+   * revenue, or the ledger reports money that does not exist.
+   */
+  livemode?: boolean;
   data?: { object?: Record<string, unknown> };
 }
 

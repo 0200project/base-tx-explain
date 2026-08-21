@@ -656,6 +656,14 @@ function handleStripeWebhook(req: express.Request, res: express.Response): void 
       const sessionId = validSessionId(obj.id);
       if (sessionId) {
         const kind = sessionKind(obj);
+        // Stripe marks test-mode events livemode:false. A test purchase should
+        // still mint a working pass — that is the point of testing the flow —
+        // but it must NEVER book revenue. The first test purchase wrote a real
+        // $9 row into the ledger and another session nearly reported it to the
+        // founder as a stranger paying. A number that reads as money when no
+        // money exists is the exact failure we spent tonight removing from the
+        // x402 metrics; shipping it again on a new rail would be worse.
+        const isLive = event.livemode === true;
         const minted = mintPass({ payer: typeof obj.customer === 'string' ? obj.customer : undefined });
         recordDelivery(sessionId, {
           ...minted,
@@ -663,13 +671,18 @@ function handleStripeWebhook(req: express.Request, res: express.Response): void 
           subscription_id: typeof obj.subscription === 'string' ? obj.subscription : undefined,
           delivered_at: Date.now(),
         });
-        recordEvent({
-          t: new Date().toISOString(),
-          e: 'settled',
-          client: 'stripe',
-          amount_usd: typeof obj.amount_total === 'number' ? obj.amount_total / 100 : 0,
-        });
-        console.log(`[stripe] ${kind} PAID, pass minted for session ${sessionId.slice(0, 12)}...`);
+        if (isLive) {
+          recordEvent({
+            t: new Date().toISOString(),
+            e: 'settled',
+            client: 'stripe',
+            amount_usd: typeof obj.amount_total === 'number' ? obj.amount_total / 100 : 0,
+          });
+        }
+        console.log(
+          `[stripe] ${kind} PAID${isLive ? '' : ' (TEST MODE, no revenue booked)'}, ` +
+            `pass minted for session ${sessionId.slice(0, 12)}...`,
+        );
       }
     } else if (event.type === 'customer.subscription.deleted') {
       // Cancelled or ended. Revoke so a lapsed subscriber stops getting calls.

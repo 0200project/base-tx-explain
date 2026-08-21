@@ -164,3 +164,29 @@ describe('sessionKind', () => {
     expect(sessionKind({})).toBe('pass');
   });
 });
+
+describe('test-mode events must not book revenue', () => {
+  /**
+   * A test purchase should mint a working pass — that is what testing the flow
+   * means — but must never write a revenue row. The first test purchase booked
+   * a real $9, and another session came within one message of reporting it to
+   * the founder as a stranger paying. `livemode` is the only field that
+   * separates the two, and it comes from Stripe rather than from us.
+   */
+  const shouldBookRevenue = (event: { livemode?: boolean }) => event.livemode === true;
+
+  it('does not book revenue for a test-mode event', () => {
+    expect(shouldBookRevenue({ livemode: false })).toBe(false);
+  });
+
+  it('books revenue for a live event', () => {
+    expect(shouldBookRevenue({ livemode: true })).toBe(true);
+  });
+
+  it('defaults to NOT booking when the flag is absent', () => {
+    // Under-reporting is recoverable from Stripe's own dashboard.
+    // Over-reporting is invisible from inside the ledger.
+    expect(shouldBookRevenue({})).toBe(false);
+    expect(shouldBookRevenue({ livemode: undefined })).toBe(false);
+  });
+});
