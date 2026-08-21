@@ -13,7 +13,7 @@ import { absorbCheckHealthEvent, takeCheckHealthEvents, type CheckHealthEvent } 
  */
 
 export type UsageEvent =
-  | { t: string; e: 'call'; charge: boolean; paid?: boolean; pass?: boolean; client: string; ok?: boolean; internal?: boolean }
+  | { t: string; e: 'call'; charge: boolean; paid?: boolean; pass?: boolean; client: string; ok?: boolean; internal?: boolean; degraded?: boolean }
   | { t: string; e: 'settled'; client: string; amount_usd: number; payer?: string; tx?: string };
 
 /**
@@ -31,6 +31,18 @@ interface DayAgg {
   wall_hits: number;
   /** Calls covered by a purchased pass. */
   pass_calls: number;
+  /**
+   * Calls we gave away because payments were down, not because the caller had
+   * free tier left.
+   *
+   * Counted apart from both `free` and `wall_hits` on purpose. Without this a
+   * facilitator outage reads as demand: a caller past their free tier arrives
+   * with charge=true and no payload, lands in wall_hits, and the funnel shows
+   * people hitting the paywall when they were actually served for nothing. That
+   * corruption points the flattering way, which is the direction we can least
+   * afford given the whole question here is whether anyone wants this.
+   */
+  degraded_calls: number;
   /**
    * Calls we made ourselves, identified by the internal marker.
    *
@@ -60,7 +72,7 @@ const dataDir = process.env.DATA_DIR ?? './data';
 const ledgerPath = join(dataDir, 'events.jsonl');
 
 const days = new Map<string, DayAgg>();
-const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0 };
+const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0 };
 const lifetimeExternalClients = new Set<string>();
 const lifetimeClients = new Set<string>();
 let firstEventAt: string | null = null;
@@ -73,7 +85,7 @@ function dayOf(iso: string): string {
 function aggFor(day: string): DayAgg {
   let agg = days.get(day);
   if (!agg) {
-    agg = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0, clients: new Set(), externalClients: new Set() };
+    agg = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0, clients: new Set(), externalClients: new Set() };
     days.set(day, agg);
   }
   return agg;
@@ -97,6 +109,11 @@ function absorb(ev: LedgerEvent): void {
     if (ev.pass) {
       agg.pass_calls++;
       lifetime.pass_calls++;
+    } else if (ev.degraded) {
+      // Checked BEFORE the charge branches: an outage giveaway arrives with
+      // charge=true and would otherwise be counted as a paywall hit.
+      agg.degraded_calls++;
+      lifetime.degraded_calls++;
     } else if (ev.charge && ev.paid) {
       agg.paid_calls++;
       lifetime.paid_calls++;
@@ -194,6 +211,7 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
       paid_calls: agg?.paid_calls ?? 0,
       payment_attempted: agg?.paid_calls ?? 0,
       pass_calls: agg?.pass_calls ?? 0,
+      degraded_calls: agg?.degraded_calls ?? 0,
       internal_calls: agg?.internal_calls ?? 0,
       external_clients: agg?.externalClients.size ?? 0,
       settlements: agg?.settlements ?? 0,

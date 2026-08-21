@@ -101,6 +101,12 @@ let buyPassHandler: ((args: Record<string, never>, extra: unknown) => Promise<Re
 let httpPaymentRequired: Record<string, unknown> | null = null;
 /** Shared with the REST rail so both charge through one configured server. */
 let sharedResourceServer: import('@x402/core/server').x402ResourceServer | null = null;
+/**
+ * Whether payment initialisation has completed. False means the facilitator was
+ * unreachable at boot and we are serving the free tier only — a degraded state
+ * that must be visible rather than inferred from calls quietly not being charged.
+ */
+let paymentsReady = false;
 let sharedPayTo = '';
 
 // An https resource URL: x402 indexers (Bazaar, x402scan) group and link
@@ -635,7 +641,13 @@ function handleStripeWebhook(req: express.Request, res: express.Response): void 
     // Not merely logged: a SIGNED delivery we cannot match is a customer who
     // was charged and got no pass, and one console line in a log nobody
     // watches is how that stays invisible until they complain.
-    recordWebhookRejected(verdict.reason);
+    // Labelled at the moment it happens: our own forged-signature test and a
+    // genuine rejected delivery are indistinguishable an hour later, and one of
+    // them means a customer was charged for nothing. Forgetting the marker still
+    // makes our probe look external and raise the alarm — the cheap direction.
+    recordWebhookRejected(verdict.reason, {
+      internal: isInternalRequest(req.headers as Record<string, unknown>),
+    });
     res.status(400).json({ error: 'invalid signature' });
     return;
   }
@@ -812,6 +824,10 @@ app.get('/healthz', (_req, res) => {
       ok: true,
       version: VERSION,
       payment_mode: PAYMENT_MODE,
+      // False means the facilitator was unreachable and we are on the free tier
+      // only. Published so a degraded payment path is visible, rather than being
+      // inferred from calls quietly not being charged.
+      payments_ready: paymentsReady,
       metrics,
       lifetime: snapshot.lifetime,
       check_health: checkHealthSnapshot(24),
@@ -994,7 +1010,13 @@ const isMcpClient = (req: express.Request): boolean =>
 /** x402 v2 wire format: the PaymentRequired payload rides in a base64 response header. */
 function send402(res: express.Response): void {
   if (!httpPaymentRequired) {
-    res.status(500).json({ error: 'payment configuration missing' });
+    // Payments have not initialised (facilitator unreachable at boot, retrying).
+    // 503 + Retry-After, not 500: this is temporary and the caller should come
+    // back, which a 500 does not tell them.
+    res.status(503).set('Retry-After', '60').json({
+      error: 'Payment is temporarily unavailable; the free tier still works. Retry shortly.',
+      code: 'payments_unavailable',
+    });
     return;
   }
   // The header carries the SAME object as the body, hint included.
@@ -1103,14 +1125,43 @@ app.post(['/mcp', '/mcp/:token'], async (req, res) => {
   }
   if (isBuyPass) charge = true;
 
+  // Would have been charged, but payments are down, so freeHandler will serve it
+  // for nothing. Recorded distinctly because otherwise an outage READS AS DEMAND:
+  // this call carries charge=true with no payment payload and would land in
+  // wall_hits, showing people hitting the paywall when we in fact gave it away.
+  //
+  // WHEN THIS TRADE FLIPS: giving service away during an outage is right while
+  // revenue at risk is zero and the marginal cost is a couple of upstream reads,
+  // and a stranger evaluating us learns "it works" rather than "it is flaky".
+  // Once there is real paid volume an outage becomes an unbounded giveaway and
+  // returning 503 for would-be-charged calls starts to look better. `payments_ready`
+  // on /healthz and `degraded_calls` in the ledger are what make that revisitable
+  // on evidence rather than on a hunch.
+  const degradedByOutage = charge && !paidHandler;
+
   if (isToolCall) {
     metrics.tool_calls++;
     if (charge) metrics.paywalled++;
     else metrics.free++;
     const ipTag = createHash('sha256').update(`btx:${ip}`).digest('hex').slice(0, 8);
-    const kind = passToken ? 'pass' : charge ? (hasPayment ? 'paid-retry' : isBuyPass ? 'buy-pass' : 'paywalled') : 'free';
+    const kind = passToken
+      ? 'pass'
+      : degradedByOutage
+        ? 'free-degraded'
+        : charge
+          ? (hasPayment ? 'paid-retry' : isBuyPass ? 'buy-pass' : 'paywalled')
+          : 'free';
     console.log(`[call] ${new Date().toISOString()} ${kind} client=${ipTag}`);
-    recordEvent({ t: new Date().toISOString(), e: 'call', charge, paid: hasPayment, pass: Boolean(passToken), client: ipTag, internal: isInternalRequest(req.headers as Record<string, unknown>) });
+    recordEvent({
+      t: new Date().toISOString(),
+      e: 'call',
+      charge,
+      paid: hasPayment,
+      pass: Boolean(passToken),
+      client: ipTag,
+      internal: isInternalRequest(req.headers as Record<string, unknown>),
+      ...(degradedByOutage ? { degraded: true } : {}),
+    });
   }
 
   const server = getServer(charge, ip, passToken);
@@ -1161,13 +1212,30 @@ initWalletMonitor();
 // deploys are frequent here, which makes that the common case, not an edge one.
 initWebhookHealth();
 
-initApifyBilling()
-  .then(() => initPayments())
-  .then(() => {
-    // REST rail. Registered after initPayments so it shares the same
-    // configured resource server; only in x402 mode, since without payments
-    // configured there is nothing to gate it with.
-    if (PAYMENT_MODE === 'x402' && sharedResourceServer) {
+/**
+ * Bind FIRST, then bring payments up in the background.
+ *
+ * app.listen used to sit inside initApifyBilling().then(initPayments).then(...),
+ * with .catch(process.exit(1)). initPayments does a network GET to a third-party
+ * facilitator, and @x402/core retries that only on HTTP 429 — a 5xx, DNS failure,
+ * TLS error or timeout throws on the first attempt. So one bad moment at a
+ * company we do not control meant the port was never bound: no paid tool, and
+ * also no free tier, no /healthz, no /openapi.json, no discovery contracts. Fly
+ * then restarted into the same dead dependency, so it crash-looped instead of
+ * self-healing. Nothing above this line needs the network, and nothing the free
+ * tier serves needs payments, so none of it should wait on them.
+ */
+app.listen(port, () => {
+  console.log(`base-tx-explain v${VERSION} listening on :${port} (payment mode: ${PAYMENT_MODE})`);
+});
+
+/** Retries must never stack a second copy of the paid routes onto the router. */
+let paidRoutesRegistered = false;
+
+function registerPaidRoutes(): void {
+  if (paidRoutesRegistered) return;
+  if (PAYMENT_MODE !== 'x402' || !sharedResourceServer) return;
+  {
       registerRestRoutes(app, {
         resourceServer: sharedResourceServer,
         payTo: sharedPayTo,
@@ -1215,12 +1283,37 @@ initApifyBilling()
         },
       });
       console.log(`REST rail: POST ${PUBLIC_URL}/explain ($${PRICE_USD}/call) and POST ${PUBLIC_URL}/pass ($${PASS_PRICE_USD}/${PASS_DAYS}d) via x402 HTTP`);
-    }
-    app.listen(port, () => {
-      console.log(`base-tx-explain v${VERSION} listening on :${port} (payment mode: ${PAYMENT_MODE})`);
-    });
-  })
-  .catch((err) => {
-    console.error('Startup failed:', err);
-    process.exit(1);
-  });
+  }
+  paidRoutesRegistered = true;
+}
+
+// Backoff for a dependency that can be down for a while: quick enough to catch a
+// blip, slow enough not to hammer a service that is already struggling.
+const PAYMENT_RETRY_BASE_MS = 5_000;
+const PAYMENT_RETRY_MAX_MS = 5 * 60_000;
+
+/**
+ * Bring up billing and payments, retrying forever. Failure here degrades the
+ * service to its free tier; it must never end the process, because the free tier
+ * and every read-only surface work perfectly well without a facilitator.
+ */
+async function startPayments(attempt = 1): Promise<void> {
+  try {
+    await initApifyBilling();
+    await initPayments();
+    registerPaidRoutes();
+    paymentsReady = true;
+    console.log('[payments] ready');
+  } catch (err) {
+    paymentsReady = false;
+    const delay = Math.min(PAYMENT_RETRY_BASE_MS * 2 ** (attempt - 1), PAYMENT_RETRY_MAX_MS);
+    console.error(
+      `[payments] init failed (attempt ${attempt}); serving the free tier only, ` +
+        `retrying in ${Math.round(delay / 1000)}s:`,
+      err,
+    );
+    setTimeout(() => void startPayments(attempt + 1), delay);
+  }
+}
+
+void startPayments();
