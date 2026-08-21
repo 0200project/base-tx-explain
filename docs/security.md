@@ -137,6 +137,14 @@ data. Keep that list honest as fields change.
   different addresses inside one /64 went free, free, free-degraded,
   free-degraded — the counter depleting across the rotation — while a fifth call
   from a different /64 got its own tier._
+  **One-time migration effect, checked rather than assumed:** `free-tier.json`
+  keys are a salted hash of the client identifier, so counts written before the
+  change key on the full address and stopped matching at the boundary. Any IPv6
+  client mid-window got one fresh tier. That is the over-granting direction,
+  which is `freeTier.ts`'s stated safe failure, and the orphaned entries are not
+  a leak: `initFreeTier` calls `prune()` on every boot and drops anything past
+  the 30-day window, so they clear themselves. Recorded so a later reader does
+  not mistake the one-off for abuse.
   **Ledger semantics changed with it:** `client` is hashed from the same key, so
   unique/external client counts now treat a /64 as one client. Deliberate — a
   number answering "has a stranger used this" must not be inflatable by one
