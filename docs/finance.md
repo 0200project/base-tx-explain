@@ -451,11 +451,23 @@ narrowed, possibly moot.** If "spend that gets us clients" resolves mostly to
 card — which needs no wallet, no key, no signer — then x402 autonomous spend
 may be dogfooding-only, in which case `to` gets pinned to our own `payTo`, a
 fully compromised agent can do nothing but pay us, and there is nothing left
-to allowlist. Security is putting the sharper question to the Founder
-directly: is there any third-party x402 service we would actually pay? Finance
-already put the allowlist framing to him in this chat before this scope change
-arrived — noting that here rather than re-asking, so he isn't asked the same
-decision twice from two directions in one evening.
+to allowlist. Security put the sharper question to the Founder directly: is
+there any third-party x402 service we would actually pay?
+
+**The Founder turned that question back to the team rather than answering it
+himself** — reasonable: Finance doesn't have ecosystem knowledge of what x402
+services exist and are worth paying for; that's Growth's and platform's
+territory, not the books'. Routed to them. Answer pending.
+
+**Card spend budget — ANSWERED 2026-08-21, directly by the Founder: need and
+ROI basis, not a fixed cap.** No pre-set dollar ceiling on card spend the way
+the $20 USDC is a hard ceiling on x402. Each proposal is judged on whether the
+need is real and the expected return justifies the cost — which puts more
+weight on the "Expected outcome" field of the four-line proposal format than
+it previously carried, since there is no balance to fall back on as a backstop
+the way there is on the x402 side. Finance's check on a card proposal is
+therefore: is the need and expected return actually stated and plausible, not
+"is it under some fixed number" — there isn't one.
 
 ## Known corrections to the record
 
