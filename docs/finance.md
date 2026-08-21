@@ -177,7 +177,18 @@ not control.
 
 | Date | Agent | Amount | Channel | Purpose | Result |
 |---|---|---|---|---|---|
-| — | — | $0.00 | — | *no growth spend to date* | — |
+| — | — | $0.00 | — | *no growth spend executed to date* | — |
+
+**Proposed, not executed — 2026-08-21, growth.** $0.05 USDC, one-time, x402
+listing in a third-party service registry (aegis.borisinc.com). Budget check
+was clear (trivially within the $20, nothing else committed). Execution
+stopped at the right layer: growth checked and confirmed no signing key exists
+anywhere it can reach, consistent with security's "controls before capability"
+sequencing — no signer wired in until spend caps are live. Not routed around.
+**Downgraded from an autonomous-spend proposal to a manual option the Founder
+can act on whenever, same as the wallet funding was.** Nothing spent, nothing
+booked. First real test of the approval chain, and it held — no execution
+happened without a checked, available mechanism.
 
 **Spent against the $20: $0.00. Remaining allocation: $20.00, fully funded and
 verified on chain** (see Open Item 1, resolved).
