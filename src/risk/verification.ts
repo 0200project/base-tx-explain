@@ -1,5 +1,5 @@
 import type { Address } from 'viem';
-import { DAY, FOREVER, TtlCache } from '../cache.js';
+import { DAY, FOREVER, NEGATIVE_TTL, TtlCache } from '../cache.js';
 import { client } from '../rpc.js';
 
 type VerificationStatus = 'verified' | 'unverified' | 'eoa' | 'unknown';
@@ -12,20 +12,30 @@ const cache = new TtlCache<VerificationStatus>(10_000, DAY);
  * "unknown" (both providers unreachable) must never produce a risk flag.
  */
 export async function verificationStatus(address: Address): Promise<VerificationStatus> {
-  return cache.getOrLoad(address.toLowerCase(), async () => {
-    let code: string | undefined;
-    try {
-      code = await client.getCode({ address });
-    } catch {
-      return 'unknown';
-    }
-    // No code, or a bare EIP-7702 delegation marker (23 bytes): not a contract to audit.
-    if (!code || code === '0x' || code.length <= 48) return 'eoa';
+  // 'unknown' is a transient failure, not a fact about the contract, and this
+  // cache is keyed on address alone — so caching it for a full day let a single
+  // Sourcify blip suppress unverified_contract for that contract for 24 hours,
+  // across every transaction and every client. Measured case: Blockscout was
+  // down for roughly 16 minutes on 2026-08-20 and would have poisoned entries
+  // long after it recovered. Real answers still cache for a day.
+  return cache.getOrLoad(
+    address.toLowerCase(),
+    async () => {
+      let code: string | undefined;
+      try {
+        code = await client.getCode({ address });
+      } catch {
+        return 'unknown';
+      }
+      // No code, or a bare EIP-7702 delegation marker (23 bytes): not a contract to audit.
+      if (!code || code === '0x' || code.length <= 48) return 'eoa';
 
-    const sourcify = await checkSourcify(address);
-    if (sourcify !== 'unknown') return sourcify;
-    return checkEtherscan(address);
-  });
+      const sourcify = await checkSourcify(address);
+      if (sourcify !== 'unknown') return sourcify;
+      return checkEtherscan(address);
+    },
+    (v) => (v === 'unknown' ? NEGATIVE_TTL : DAY),
+  );
 }
 
 async function checkSourcify(address: Address): Promise<VerificationStatus> {

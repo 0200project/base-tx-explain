@@ -1,5 +1,5 @@
 import type { Address } from 'viem';
-import { DAY, TtlCache } from '../cache.js';
+import { DAY, NEGATIVE_TTL, TtlCache } from '../cache.js';
 
 const cache = new TtlCache<boolean | null>(5_000, DAY);
 const PAGE_CAP = 1_000;
@@ -37,7 +37,10 @@ export async function isFirstInteraction(
       verdict = !history.some((tx) => tx.to?.toLowerCase() === target);
     }
   }
-  cache.set(cacheKey, verdict);
+  // A null verdict means the lookup failed or the history was truncated, not
+  // that the answer is null. Caching it for a day would keep answering from a
+  // transient outage long after the source recovered.
+  cache.set(cacheKey, verdict, verdict === null ? NEGATIVE_TTL : DAY);
   return verdict;
 }
 

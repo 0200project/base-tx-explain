@@ -66,6 +66,21 @@
   .hero-checks { margin-top: 1.5rem; }
   .hero-checks li + li { margin-top: 0.75rem; }
   .hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2.25rem; }
+  .hero-try { display: flex; flex-wrap: wrap; gap: 0.625rem; margin-top: 1rem; }
+  .hero-try-input {
+    flex: 1 1 16rem;
+    min-width: 0;
+    height: 2.5rem;
+    padding-inline: 0.875rem;
+    background: var(--bg-raised);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+  }
+  .hero-try-input::placeholder { color: var(--fg-faint); }
+  .hero-try-input:focus-visible { border-color: var(--border-hover); }
   .hero-artifact { position: relative; display: flex; flex-direction: column; }
   .hero-artifact .term { flex: 1; display: flex; flex-direction: column; }
   .hero-artifact .term-body { flex: 1; }
@@ -118,8 +133,6 @@
     animation: t-type 1.15s steps(43, end) 0.45s forwards;
   }
   @keyframes t-type { to { width: 43ch; } }
-  .t-dim { color: var(--fg-faint); }
-  .t-402 { color: var(--accent); }
   .t-cursor {
     display: inline-block;
     width: 0.55em;
@@ -191,10 +204,11 @@
     </button>
     <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
       <li><a href="/tools/">Tools</a></li>
+      <li><a href="/playground/">Playground</a></li>
       <li><a href="/docs/">Docs</a></li>
       <li><a href="/docs/#pricing">Pricing</a></li>
       <li class="nav-cta"><a class="btn btn-ghost btn-sm" href="https://github.com/0200project">GitHub</a></li>
-      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/docs/">Start building</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/playground/">Try it free</a></li>
     </ul></nav>
   </div>
 </header>
@@ -209,33 +223,35 @@
         <ul class="checks hero-checks">
           <li>Discovered and called over MCP</li>
           <li>Deterministic &mdash; no LLM in the response path</li>
-          <li>Paid per call in USDC &mdash; no accounts, no API keys</li>
+          <li>10 free calls &mdash; no wallet, no signup, no API key</li>
         </ul>
         <div class="hero-actions">
-          <a class="btn btn-primary" href="/tools/">Explore tools</a>
+          <a class="btn btn-primary" href="/playground/">Try it free</a>
           <a class="btn btn-ghost" href="https://github.com/0200project">GitHub</a>
         </div>
+        <form class="hero-try" action="/playground/" method="get">
+          <input class="hero-try-input" type="text" name="tx" placeholder="Or paste a Base tx hash&#8230;" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Base transaction hash">
+          <button class="btn btn-ghost btn-sm" type="submit">Explain it</button>
+        </form>
       </div>
       <div class="hero-artifact">
         <div class="term panel">
           <div class="panel-head"><span>agent session</span><span>base mainnet &middot; replay</span></div>
           <div class="term-body">
             <div class="t-line t-cmd" style="--t:0.4s"><span class="t-prompt">$</span> <span class="t-type">tools/call explain_transaction 0x0c84&#8230;4c8c</span></div>
-            <div class="t-line t-dim" style="--t:1.9s">&#8592; <span class="t-402">402 Payment Required</span> &middot; $0.02 USDC on Base</div>
-            <div class="t-line t-dim" style="--t:2.6s">&#8594; paid via x402 &middot; retrying</div>
-            <div class="t-line tok-punc" style="--t:3.3s">{</div>
-            <div class="t-line" style="--t:3.37s">  <span class="tok-key">"summary"</span><span class="tok-punc">:</span> <span class="tok-str">"0x401d&#8230;f2c5 swapped</span></div>
-            <div class="t-line" style="--t:3.42s"><span class="tok-str">    0.03 ETH for 12,899,422 WNL</span></div>
-            <div class="t-line" style="--t:3.47s"><span class="tok-str">    via Uniswap V4 PoolManager."</span><span class="tok-punc">,</span></div>
-            <div class="t-line" style="--t:3.55s">  <span class="tok-key">"action_type"</span><span class="tok-punc">:</span> <span class="tok-str">"swap"</span><span class="tok-punc">,</span></div>
-            <div class="t-line" style="--t:3.6s">  <span class="tok-key">"status"</span><span class="tok-punc">:</span> <span class="tok-str">"success"</span><span class="tok-punc">,</span></div>
-            <div class="t-line" style="--t:3.68s">  <span class="tok-key">"risk_flags"</span><span class="tok-punc">:</span> <span class="tok-punc">[</span><span class="tok-flag">"unverified_contract"</span><span class="tok-punc">],</span></div>
-            <div class="t-line" style="--t:3.74s">  <span class="tok-key">"gas_paid_usd"</span><span class="tok-punc">:</span> <span class="tok-num">0.020562</span></div>
-            <div class="t-line" style="--t:3.8s"><span class="tok-punc">}</span></div>
-            <div class="t-line" style="--t:4.25s"><span class="t-prompt">$</span> <span class="t-cursor" aria-hidden="true"></span></div>
+            <div class="t-line tok-punc" style="--t:1.75s">{</div>
+            <div class="t-line" style="--t:1.82s">  <span class="tok-key">"summary"</span><span class="tok-punc">:</span> <span class="tok-str">"0x401d&#8230;f2c5 swapped</span></div>
+            <div class="t-line" style="--t:1.87s"><span class="tok-str">    0.03 ETH for 12,899,422 WNL</span></div>
+            <div class="t-line" style="--t:1.92s"><span class="tok-str">    via Uniswap V4 PoolManager."</span><span class="tok-punc">,</span></div>
+            <div class="t-line" style="--t:2.0s">  <span class="tok-key">"action_type"</span><span class="tok-punc">:</span> <span class="tok-str">"swap"</span><span class="tok-punc">,</span></div>
+            <div class="t-line" style="--t:2.05s">  <span class="tok-key">"status"</span><span class="tok-punc">:</span> <span class="tok-str">"success"</span><span class="tok-punc">,</span></div>
+            <div class="t-line" style="--t:2.13s">  <span class="tok-key">"risk_flags"</span><span class="tok-punc">:</span> <span class="tok-punc">[</span><span class="tok-flag">"unverified_contract"</span><span class="tok-punc">],</span></div>
+            <div class="t-line" style="--t:2.19s">  <span class="tok-key">"gas_paid_usd"</span><span class="tok-punc">:</span> <span class="tok-num">0.020562</span></div>
+            <div class="t-line" style="--t:2.25s"><span class="tok-punc">}</span></div>
+            <div class="t-line" style="--t:2.7s"><span class="t-prompt">$</span> <span class="t-cursor" aria-hidden="true"></span></div>
           </div>
         </div>
-        <p class="term-note">Real output, replayed &mdash; from a <a href="https://basescan.org/tx/0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c">live Base transaction</a>.</p>
+        <p class="term-note">A free call, replayed &mdash; no wallet needed. Real output from a <a href="https://basescan.org/tx/0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c">live Base transaction</a>.</p>
       </div>
     </div>
   </section>
@@ -336,6 +352,7 @@
             <li><div><strong>Receive a 402 challenge</strong><span>The response carries exact price, asset, and recipient — everything needed to pay.</span></div></li>
             <li><div><strong>Pay and retry</strong><span>$0.02 per call in USDC. The agent attaches proof of payment and retries autonomously.</span></div></li>
           </ol>
+          <p class="muted" style="margin-top:1rem; font-size:0.875rem">Calling often? The <a href="/docs/#pass">$9 pass</a> covers 10,000 calls over 30 days &mdash; one payment instead of one per call.</p>
         </div>
       </div>
     </div>
