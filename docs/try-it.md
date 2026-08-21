@@ -97,3 +97,74 @@ isError, which is per spec"** — not "we have a bug here."
 Loop in Platform rather than explaining the flow. A working artifact beats an
 accurate description: Circadian verified our decode field by field before saying
 anything, and a technical prospect will do the same.
+
+---
+
+## A concrete before/after, for an x402-native prospect
+
+Prepared 2026-08-21 for the AgentPay thread, but reusable for any prospect whose
+own tool returns a settlement's recipient and amount and stops there. This is
+**output, not a claim** — reproducible by anyone with the hash.
+
+**Use this hash:** `0x6ce5e3948c9c6b8e0ef8413f3c29623163bb7b58155eda90a67464f3bb119110`
+
+**Not** our own test settlement
+(`0x2a2aaa…1939f`). It decodes identically, but its `from` and `to` are both our
+wallets — anyone who looked it up would see us paying ourselves, which reads as a
+manufactured example. The hash above has a genuine third-party payer.
+
+What we return for that transaction, verbatim:
+
+```json
+{
+  "summary": "0xb2bd...371b called contract Multicall3 (function: aggregate3).",
+  "action_type": "contract_interaction",
+  "status": "success",
+  "assets_moved": [{
+    "token": "USDC", "amount": "0.02",
+    "from": "0x9f54460FED51892b3b065EAe3Ac1603dC3C6ECe4",
+    "to":   "0xd4ec730aB062f20460727710fcE70664948a6BC9",
+    "token_address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+    "standard": "erc20"
+  }],
+  "counterparties": [{ "address": "0xca11...ca11", "label": "Multicall3" }],
+  "risk_flags": [],
+  "checks": {
+    "contract_verification": "not_applicable",
+    "first_interaction": "not_applicable",
+    "drainer_blacklist": "ok",
+    "unchecked_addresses": [], "note": null
+  },
+  "gas_paid_usd": 0.001588,
+  "block_number": 50271571,
+  "timestamp": "2026-08-21T17:14:49.000Z",
+  "provenance": { "untrusted_fields": ["summary", "assets_moved[].token", "counterparties[].label"] }
+}
+```
+
+The fields worth pointing at, and why each is hard to reconstruct from a
+recipient-and-amount history:
+
+| Field | Why it matters to an audit trail |
+|---|---|
+| `gas_paid_usd` | the cost side of the entry, already converted — not fee × rate |
+| `assets_moved[].from` | the *payer*, which a recipient-only record never has |
+| `token_address` + `standard` | which USDC, and that it is ERC-20 — not a symbol string |
+| `counterparties[].label` | `Multicall3` resolved, so a batched settlement is not an opaque address |
+| `status` | reverted settlements excluded from disposals |
+| `checks` | which risk lookups ran, so an empty `risk_flags` is never read as "clean" |
+| `provenance.untrusted_fields` | names the fields an attacker controls — no explorer publishes this |
+
+### Two honesty constraints on using this
+
+**Do not call it a customer payment.** It is Circadian's pre-arranged technical
+probe by a party who evaluated us and declined to buy. It is a real, settled,
+on-chain payment and fine as a decode example — it is not a sale, and
+`knownNonRevenue.ts` says so.
+
+**Say what the `checks` object is doing here.** Two of three read
+`not_applicable` because a plain transfer extends no trust to a new contract —
+nothing was skipped, there was nothing to look at. That is the field behaving
+correctly, and it is the honest version. A richer transaction (a swap, an
+approval) exercises all three. Do not present this one as a showcase of risk
+checking; present it as a showcase of an audit line.
