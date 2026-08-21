@@ -333,3 +333,43 @@ Three properties, all cheap at write time and impossible to add afterwards:
 Ask of any counter that is about to go up: *if I did this myself, five minutes
 ago, would this number look different?* If not, the label is missing. Every one
 of the six above answers no.
+
+## "Can you show me" beats "did you consider"
+
+Platform reviewed the authorization single-flight and asked three questions. The
+one that found a bug did not find it by being asked. I answered Q1 (what is the
+key?) correctly from memory — payer and nonce, no cross-payer collision — and
+while writing that answer noticed the key ignored `tx_hash`, which meant one
+authorization plus N different hashes returned N-1 callers a decode of a
+transaction they never asked about. A silently wrong authoritative answer, worse
+than the cost bug the module existed to fix.
+
+Q2 (what bounds the map?) went the same way, more starkly. I could answer it from
+the source: TTL 10 minutes, cap 1000, evict oldest. The answer was right and the
+code was wrong — `prune` ran before the insert, so the map settled at cap+1 and
+never held its stated ceiling. **The question did not find that. Writing the test
+to answer the question found it**, and it failed on the first run at 1001.
+
+The pattern across today: three defects were caught by review after the author
+and a green suite both missed them (`metrics.paywalled`, platform's
+`PAYMENT_MODE=none` shim, this). In none of the three did the reviewer already
+know the bug. What they did was ask for something that had to be *demonstrated*
+rather than *asserted* — and the demonstration is where the gap showed.
+
+So the useful reviewer question is not "did you think about X" — the author
+almost always did, and will say so accurately. It is "show me X holding," because
+the author has to go build the thing that proves it, and the proof is what fails.
+
+### Corollary: verify the reviewer too
+
+Platform closed a hazard neither of us had raised — our conflict response carries
+`isError: true`, the same flag a 402 challenge sets, so could a client mistake a
+refusal for a challenge and pay in a loop? They said no, with a mechanism. I
+checked it anyway, because a confident peer assertion about library behaviour is
+exactly what cost us the `success:false` mistake earlier today.
+
+It holds, and for a stronger reason than the one given: `PaymentRequiredSchema`
+is a zod **discriminated union on `x402Version`**, so a payload lacking that key
+fails at the discriminator before any field is examined. Not "missing `accepts`
+so the parse fails" — it never reaches `accepts`. Same conclusion, firmer floor,
+and now written down instead of living in a thread.
