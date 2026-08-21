@@ -173,6 +173,60 @@ It worked. That is true regardless of whose money it was, and it is the more
 durable fact — the settlement mechanism has now been exercised by money we do
 not control.
 
+### `active_passes: 2` — do not reconcile against this, verified test artifacts
+
+Flagged 2026-08-21 by security before Finance could misread it. `/stats`
+shows `passes.active_passes: 2` against `settlements: 1` — read naively, that
+implies roughly $18 unaccounted for. **It is not.** Both are the team's own
+overnight test artifacts: `payer: null`, issued ~05:21 and 06:11 UTC, no
+settlement event behind either. Not purchases, not revenue, not a discrepancy.
+Disposal (label internal vs. delete) is the Founder's call — platform
+recommends labelling rather than deleting, since deleting makes the count
+honest while destroying the record a real receipt might need to match
+against later. Finance's position: excluded from revenue entirely, and this
+number should never be read as implying settled dollars without checking
+`settlements` first.
+
+### A real reconciliation gap, structural — restart can destroy a settled pass silently
+
+Raised 2026-08-21 by security (`security.md` Open #2), proven by booting the
+pass store twice against one file. **A pass whose payment settles during a
+machine restart is destroyed without a trace, while the $9 still lands on
+chain.** The window is seconds wide — between mint and the settlement
+hook — but deploys happen often and a rolling deploy stops the machine mid-
+window. If the process dies after the facilitator broadcasts the transfer,
+the transfer still completes; nothing records that it was for a pass that no
+longer exists.
+
+**Why this is Finance's problem, not just an engineering one:** the payout
+wallet receives $9 the ledger never saw, for a pass that no longer exists,
+and the customer holds a token that answers `invalid`. Neither end has the
+information to find the other — a genuine money-taken-no-record gap. **If an
+unattributed wallet receipt is ever found, this is the first thing to check,
+not the last.** Platform has shipped the visibility half (stranded passes are
+now retained and listed instead of dropped rather than silently vanishing);
+the real fix — reconciling against `authorizationState(payer, nonce)` — is
+still open, deliberately left rather than rushed.
+
+### Revenue attribution model changed — counted UP, not down, as of tonight
+
+`revenue_from_customers_usd` no longer derives by subtracting known
+non-revenue from a raw total. It now **counts up only from settlements a
+human has explicitly promoted.** Its resting state is $0 — real settled money
+that hasn't been promoted sits visibly in `unattributed_revenue_usd` instead
+of silently inflating a customer-revenue figure. Confirmed live against
+`/stats`: `self_revenue_usd: 0`, `unattributed_revenue_usd: 0`,
+`attributed_revenue_usd: 0`, `revenue_from_customers_usd: 0` — nothing
+currently sitting unpromoted.
+
+**Consequence for reading future numbers: a real first sale will show $0
+customer revenue until someone explicitly promotes it** via
+`POST /revenue/attribute` (stats token required). That is deliberate, not a
+bug — it means Finance verifies and promotes real revenue by hand rather than
+trusting an automatic subtraction, which is exactly the discipline this
+ledger has run on all day, now enforced by the endpoint itself rather than by
+habit alone.
+
 ## Growth / customer-acquisition expenses
 
 | Date | Agent | Amount | Channel | Purpose | Result |
@@ -266,6 +320,8 @@ clients have actually been identified (see D-5):**
 | `81238a28` | **Genuine external arrival — confirmed, not us, not the Founder** (19:35Z) | 0 | — |
 | `5245eb45` | **Genuine external arrival — confirmed by marked test call** (20:42Z) | 0 | — |
 | 3 new clients (incl. `0a43aec8`) | **First channel-attributed arrivals — see caveat below** (20:57Z burst) | 0 | — |
+| `d3719dab`, `6adbdfe6` | Paired burst, 3.5s apart — same bot/scanner shape as the 20:57Z burst, confirmed twice now by platform | 0 | — |
+| `21361d80` | Isolated single, 21:43:09Z — same shape as the earlier plausibly-human arrivals, no paired second client | 0 | — |
 
 **`81238a28`, resolved 2026-08-21 by elimination, both steps checked rather
 than assumed.** First matched the `53d7ceaf` shape and was wrong — platform
@@ -320,11 +376,19 @@ arrivals, not leads, not customers — the tagged link registered its first
 hit, which is real signal that the channel works technically, but whether
 that hit was a person is not yet known.
 
-**The honest read: eight genuinely unattributed one-off visitor touches
-today** (three still fully unexplained, two confirmed real strangers, three
-from tonight's burst — channel-attributed but human-vs-bot unresolved),
-**zero repeat visits, zero payment attempts from any of them, zero
-customers.**
+**11 → 14, resolved by growth, verified by Finance against `/stats`
+(reads 14, exact match).** Two more arrivals confirmed same-shape as the
+20:57Z burst — `d3719dab`/`6adbdfe6`, 3.5 seconds apart, the identical
+bot/scanner pattern platform has now confirmed twice. One isolated single,
+`21361d80` at 21:43:09Z, no paired second client — same shape as the two
+earlier arrivals already treated as plausibly human. All: arrivals, not
+leads. None returned for a second call.
+
+**The honest read: eleven genuinely unattributed one-off visitor touches
+today** (three still fully unexplained, two confirmed real strangers, six
+from tonight's two bursts — channel-attributed where tagged, human-vs-bot
+still unresolved for the paired ones), **zero repeat visits, zero payment
+attempts from any of them, zero customers.**
 
 Attribution is not known and will not be guessed. If a customer arrives, CAC is
 only calculable if Growth can tell me which spend, if any, produced them.
