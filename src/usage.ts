@@ -3,6 +3,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { absorbCheckHealthEvent, takeCheckHealthEvents, type CheckHealthEvent } from './checkHealth.js';
 import { CHANNEL_CAVEAT, DIRECT, OTHER, PRE_ATTRIBUTION, knownChannels } from './channel.js';
+import { isAttributed } from './attribution.js';
 
 /**
  * Append-only usage ledger. One JSONL file on disk (a Fly volume in
@@ -15,7 +16,23 @@ import { CHANNEL_CAVEAT, DIRECT, OTHER, PRE_ATTRIBUTION, knownChannels } from '.
 
 export type UsageEvent =
   | { t: string; e: 'call'; charge: boolean; paid?: boolean; pass?: boolean; client: string; ok?: boolean; internal?: boolean; degraded?: boolean; channel?: string }
-  | { t: string; e: 'settled'; client: string; amount_usd: number; payer?: string; tx?: string; self?: boolean };
+  | {
+      t: string;
+      e: 'settled';
+      client: string;
+      amount_usd: number;
+      payer?: string;
+      tx?: string;
+      /** Ours, detected at settlement. Resolved, so never awaiting attribution. */
+      self?: boolean;
+      /**
+       * Stable handle for this settlement (Stripe session id, or tx hash), so a
+       * human can promote exactly one arrival to customer revenue. An arrival
+       * with no id can never be promoted, which keeps it under-reported rather
+       * than letting an unidentifiable settlement be waved through.
+       */
+      id?: string;
+    };
 
 /**
  * Everything the ledger carries. Risk-check availability rides the same file
@@ -75,7 +92,7 @@ const dataDir = process.env.DATA_DIR ?? './data';
 const ledgerPath = join(dataDir, 'events.jsonl');
 
 const days = new Map<string, DayAgg>();
-const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0, self_revenue_usd: 0 };
+const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0, self_revenue_usd: 0, attributed_revenue_usd: 0, unattributed_revenue_usd: 0 };
 const lifetimeExternalClients = new Set<string>();
 const lifetimeClients = new Set<string>();
 /** External calls per channel, lifetime. */
@@ -171,11 +188,23 @@ function absorb(ev: LedgerEvent): void {
     agg.settlements++;
     lifetime.settlements++;
     // Raw revenue still counts it: the money really did settle, and hiding
-    // that would be its own dishonesty. It is subtracted from the CUSTOMER
-    // figure instead, alongside the hand-logged non-revenue arrivals.
+    // that would be its own dishonesty. What changes is which of three
+    // mutually exclusive buckets it lands in — they sum to revenue_usd, so the
+    // figures can always be reconciled against each other.
     agg.revenue_usd += ev.amount_usd;
     lifetime.revenue_usd += ev.amount_usd;
-    if (ev.self) lifetime.self_revenue_usd += ev.amount_usd;
+    if (ev.self) {
+      // Resolved: we know whose it is. Not awaiting anything.
+      lifetime.self_revenue_usd += ev.amount_usd;
+    } else if (isAttributed(ev.id)) {
+      // A human looked at this arrival and said it came from a customer.
+      lifetime.attributed_revenue_usd += ev.amount_usd;
+    } else {
+      // BIRTH STATE. Money arrived; nobody has said whose it is. Surfaced
+      // rather than silently dropped, so a forgotten promotion reads
+      // "arrived, awaiting attribution" instead of an invisible zero.
+      lifetime.unattributed_revenue_usd += ev.amount_usd;
+    }
   }
 }
 
@@ -294,10 +323,11 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
   // once so the figure and the sentence describing it cannot disagree — they
   // did once, and the endpoint said "$0.02 settled, of which $0.04 is not
   // revenue".
-  const customerRevenue = Math.max(
-    0,
-    lifetime.revenue_usd - bookedNonRevenueTotal() - lifetime.self_revenue_usd,
-  );
+  // Counted UP from settlements a human promoted, not down by subtracting what
+  // we happen to have remembered was not a sale. Subtraction assumes every
+  // arrival is revenue until proven otherwise, which is the assumption that put
+  // a self-purchase on course to read as the first sale.
+  const customerRevenue = lifetime.attributed_revenue_usd;
 
   return {
     persisted: ledgerReady,
@@ -327,6 +357,13 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
       // arrival, and merging them would hide which of the two a number came
       // from.
       self_revenue_usd: Number(lifetime.self_revenue_usd.toFixed(6)),
+      /**
+       * Money that arrived and that nobody has yet said came from a customer.
+       * PROMINENT ON PURPOSE: the failure mode this replaces was an invisible
+       * zero, and a visible bucket cannot be forgotten because it is the thing
+       * being looked at.
+       */
+      unattributed_revenue_usd: Number(lifetime.unattributed_revenue_usd.toFixed(6)),
       revenue_from_customers_usd: Number(customerRevenue.toFixed(6)),
       revenue_note: revenueNote(Number(lifetime.revenue_usd.toFixed(6)), customerRevenue),
       revenue_usd: Number(lifetime.revenue_usd.toFixed(6)),

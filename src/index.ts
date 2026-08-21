@@ -20,6 +20,7 @@ import { getTreasury } from './treasury.js';
 import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
 import { passFromHeaders, passFromPath, passUrl } from './passUrl.js';
 import { isInternalRequest } from './internal.js';
+import { attribute, attributionSnapshot, initAttribution, unattribute } from './attribution.js';
 import { channelOf, logChannelConfig } from './channel.js';
 import { clientKey } from './clientKey.js';
 import { normalizeMcpPayments } from './mcpPayment.js';
@@ -759,6 +760,9 @@ function handleStripeWebhook(req: express.Request, res: express.Response): void 
             e: 'settled',
             client: 'stripe',
             amount_usd: typeof obj.amount_total === 'number' ? obj.amount_total / 100 : 0,
+            // The session id: stable, unique, and already the handle finance
+            // uses to talk about a purchase.
+            id: sessionId,
             // Labelled at the moment it happens rather than reconciled later.
             // Our own proving purchase is money that ARRIVED, not money we
             // EARNED, and the public revenue figure must not conflate them.
@@ -1021,6 +1025,31 @@ app.get('/wallets', async (req, res) => {
  * token for the same reason: the alarm is worth something only if a stranger
  * cannot switch it off.
  */
+/**
+ * A human says a settlement came from a real customer.
+ *
+ * Token-gated and POST for the same reason as the webhook acknowledgement: a
+ * sale is worth reporting only if a person said it was one, and a number a
+ * stranger can raise is not a number. Reversible, because an irreversible
+ * promotion is one nobody will risk making.
+ */
+app.post('/revenue/attribute', (req, res) => {
+  const token = typeof req.query.token === 'string' ? req.query.token : '';
+  const header = (req.headers['x-stats-token'] as string | undefined) ?? '';
+  if (!STATS_TOKEN || !(tokenMatches(header) || tokenMatches(token))) {
+    res.status(401).json({ error: 'bad token' });
+    return;
+  }
+  const id = typeof req.query.id === 'string' ? req.query.id.slice(0, 200) : '';
+  if (!id) {
+    res.status(400).json({ error: 'pass ?id=<settlement id>', code: 'missing_id' });
+    return;
+  }
+  const undo = req.query.undo === '1';
+  const result = undo ? unattribute(id) : attribute(id);
+  res.set('Cache-Control', 'no-store').json({ ...result, attribution: attributionSnapshot() });
+});
+
 app.post('/webhook-health/ack', (req, res) => {
   const token = typeof req.query.token === 'string' ? req.query.token : '';
   if (!STATS_TOKEN || token !== STATS_TOKEN) {
@@ -1300,6 +1329,9 @@ const port = Number.parseInt(
   10,
 );
 
+// Before the ledger replays: replay decides which settlements count as
+// customer revenue and needs the promoted set already loaded.
+initAttribution();
 initUsageLedger();
 initFreeTier();
 initPasses();
@@ -1440,7 +1472,13 @@ function registerPaidRoutes(): void {
           // revenue line with sales that never happened - and an over-reported
           // sale is invisible from inside the ledger, while an under-reported
           // one is always recoverable from the payout wallet on-chain.
-          recordEvent({ t: new Date().toISOString(), e: 'settled', client: 'rest-pass', amount_usd: Number.parseFloat(PASS_PRICE_USD) });
+          recordEvent({
+            t: new Date().toISOString(),
+            e: 'settled',
+            client: 'rest-pass',
+            amount_usd: Number.parseFloat(PASS_PRICE_USD),
+            id: `rest-pass-${Date.now()}`,
+          });
         },
       });
       console.log(`REST rail: POST ${PUBLIC_URL}/explain ($${PRICE_USD}/call) and POST ${PUBLIC_URL}/pass ($${PASS_PRICE_USD}/${PASS_DAYS}d) via x402 HTTP`);

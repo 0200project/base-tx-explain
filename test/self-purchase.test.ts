@@ -67,11 +67,14 @@ describe('isSelfPurchase', () => {
   });
 });
 
-describe('a self purchase in the ledger', () => {
+describe('settlement attribution in the ledger', () => {
   async function load() {
     vi.resetModules();
     process.env.DATA_DIR = `/tmp/self-${Math.random().toString(36).slice(2)}`;
-    return import('../src/usage.js');
+    const attribution = await import('../src/attribution.js');
+    attribution._resetAttribution();
+    const usage = await import('../src/usage.js');
+    return { usage, attribution };
   }
 
   beforeEach(() => {
@@ -80,50 +83,83 @@ describe('a self purchase in the ledger', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  it('books the money as settled but NOT as customer revenue', async () => {
-    const m = await load();
+  const settle = (m: { recordEvent: (e: never) => void }, over: Record<string, unknown>) =>
     m.recordEvent({
-      t: '2026-08-21T21:00:00.000Z', e: 'settled', client: 'stripe', amount_usd: 9, self: true,
-    });
-    const snap = m.usageSnapshot() as {
-      lifetime: { revenue_usd: number; self_revenue_usd: number; revenue_from_customers_usd: number };
-    };
-    // The money really did settle; hiding that would be its own dishonesty.
-    expect(snap.lifetime.revenue_usd).toBe(9);
-    expect(snap.lifetime.self_revenue_usd).toBe(9);
-    // But nobody bought anything.
-    expect(snap.lifetime.revenue_from_customers_usd).toBe(0);
+      t: '2026-08-21T21:00:00.000Z', e: 'settled', client: 'stripe', amount_usd: 9, ...over,
+    } as never);
+
+  const lt = (m: { usageSnapshot: () => unknown }) =>
+    (m.usageSnapshot() as { lifetime: Record<string, number> }).lifetime;
+
+  it('a self purchase books as settled but never as customer revenue', async () => {
+    const { usage } = await load();
+    settle(usage, { self: true, id: 'cs_self' });
+    const l = lt(usage);
+    expect(l.revenue_usd).toBe(9);        // the money really did settle
+    expect(l.self_revenue_usd).toBe(9);   // and we know whose it is
+    expect(l.revenue_from_customers_usd).toBe(0);
+    expect(l.unattributed_revenue_usd).toBe(0); // resolved, not awaiting anything
   });
 
-  it('still counts a real sale as customer revenue', async () => {
-    const m = await load();
-    m.recordEvent({ t: '2026-08-21T21:00:00.000Z', e: 'settled', client: 'stripe', amount_usd: 9 });
-    const snap = m.usageSnapshot() as { lifetime: { revenue_from_customers_usd: number } };
-    // Whatever the hand-logged x402 favours subtract, a $9 card sale must
-    // still show up. The exclusions must not swallow a genuine first sale.
-    expect(snap.lifetime.revenue_from_customers_usd).toBeGreaterThan(8);
+  /**
+   * The reframe that made both failure directions safe. Asking "is it us" or
+   * "is it a stranger" are both questions about the PAYER, need configuration,
+   * and one of them must fail open — in the flattering direction. "Has anyone
+   * looked at this yet" is a question about OUR PROCESS, always answerable,
+   * and its birth state is the safe one.
+   */
+  it('a REAL sale is unattributed until a human says otherwise', async () => {
+    const { usage } = await load();
+    settle(usage, { id: 'cs_real' });
+    const l = lt(usage);
+    expect(l.revenue_usd).toBe(9);
+    expect(l.revenue_from_customers_usd).toBe(0);  // under-reports: the safe direction
+    expect(l.unattributed_revenue_usd).toBe(9);    // and says so, visibly
   });
 
-  it('separates a self purchase from a real one in the same ledger', async () => {
-    const m = await load();
-    m.recordEvent({ t: '2026-08-21T21:00:00.000Z', e: 'settled', client: 'stripe', amount_usd: 9, self: true });
-    m.recordEvent({ t: '2026-08-21T22:00:00.000Z', e: 'settled', client: 'stripe', amount_usd: 9 });
-    const snap = m.usageSnapshot() as {
-      lifetime: { revenue_usd: number; self_revenue_usd: number; revenue_from_customers_usd: number };
-    };
-    expect(snap.lifetime.revenue_usd).toBe(18);
-    expect(snap.lifetime.self_revenue_usd).toBe(9);
-    expect(snap.lifetime.revenue_from_customers_usd).toBeGreaterThan(8);
-    expect(snap.lifetime.revenue_from_customers_usd).toBeLessThan(9.01);
+  it('promotion moves it into customer revenue', async () => {
+    const { usage, attribution } = await load();
+    attribution.attribute('cs_real');
+    settle(usage, { id: 'cs_real' });
+    const l = lt(usage);
+    expect(l.revenue_from_customers_usd).toBe(9);
+    expect(l.unattributed_revenue_usd).toBe(0);
+  });
+
+  it('promotion is reversible, or nobody will risk making one', async () => {
+    const { usage, attribution } = await load();
+    attribution.attribute('cs_real');
+    expect(attribution.unattribute('cs_real')).toEqual({ removed: true });
+    settle(usage, { id: 'cs_real' });
+    expect(lt(usage).revenue_from_customers_usd).toBe(0);
+  });
+
+  it('a settlement with no id can never be promoted', async () => {
+    // An arrival nobody can name is one nobody can vouch for. It stays
+    // unattributed rather than being waved through.
+    const { usage } = await load();
+    settle(usage, {});
+    const l = lt(usage);
+    expect(l.unattributed_revenue_usd).toBe(9);
+    expect(l.revenue_from_customers_usd).toBe(0);
+  });
+
+  it('the three buckets always sum to what actually settled', async () => {
+    // The property that makes the figures reconcilable against each other.
+    // Two of our numbers disagreeing is how a night gets lost.
+    const { usage, attribution } = await load();
+    attribution.attribute('cs_promoted');
+    settle(usage, { id: 'cs_self', self: true });
+    settle(usage, { id: 'cs_promoted' });
+    settle(usage, { id: 'cs_pending' });
+    const l = lt(usage);
+    expect(l.self_revenue_usd + l.attributed_revenue_usd + l.unattributed_revenue_usd).toBe(l.revenue_usd);
+    expect(l.revenue_usd).toBe(27);
   });
 
   it('never reports a negative customer figure', async () => {
-    // The failure mode that killed the pre-logging idea: subtracting more than
-    // was ever booked. "$0.02 settled, of which $0.04 is not revenue" reached a
-    // public endpoint once already.
-    const m = await load();
-    m.recordEvent({ t: '2026-08-21T21:00:00.000Z', e: 'settled', client: 'stripe', amount_usd: 0.01, self: true });
-    const snap = m.usageSnapshot() as { lifetime: { revenue_from_customers_usd: number } };
-    expect(snap.lifetime.revenue_from_customers_usd).toBeGreaterThanOrEqual(0);
+    const { usage } = await load();
+    settle(usage, { amount_usd: 0.01, self: true, id: 'x' });
+    expect(lt(usage).revenue_from_customers_usd).toBeGreaterThanOrEqual(0);
   });
 });
