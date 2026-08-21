@@ -19,6 +19,8 @@ Mission: one real stranger discovers, understands, uses, and pays. Updated live.
 
 | SCVD General Store (Record Creative Co. LLC, solo-run) | Their core product is independent attestation of what other people's x402 payments actually did, settling on Base among other chains — literally our decode's job, one layer up. Already runs real x402 payments in production, so paying $0.02 is inside their comfort zone (unlike segment-research targets who'd never paid for a data source). | Sent: github.com/seancrecord/scvd-general-store-repo/issues/188 | Pending | — | Wait; check thread periodically | No |
 
+| Counterra (billiondollarapps, solo) | Reads Base+Solana x402 settlements to build accounting books for AI agents ("financial telemetry for agent payments"). A settlement only shows amount/payer/payee - it doesn't say what was purchased. Their books need exactly what we produce (what a Base tx actually did) as an input; they need accounting, not blockchain decode, as their core competence. Actively worked on right now (pushed 2 min before found). Also explicitly onboarding 2-3 free design partners for feedback - real reciprocal-value opening. | Drafting | — | — | Draft below, awaiting send | No |
+
 ## Log
 
 - 2026-08-21: Broad discovery search (Reddit r/ethdev, r/CryptoCurrency, r/base; HN Algolia) confirmed the research's core finding live — acute "I need this now" posts don't exist; what exists is builders making their own decoders (criteria-2/3 tension) or off-topic noise. Pivoted to precision search inside the x402/MCP ecosystem itself, the one population that already trusts this payment model.
