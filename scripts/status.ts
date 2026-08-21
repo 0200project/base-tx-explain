@@ -77,7 +77,26 @@ const stats = (await statsRes.json()) as {
     unbooked_notional_usd: number;
     note: string;
   };
+  // Present from v0.1.3 on. Older deploys omit it, so every use is guarded.
+  check_health?: CheckHealth;
+  check_health_7d?: CheckHealth;
 };
+
+interface CheckHealth {
+  window_hours: number;
+  observed_hours: number;
+  checks: Record<string, {
+    ok: number;
+    partial: number;
+    unavailable: number;
+    inconclusive: number;
+    not_applicable: number;
+    attempts: number;
+    unavailable_rate: number;
+    dark_hours: number;
+    last_unavailable_at: string | null;
+  }>;
+}
 
 const lt = stats.lifetime;
 const rec = stats.reconciliation;
@@ -123,6 +142,50 @@ if (strangers > 0) {
         : '  None have paid yet. A paywall hit means one considered it.');
 } else {
   console.log('  No strangers yet. Every call so far is ours.');
+}
+
+// Risk-check availability. A check that could not run emits no flag, and no
+// flag looks exactly like nothing found - so a check that was dark is a quiet
+// reduction in what the product does, and the only place it shows up is here.
+const health = stats.check_health;
+if (health) {
+  console.log('');
+  console.log(`  risk checks (last ${health.window_hours}h, ${health.observed_hours}h with traffic)`);
+  for (const [name, c] of Object.entries(health.checks)) {
+    if (c.attempts === 0) {
+      console.log(`    ${name.padEnd(22)} no traffic to measure`);
+      continue;
+    }
+    const rate = `${(c.unavailable_rate * 100).toFixed(1)}%`;
+    const state =
+      c.dark_hours > 0
+        ? `DARK ${c.dark_hours}h`
+        : c.unavailable > 0
+          ? 'degraded'
+          : c.partial > 0
+            ? 'partial coverage'
+            : 'answering';
+    console.log(
+      `    ${name.padEnd(22)} ${String(c.attempts).padStart(5)} ran  ${String(c.unavailable).padStart(4)} unavailable (${rate.padStart(5)})  ${state}`,
+    );
+  }
+  const dark = Object.entries(health.checks).filter(([, c]) => c.dark_hours > 0);
+  for (const [name, c] of dark) {
+    console.log('');
+    console.log(
+      `  *** ${name} WAS DARK FOR ${c.dark_hours} CONSECUTIVE HOUR${c.dark_hours === 1 ? '' : 'S'} ***`,
+    );
+    console.log(`  Every attempt failed in that window, so no flag it produces could have fired.`);
+    if (c.last_unavailable_at) console.log(`  Most recent failing hour: ${c.last_unavailable_at}`);
+  }
+  const week = stats.check_health_7d;
+  if (week) {
+    const worst = Object.entries(week.checks).sort((a, b) => b[1].dark_hours - a[1].dark_hours)[0];
+    if (worst && worst[1].dark_hours > 0 && dark.length === 0) {
+      console.log('');
+      console.log(`  Worst in the last 7 days: ${worst[0]}, dark for ${worst[1].dark_hours}h.`);
+    }
+  }
 }
 
 const active = stats.daily.filter((d) => d.calls > 0).slice(-7);

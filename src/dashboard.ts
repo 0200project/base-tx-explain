@@ -148,6 +148,12 @@ const DASH_CSS =
   .recon-note { margin-top: 0.625rem; }
   .usage-note { margin-top: 0.75rem; }
 
+  .check-table td.state { font-family: var(--mono); font-size: 0.8125rem; white-space: nowrap; }
+  .check-table td.name { font-family: var(--mono); font-size: 0.8125rem; color: var(--fg-strong); }
+  .check-table td.num { text-align: right; font-family: var(--mono); font-size: 0.8125rem; }
+  .check-table th.num { text-align: right; }
+  .check-table tr.dark td.state { color: var(--fg-strong); }
+
   .chart-panel { padding: 1.25rem; margin-top: 1.25rem; }
   .chart { display: flex; align-items: flex-end; gap: 2px; height: 120px; }
   .bar-col { flex: 1 1 0; min-width: 0; height: 100%; display: flex; align-items: flex-end; }
@@ -217,10 +223,10 @@ const DASH_SCRIPT = `
     var tile = $('rc-delta-tile');
     var note = $('rc-note');
     $('rc-booked').textContent = usd(r.booked_usd);
-    $('rc-chain').textContent = r.received_usd === null ? '\\u2014' : usd(r.received_usd);
+    $('rc-chain').textContent = r.received_usd === null ? '\u2014' : usd(r.received_usd);
 
     if (r.delta_usd === null) {
-      $('rc-delta').textContent = '\\u2014';
+      $('rc-delta').textContent = '\u2014';
       $('rc-delta-label').textContent = 'Unbooked';
       tile.className = 'tile';
       note.textContent = r.note || '';
@@ -358,11 +364,90 @@ const DASH_SCRIPT = `
         var bits = ['Wall hits are 402 payment challenges served.'];
         if (d.version) bits.unshift('Server v' + d.version + (d.payment_mode ? ' \\u00b7 payment mode: ' + d.payment_mode : '') + '.');
         $('usage-note').textContent = bits.join(' ');
+        renderCheckHealth(d.check_health);
         msg.textContent = '';
       })
       .catch(function () {
         msg.textContent = 'Could not reach /healthz right now. The section will retry on the next refresh.';
+        $('check-msg').textContent = 'Check availability is unknown while /healthz is unreachable.';
       });
+  }
+
+  /* ---------- risk-check availability (same /healthz payload) ---------- */
+
+  var CHECK_ROWS = [
+    ['contract_verification', 'verified source code (Sourcify/Basescan)'],
+    ['first_interaction', 'counterparty history (Blockscout/Basescan)'],
+    ['drainer_blacklist', 'scam/drainer blocklist']
+  ];
+
+  // Wording is deliberately flat. A check that answered is "answering", never
+  // "healthy" or a green tick: this page reports whether a lookup ran, and any
+  // word that sounds like a verdict on the transactions it ran against is the
+  // exact misreading the checks field exists to prevent.
+  function checkState(c) {
+    if (!c || !c.attempts) return 'no traffic to measure';
+    if (c.dark_hours > 0) return 'DARK ' + c.dark_hours + 'h';
+    if (c.unavailable > 0) return 'degraded';
+    if (c.partial > 0) return 'partial coverage';
+    return 'answering';
+  }
+
+  function renderCheckHealth(h) {
+    var wrap = $('check-table');
+    var note = $('check-note');
+    wrap.innerHTML = '';
+    if (!h || !h.checks) {
+      note.textContent = 'This server build does not report check availability.';
+      return;
+    }
+    var table = document.createElement('table');
+    table.className = 'stats-table check-table';
+    table.innerHTML = '<thead><tr><th>Check</th><th class="num">Ran</th>' +
+      '<th class="num">Unavailable</th><th class="num">Rate</th><th>State</th></tr></thead>';
+    var tbody = document.createElement('tbody');
+    var worst = 0;
+    CHECK_ROWS.forEach(function (row) {
+      var key = row[0];
+      var c = h.checks[key] || null;
+      var tr = document.createElement('tr');
+      if (c && c.dark_hours > 0) tr.className = 'dark';
+
+      var tdN = document.createElement('td');
+      tdN.className = 'name';
+      tdN.textContent = key;
+      tdN.title = row[1];
+      tr.appendChild(tdN);
+
+      var cells = [
+        [c ? int(c.attempts) : '\u2014', 'num'],
+        [c ? int(c.unavailable) : '\u2014', 'num'],
+        [c && c.attempts ? (c.unavailable_rate * 100).toFixed(1) + '%' : '\u2014', 'num'],
+        [checkState(c), 'state']
+      ];
+      cells.forEach(function (cell) {
+        var td = document.createElement('td');
+        td.textContent = cell[0];
+        td.className = cell[1];
+        tr.appendChild(td);
+      });
+      if (c && c.dark_hours > worst) worst = c.dark_hours;
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    var box = document.createElement('div');
+    box.className = 'table-wrap';
+    box.appendChild(table);
+    wrap.appendChild(box);
+
+    var bits = ['Last ' + (h.window_hours || 24) + ' hours; ' + (h.observed_hours || 0) +
+      ' of them saw any traffic. "Ran" counts responses where the check had something to look at.'];
+    if (worst > 0) {
+      bits.push('A check was dark for ' + worst +
+        (worst === 1 ? ' hour' : ' consecutive hours') +
+        ': every attempt in that window failed, so no flag it emits could have fired.');
+    }
+    note.textContent = bits.join(' ');
   }
 
   /* ---------- daily detail (same-origin /stats, cookie-authenticated) ---------- */
@@ -549,6 +634,13 @@ export function dashboardPage(): string {
     '</div>' +
     '<p class="small faint usage-note" id="usage-note">Wall hits are 402 payment challenges served.</p>' +
     '<p class="small faint section-msg" id="usage-msg"></p>' +
+    '</section>' +
+    '<section class="dash-section" id="sec-checks">' +
+    '<h2>Risk-check availability</h2>' +
+    '<p class="small faint">Each response says whether its own risk lookups ran. This is the same thing counted across every response, so a check that is broken for everyone is visible as a duration rather than a footnote nobody re-reads.</p>' +
+    '<div id="check-table"></div>' +
+    '<p class="small faint usage-note" id="check-note"></p>' +
+    '<p class="small faint section-msg" id="check-msg"></p>' +
     '</section>' +
     '<section class="dash-section" id="sec-stats">' +
     '<h2>Daily detail</h2>' +

@@ -40,9 +40,21 @@ const _everyCheckIsTracked: Record<StatusValuedKeys, CheckName> = {
 };
 void _everyCheckIsTracked;
 
+/**
+ * The status set these buckets count, deliberately declared here rather than
+ * derived from `CheckStatus`.
+ *
+ * A monitor whose on-disk schema shifts every time the response type gains a
+ * value cannot read its own history. Tracking a superset instead means a status
+ * this build has never seen sits at zero rather than breaking the bucket, and a
+ * status that disappears from the response type leaves its past counts readable.
+ * If `CheckStatus` ever gains a value that is NOT listed here, `recordChecks`
+ * stops compiling, which is the moment to add it.
+ */
 const STATUSES = ['ok', 'partial', 'unavailable', 'inconclusive', 'not_applicable'] as const;
+type TrackedStatus = (typeof STATUSES)[number];
 
-type Counts = Record<CheckStatus, number>;
+type Counts = Record<TrackedStatus, number>;
 
 interface HourBucket {
   counts: Record<CheckName, Counts>;
@@ -61,7 +73,7 @@ export interface CheckHealthEvent {
   e: 'checks';
   /** `YYYY-MM-DDTHH`, always UTC. */
   hour: string;
-  counts: Record<string, Partial<Record<CheckStatus, number>>>;
+  counts: Record<string, Partial<Record<TrackedStatus, number>>>;
 }
 
 export interface CheckAvailability extends Counts {
@@ -171,10 +183,10 @@ export function recordChecks(checks: ChecksPerformed, at: Date = new Date()): vo
   bucket.dirty = true;
 }
 
-function payloadFor(bucket: HourBucket): Record<string, Partial<Record<CheckStatus, number>>> {
-  const counts: Record<string, Partial<Record<CheckStatus, number>>> = {};
+function payloadFor(bucket: HourBucket): Record<string, Partial<Record<TrackedStatus, number>>> {
+  const counts: Record<string, Partial<Record<TrackedStatus, number>>> = {};
   for (const name of CHECK_NAMES) {
-    const nonZero: Partial<Record<CheckStatus, number>> = {};
+    const nonZero: Partial<Record<TrackedStatus, number>> = {};
     for (const status of STATUSES) {
       const n = bucket.counts[name][status];
       if (n > 0) nonZero[status] = n;

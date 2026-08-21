@@ -20,6 +20,7 @@ import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from '
 import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, passSnapshot, refundPassUse, activatePass, revokePass, revokePendingPass, usePass } from './passes.js';
 import { HOUR, TtlCache } from './cache.js';
 import { APIFY_BILLING_ACTIVE, initApifyBilling, chargeApifyCall } from './apifyBilling.js';
+import { checkHealthSnapshot } from './checkHealth.js';
 import { initUsageLedger, recordEvent, usageSnapshot } from './usage.js';
 
 const VERSION = '0.1.2';
@@ -576,7 +577,18 @@ app.get('/healthz', (_req, res) => {
   res
     .status(200)
     .set('Access-Control-Allow-Origin', '*')
-    .json({ ok: true, version: VERSION, payment_mode: PAYMENT_MODE, metrics, lifetime: snapshot.lifetime });
+    // check_health is public on purpose. A per-response `checks` field tells one
+    // caller that their answer was incomplete; publishing the aggregate is how
+    // anyone relying on a risk check can see it was dark for a period, without
+    // having to keep and correlate their own responses to find out.
+    .json({
+      ok: true,
+      version: VERSION,
+      payment_mode: PAYMENT_MODE,
+      metrics,
+      lifetime: snapshot.lifetime,
+      check_health: checkHealthSnapshot(24),
+    });
 });
 
 // Founder stats: full daily series behind a bearer token. Absent token
@@ -697,6 +709,8 @@ app.get('/stats', async (req, res) => {
     treasury,
     reconciliation,
     ...usage,
+    check_health: checkHealthSnapshot(24),
+    check_health_7d: checkHealthSnapshot(24 * 7),
     passes: passSnapshot(),
   });
 });
