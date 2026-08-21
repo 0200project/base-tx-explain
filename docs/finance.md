@@ -32,14 +32,18 @@ Revisit if monthly revenue ever exceeds ~$500.
 |---|---|
 | Allocated | **$20.00** — discretionary customer-acquisition experiment budget, 2026-08-21 |
 | Source of that figure | Founder directive, given first-hand to the Accountant |
-| Verified funding located | **$4.98 USDC**, wallet `0x2E31f337…5e3D06FC7` (Base) |
-| Unlocated | **$15.02** — see Open Item 1 |
+| **Funded, verified on chain** | **$20.00 USDC**, SPEND wallet `0x2E31f337…5e3D06FC7` (Base), confirmed 2026-08-21 |
+| Unlocated | **$0.00 — closed.** |
 
-The $20 is an **allocation**, not a verified balance. The only company funds I
-can currently see on chain are the $4.98 above. Whether the $20 includes that
-wallet, sits somewhere else (card, exchange, unfunded), or is a separate figure
-is **unknown and must not be assumed.** Spending is approved against verified
-available funds, not against a stated allocation.
+**Open Item 1 is resolved.** The Founder topped up the SPEND wallet to the
+full $20.00 in one transfer (Finance had recommended smaller, deliberate
+increments once the balance became the primary control on autonomous spend —
+see Open Item 9 — the Founder proceeded with the full amount; noted, not
+reversed). Verified independently by Finance by reading the USDC contract's
+`balanceOf` for that address directly, twice, not taken from any report:
+**$20.000000 exactly.** The approvable ceiling is no longer $4.98 — it is now
+the full $20.00, and that full amount is the blast radius until a
+balance-bounded spend mechanism is live (see Open Item 9).
 
 ## Revenue
 
@@ -121,8 +125,8 @@ not control.
 |---|---|---|---|---|---|
 | — | — | $0.00 | — | *no growth spend to date* | — |
 
-**Spent against the $20: $0.00. Remaining allocation: $20.00** (of which only
-$4.98 is verified as available — see Open Item 1).
+**Spent against the $20: $0.00. Remaining allocation: $20.00, fully funded and
+verified on chain** (see Open Item 1, resolved).
 
 ## Infrastructure & API expenses
 
@@ -319,23 +323,29 @@ prompt-injection target with a payout attached. Every such spend, autonomous or
 not, gets logged the same way as any other expense in this ledger — no
 exception for "automatic."
 
-**9. What is autonomous spend actually FOR? — blocks the security design.**
-Raised 2026-08-21 by security, and it's the right question before any spend
-mechanism gets built: does autonomous spend pay only our own endpoint
-(dogfooding/validation — destination pinnable, a compromised agent becomes a
-no-op), or arbitrary third-party x402 services (destination not pinnable,
-design leans entirely on amount limits and balance)? Materially different
-builds. *Needs the Founder.*
+**9. What is autonomous spend actually FOR? — ANSWERED 2026-08-21, directly by
+the Founder.** Both: **our own endpoint, and — more importantly — spend that
+gets us clients.** That means third-party spend is explicitly in scope, not
+just dogfooding. **Destination cannot be pinned.** Per security's own framing
+of the two builds, this is the harder one: the design leans entirely on amount
+limits and balance rather than a pinned destination making a compromised agent
+a no-op. Relayed to security and platform to unblock the spec.
 
 Security's framing of the risk, worth recording verbatim rather than
 paraphrasing: **"the most you can lose from the SPEND wallet is a number you
-choose — today that number is $4.98."** Balance is the control that cannot be
-reasoned around, because no compromise spends money that isn't there. Zero ETH
-in that wallet is *not* a control — EIP-3009 lets a third party submit and pay
-gas on the holder's behalf, so an attacker with the key can still move the
-full balance. Consequence for funding: **top up in small, deliberate
-increments rather than one transfer**, since the balance now doubles as the
-security boundary, not just working capital.
+choose."** Balance is the control that cannot be reasoned around, because no
+compromise spends money that isn't there. Zero ETH in that wallet is *not* a
+control — EIP-3009 lets a third party submit and pay gas on the holder's
+behalf, so an attacker with the key can still move the full balance.
+
+**That number is now $20.00, not $4.98.** Security recommended topping up in
+small, deliberate increments once balance became the security boundary. The
+Founder funded the full $20.00 in one transfer before that recommendation
+reached him. Recorded plainly, not reversed: **the full allocated budget is
+now the blast radius until a balance-bounded, destination-unpinned spend
+mechanism is live.** Nothing currently has the technical means to spend it —
+see Open Item 7 — but the exposure is real from the moment any such mechanism
+ships, and it ships into a wallet that already holds the whole $20.
 
 The sharpest finding, recorded here because it is a hard boundary Finance
 should hold the team to regardless of implementation: **if a spending agent
@@ -428,8 +438,8 @@ failed read). Not inherited from any report that could not complete.
 | Growth spend | $0.00 |
 | Infrastructure cash out | $0.00 |
 | **Net cash flow** | **$0.00** |
-| Funds on hand | **$5.02** ($4.98 budget + $0.04 payout) |
-| Growth budget | $20.00 allocated · $0.00 spent · **$4.98 verified available** |
+| Funds on hand | **$20.04** ($20.00 budget, fully funded 2026-08-21 + $0.04 payout) |
+| Growth budget | $20.00 allocated · $0.00 spent · **$20.00 verified available** |
 
 Usage context, not revenue: 126 lifetime calls · 43 paywall hits · 8 payment
 attempts · **1 settlement, $0.02** · 1 pass call, re-read from `/stats` at end
