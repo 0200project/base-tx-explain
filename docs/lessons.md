@@ -153,6 +153,29 @@ Empty, or do not deploy. (`site/` is not in the image, which is the only reason
 two earlier deploys with a dirty `site/` were harmless — that was the Dockerfile
 saving us, not the process.)
 
+## Pushing from a shared branch publishes everything, including someone else's work
+
+_2026-08-21._
+
+A session wrote a vulnerability description into `docs/finance.md` without checking
+that the repo is public, and never pushed it — a different session's unrelated
+push carried it out on the shared branch. It was public until it was noticed.
+
+This is the deploy lesson below with a different verb. Work leaves this building
+by any session's `git push` and any session's `fly deploy`, not only by the one
+that wrote it. There is no such thing as "committed but not published here."
+
+**Practice:** before writing anything sensitive into a tracked file, check
+`gh repo view --json isPrivate`. Assume anything committed is public the moment
+anyone else pushes, which may be minutes and is not up to you. Sensitive detail
+belongs somewhere unpushed, with the tracked file carrying a neutral pointer.
+
+**On cleanup:** rewriting public history is usually the wrong reflex. It needs a
+force-push, it breaks open PRs and anyone's fetched copy, and it is only worth it
+if the leaked thing is still live. If the underlying credential can be ROTATED,
+rotate it — that turns the published text into a description of a fixed problem,
+and the history stops mattering. Fix the thing, do not chase the paper.
+
 ## Deploying from a shared branch ships everything, not your commit
 
 _2026-08-20._
