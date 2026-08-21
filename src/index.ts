@@ -18,6 +18,7 @@ import { declaredWithdrawn, reconcile } from './reconcile.js';
 import { getTreasury } from './treasury.js';
 import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
 import { passFromHeaders, passFromPath, passUrl } from './passUrl.js';
+import { isInternalRequest } from './internal.js';
 import {
   alreadyHandled,
   passForSession,
@@ -1014,7 +1015,7 @@ app.post(['/mcp', '/mcp/:token'], async (req, res) => {
     const ipTag = createHash('sha256').update(`btx:${ip}`).digest('hex').slice(0, 8);
     const kind = passToken ? 'pass' : charge ? (hasPayment ? 'paid-retry' : isBuyPass ? 'buy-pass' : 'paywalled') : 'free';
     console.log(`[call] ${new Date().toISOString()} ${kind} client=${ipTag}`);
-    recordEvent({ t: new Date().toISOString(), e: 'call', charge, paid: hasPayment, pass: Boolean(passToken), client: ipTag });
+    recordEvent({ t: new Date().toISOString(), e: 'call', charge, paid: hasPayment, pass: Boolean(passToken), client: ipTag, internal: isInternalRequest(req.headers as Record<string, unknown>) });
   }
 
   const server = getServer(charge, ip, passToken);
@@ -1088,7 +1089,7 @@ initApifyBilling()
           else metrics.free++;
           const tag = createHash('sha256').update(`btx:${clientIpOf(req)}`).digest('hex').slice(0, 8);
           console.log(`[rest] ${new Date().toISOString()} ${viaPass ? 'pass' : charged ? 'paid' : 'free'} ok=${ok} client=${tag}`);
-          recordEvent({ t: new Date().toISOString(), e: 'call', charge: charged, paid: charged, pass: viaPass, client: tag, ok });
+          recordEvent({ t: new Date().toISOString(), e: 'call', charge: charged, paid: charged, pass: viaPass, client: tag, ok, internal: isInternalRequest(req.headers as Record<string, unknown>) });
         },
       });
       registerPassRoutes(app, {

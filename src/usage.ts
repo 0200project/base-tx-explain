@@ -12,7 +12,7 @@ import { absorbCheckHealthEvent, takeCheckHealthEvents, type CheckHealthEvent } 
  */
 
 export type UsageEvent =
-  | { t: string; e: 'call'; charge: boolean; paid?: boolean; pass?: boolean; client: string; ok?: boolean }
+  | { t: string; e: 'call'; charge: boolean; paid?: boolean; pass?: boolean; client: string; ok?: boolean; internal?: boolean }
   | { t: string; e: 'settled'; client: string; amount_usd: number; payer?: string; tx?: string };
 
 /**
@@ -31,6 +31,17 @@ interface DayAgg {
   /** Calls covered by a purchased pass. */
   pass_calls: number;
   /**
+   * Calls we made ourselves, identified by the internal marker.
+   *
+   * Counted separately so the scoreboard can subtract us. An unmarked call is
+   * counted as external, so this UNDERSTATES our own traffic and never
+   * overstates a stranger's — the safe direction, since dismissing a real
+   * stranger as internal would throw away the one signal that matters.
+   */
+  internal_calls: number;
+  /** Distinct clients excluding ones that identified themselves as us. */
+  externalClients: Set<string>;
+  /**
    * Calls that ARRIVED carrying an x402 payment payload. This is payment
    * attempted, not payment succeeded: the flag is set from the presence of the
    * payload before any verification, and settlement is tracked separately in
@@ -48,7 +59,8 @@ const dataDir = process.env.DATA_DIR ?? './data';
 const ledgerPath = join(dataDir, 'events.jsonl');
 
 const days = new Map<string, DayAgg>();
-const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, settlements: 0, revenue_usd: 0 };
+const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0 };
+const lifetimeExternalClients = new Set<string>();
 const lifetimeClients = new Set<string>();
 let firstEventAt: string | null = null;
 let ledgerReady = false;
@@ -60,7 +72,7 @@ function dayOf(iso: string): string {
 function aggFor(day: string): DayAgg {
   let agg = days.get(day);
   if (!agg) {
-    agg = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, settlements: 0, revenue_usd: 0, clients: new Set() };
+    agg = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0, clients: new Set(), externalClients: new Set() };
     days.set(day, agg);
   }
   return agg;
@@ -96,6 +108,13 @@ function absorb(ev: LedgerEvent): void {
     }
     agg.clients.add(ev.client);
     lifetimeClients.add(ev.client);
+    if (ev.internal) {
+      agg.internal_calls++;
+      lifetime.internal_calls++;
+    } else {
+      agg.externalClients.add(ev.client);
+      lifetimeExternalClients.add(ev.client);
+    }
   } else if (ev.e === 'settled') {
     agg.settlements++;
     lifetime.settlements++;
@@ -174,6 +193,8 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
       paid_calls: agg?.paid_calls ?? 0,
       payment_attempted: agg?.paid_calls ?? 0,
       pass_calls: agg?.pass_calls ?? 0,
+      internal_calls: agg?.internal_calls ?? 0,
+      external_clients: agg?.externalClients.size ?? 0,
       settlements: agg?.settlements ?? 0,
       revenue_usd: Number((agg?.revenue_usd ?? 0).toFixed(6)),
       unique_clients: agg?.clients.size ?? 0,
@@ -191,6 +212,8 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
       // name is emitted alongside; the old key stays until the public status
       // page, which reads it, has been republished.
       payment_attempted: lifetime.paid_calls,
+      // The number that actually answers "has a stranger used this".
+      external_clients: lifetimeExternalClients.size,
       revenue_usd: Number(lifetime.revenue_usd.toFixed(6)),
       unique_clients: lifetimeClients.size,
     },

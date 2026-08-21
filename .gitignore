@@ -9,3 +9,4 @@ data/drainers.local.json
 outreach/
 .stats-token
 reports/
+.internal-marker
