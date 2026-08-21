@@ -99,22 +99,15 @@ not trip the customer-signal line.
 **Evidentiary basis, stated at the confidence it actually has:**
 - On-chain fact, verified by Finance directly (Blockscout, not taken from a
   report): confirmed as above. This part is certain.
-- Attribution to Circadian: **very high confidence, not yet closed.** Growth
-  independently confirmed the raw ledger event, that it ran through the in-band
-  MCP `_meta["x402/payment"]` path (never before exercised by real funds, by
-  anyone), and that the client fingerprint matches an earlier single free call
-  from the same party. Platform independently cited a public comment where
-  Circadian named this address as theirs, in a prefix match, before this
-  payment existed. **Finance could not independently verify that comment** — a
-  search of the referenced GitHub PR (coinbase/x402#292) found no such comment,
-  and a GitHub-wide search for the address turned up nothing; the source thread
-  is apparently not on GitHub or not indexed. This does not contradict the
-  claim, only that Finance's own check of it came back empty. Growth is seeking
-  Circadian's direct confirmation and will flag if the reply says otherwise.
-- **This entry will be corrected if that confirmation contradicts it.** Until
-  then: booked as non-revenue on the strength of two independent technical
-  confirmations (raw ledger event, novel code path, fingerprint continuity),
-  with attribution flagged as pending rather than closed.
+- Attribution to Circadian: **confirmed, closed.** Growth's technical case
+  (raw ledger event, the in-band MCP `_meta["x402/payment"]` path exercised by
+  real funds for the first time ever, matching client fingerprint) was already
+  strong. Finance flagged one gap — the public comment Platform cited could not
+  be located (searched coinbase/x402#292 and GitHub-wide, found nothing) — and
+  that gap is now closed by a better source: **Circadian confirmed directly**,
+  posting their own settlement receipt (same tx hash, same block 50271571, same
+  $0.02) matching our record exactly. A counterparty's own receipt outranks a
+  comment Finance couldn't find.
 
 **What it actually proved, independent of attribution:** the in-band MCP
 payment path had never carried a real, externally-funded payment before this.
