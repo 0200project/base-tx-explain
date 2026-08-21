@@ -163,15 +163,29 @@ important open question in this document.
 |---|---|
 | Spend | $0.00 |
 | Visitors | **not measured** — static site, no analytics by design |
-| Trials (free-tier users) | 6 unique clients lifetime, but see caveat |
-| Checkout starts | 4 payment attempts, all from our own client `3f4d2c03` |
+| Trials (free-tier users) | 6 unique clients lifetime, but see attribution below |
+| x402 payment attempts | 8 lifetime — see attribution below |
 | Paying customers | **0** |
 | Revenue attributable | $0.00 |
 | **CAC** | **undefined** — not $0. Zero spend and zero customers gives no ratio |
 
-Caveat on "trials": `external_clients` reads 6, but all 6 predate the
-internal-call marker and are a historical overcount, not six strangers. New
-external clients since the marker shipped: **0**.
+**Attribution of the 6 unique clients, as of end of day 2026-08-21 — updated
+from the earlier blanket "predates the marker" caveat now that individual
+clients have actually been identified (see D-5):**
+
+| Client | Identity | Paid attempts | Settled |
+|---|---|---|---|
+| `3f4d2c03` | Us — established since day one | 4 | 0 |
+| `53d7ceaf` | Us — `paid-call.ts` gap, fixed `ded8d41` | 2 | 0 |
+| `8f92f999` | Circadian — matched to settlement second by growth | 2 | 1, booked $0.00 (favor) |
+| `56cb6309` | Unexplained, organic, 3 calls, never returned | 0 | — |
+| `c63f048f` | Unexplained, organic, 1 call, never returned | 0 | — |
+| `1b624776` | Unexplained, organic, 1 call, never returned | 0 | — |
+
+**The honest read: three genuinely unattributed one-off visitor touches
+today, zero repeat visits, zero payment attempts from any of them, zero
+customers.** Nothing here is being called a lead — one or two free calls with
+no return is not evidence of anything beyond a visitor who looked once.
 
 Attribution is not known and will not be guessed. If a customer arrives, CAC is
 only calculable if Growth can tell me which spend, if any, produced them.
@@ -502,22 +516,32 @@ raw ledger total). Found by reading the deployed server's actual output, not
 by trusting a passing test suite — the same discipline this ledger has needed
 all day.
 
-**D-5. Two of eight unbooked paid-call attempts belong to an unidentified
-client.** Investigated by Finance directly, not left unexamined per platform's
-flag. Raw ledger breakdown of the 8 `paid:true` events:
-- **4** from `3f4d2c03` — known, ours, established since day one.
-- **2** from `8f92f999` — Circadian. One at 17:14:47Z (an earlier attempt on
-  the same interaction), one at 17:14:49Z (the settled probe, already booked
-  as non-revenue above). Accounted for.
-- **2** from **`53d7ceaf`** — **unidentified.** 17:26:32Z and 17:26:50Z, both
-  `internal: false` (did not carry the team's internal-call marker), both
-  roughly one minute after the 17:25:41Z machine restart. Not a fingerprint
-  that has appeared in any prior discussion today. Could be a team member
-  re-testing post-restart without the marker header set, or could be a
-  genuine second external party whose payment never settled. **Not resolved.
-  Asked platform and growth to check server logs for this fingerprint before
-  it gets attributed either way** — same discipline applied to the Circadian
-  attribution, which turned out to matter.
+**D-5. RESOLVED 2026-08-21, within minutes, by platform. `53d7ceaf` is us.**
+Investigated by Finance first rather than left unexamined, then confirmed by
+platform with decisive proof: the client tag is `sha256("btx:"+ip).slice(0,8)`
+— IP-derived only — and that same tag made an earlier call at 16:18:22Z
+carrying `internal: true`, meaning it presented the `INTERNAL_MARKER` secret,
+which lives only in our own environment. A stranger cannot share an IP with a
+request bearing our internal secret. Root cause: `scripts/paid-call.ts` — the
+script whose entire job is to look like a genuine x402 buyer — never sent the
+marker header, so its own realism made it the one hole. Fixed in `ded8d41`:
+sends the marker when set, warns loudly at startup when unset, and the failure
+direction stays deliberately safe (unset still reads as unmarked, so an actual
+stranger is never miscounted as us). One correction to Finance's own note
+above: the timing coincidence with the 17:25:41Z restart was just that — a
+coincidence, not the mechanism; the machine actually booted later, at
+17:52:24Z. Refusing to attribute it without a real check was still the right
+call — it took four minutes and converted an open question into a fixed bug
+rather than a guess either way.
+
+**Consequence for the "6 external clients" figure:** at least **3 of the 6**
+are now individually identified and explained — `3f4d2c03` (us, predates the
+marker), `53d7ceaf` (us, the paid-call.ts gap, now fixed), and `8f92f999`
+(Circadian — independently matched by growth to the settlement second, not
+a customer). The remaining **`56cb6309`, `c63f048f`, `1b624776`** each made
+one to three calls and never returned — genuinely unexplained, organic, and
+not converted. That is the honest count of real, unattributed visitor
+interest today: **three one-off touches, zero repeat, zero paid.**
 
 ## Known corrections to the record
 
