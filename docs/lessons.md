@@ -449,6 +449,25 @@ it is the only mitigation there is**: `docs/try-it.md` now names the failure mod
 that are deliberate, in the order someone will hit them, with the handle to fix
 each. Without that page the design is indistinguishable from a defect.
 
+### The tell for a statement that outlived its subject
+
+Three instances tonight of a true sentence surviving the change that falsified
+it: an init-ordering comment, the justification for deleting stranded passes, and
+a boot log reading `(1 active)` for a store holding zero active passes and one
+stranded. Platform's sharpening is the useful part, and it is theirs: **all three
+were in code they had just changed.**
+
+So the tell is not "audit the comments", which is a job nobody schedules and
+nobody finishes. It is a question available in the same breath as the edit:
+*did I just change what a nearby sentence describes?* Comments, log lines, field
+names and error strings are all statements about behaviour, and an edit that
+moves the behaviour leaves them behind silently — no test fails, because none of
+them are executed as claims.
+
+The boot-line case is the sharpest because of where it landed: it printed
+`1 active` to the one person who most needed to read `1 stranded`, in the exact
+scenario the whole retention mechanism exists to serve.
+
 ### The corollary: a safe default creates a debt somewhere else
 
 Choosing the safe direction does not remove work, it moves it — out of the failure
