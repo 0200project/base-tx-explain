@@ -235,6 +235,20 @@ data. Keep that list honest as fields change.
    The correct close is a reconciler against `authorizationState(payer, nonce)`
    (the same call verify uses) plus the payout wallet, not a cap that papers over
    it.
+8. **UNVERIFIED: that the Stripe signing secret in Fly is the newly-ROLLED one.**
+   The malformed entry whose NAME was a secret value is confirmed deleted, and a
+   secret is loaded and verifying (an unsigned POST to `/stripe/webhook` returns
+   400, not 503). But deleting that entry removed a COPY of the secret; it does
+   nothing to the secret itself. If the value now in `STRIPE_WEBHOOK_SECRET` were
+   still the exposed one, the exposure would be unchanged and only the evidence of
+   it gone — which looks resolved and is worse. The founder states he rolled it in
+   Stripe and pasted from the reveal field, and the digest changed, so the likely
+   case is fine; that is testimony plus a weak signal, not proof, and the
+   pre-rotation digest was never captured for comparison. No real webhook has been
+   delivered since (app logs show only our own unsigned probe), so nothing has
+   exercised it. Closes on the first real delivery, or a Stripe "send test event"
+   — Stripe's dashboard was erroring when we tried. This also gates card payments
+   working at all: a stale value means charged-at-Stripe, no pass minted.
 8. **Test files are never typechecked**, so a signature change silently leaves
    stale callers. `tsconfig.json` includes only `src/**/*.ts`; `npm run typecheck`
    therefore passes while a test calls a function with the wrong shape. Found when
