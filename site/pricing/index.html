@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>document.documentElement.classList.add('js')</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pricing — 0200project</title>
+<meta name="description" content="Four ways to call base-tx-explain: free, $0.02 per call via x402, a $9 pass for 10,000 calls, or $9/month recurring. No accounts anywhere.">
+<meta name="theme-color" content="#050505">
+<meta property="og:title" content="Pricing — 0200project">
+<meta property="og:description" content="Free, pay-per-call, a $9 pass, or $9/month recurring — 10,000 calls either way. No accounts anywhere.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="0200project">
+<meta property="og:image" content="https://0200project.com/assets/og.png">
+<meta property="og:url" content="https://0200project.com/pricing/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://0200project.com/pricing/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+  .pr-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  @media (max-width: 55em) {
+    .pr-grid { grid-template-columns: minmax(0, 1fr); }
+  }
+  .pr-card {
+    display: flex;
+    flex-direction: column;
+    padding: 1.75rem;
+  }
+  .pr-tag {
+    font-family: var(--mono);
+    font-size: 0.71875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin-bottom: 0.75rem;
+  }
+  .pr-price {
+    font-size: 2rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--fg-strong);
+  }
+  .pr-price span { font-size: 1rem; font-weight: 400; color: var(--fg-muted); }
+  .pr-desc { color: var(--fg-muted); font-size: 0.9375rem; margin-top: 0.75rem; }
+  .pr-actions { margin-top: auto; padding-top: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.625rem; }
+
+  .pr-url {
+    margin-top: 1.25rem;
+    padding: 0.875rem 1rem;
+    background: var(--bg-inset);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--mono);
+    font-size: 0.78125rem;
+    color: var(--fg);
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .pr-url-label { font-size: 0.8125rem; color: var(--fg-muted); margin-top: 1.25rem; margin-bottom: 0.375rem; }
+
+  .pr-buy-wallet { margin-top: 1rem; }
+  .pr-buy-wallet p { color: var(--fg-muted); font-size: 0.875rem; }
+  .pr-buy-wallet p + p { margin-top: 0.5rem; }
+  .pr-buy-wallet .btn { margin-top: 0.625rem; }
+
+  .btn-disabled, .btn-disabled:hover {
+    background: var(--bg-inset);
+    color: var(--fg-faint);
+    border: 1px solid var(--border);
+    cursor: not-allowed;
+  }
+
+  .pr-callout {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    margin-top: 1rem;
+  }
+  .pr-callout p { color: var(--fg-muted); font-size: 0.9375rem; max-width: 34rem; }
+  .pr-callout strong { color: var(--fg); }
+
+  .pr-faq { max-width: 40rem; margin-top: 3rem; }
+  .pr-faq h3 { font-size: 1rem; margin-bottom: 0.5rem; }
+  .pr-faq p { color: var(--fg-muted); font-size: 0.9375rem; }
+
+  #pr-success { display: none; margin-bottom: 2rem; }
+  #pr-success.show { display: block; }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="0200project home">
+      <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+      0200project
+    </a>
+    <button class="nav-toggle" aria-expanded="false" aria-label="Menu" aria-controls="site-menu">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/playground/">Playground</a></li>
+      <li><a href="/docs/">Docs</a></li>
+      <li><a href="/pricing/" aria-current="page">Pricing</a></li>
+      <li class="nav-cta"><a class="btn btn-ghost btn-sm" href="https://github.com/0200project">GitHub</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/playground/">Try it free</a></li>
+    </ul></nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="page-hero">
+    <div class="container">
+      <span class="eyebrow">Pricing</span>
+      <h1 class="h-section">Pay for what you call.</h1>
+      <p class="lead">Four ways to call base-tx-explain, from free to a flat monthly rate. No accounts anywhere — even the recurring plan cancels itself through Stripe, not us.</p>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0">
+    <div class="container">
+
+      <div id="pr-success" class="panel">
+        <div class="panel-head"><span>your pass</span><span id="pr-success-meta"></span></div>
+        <div id="pr-success-body" style="padding:1.25rem"></div>
+      </div>
+
+      <div class="pr-grid reveal">
+
+        <div class="card pr-card">
+          <span class="pr-tag">Free</span>
+          <div class="pr-price">$0</div>
+          <p class="pr-desc">10 calls per client. No signup, no wallet, no API key.</p>
+          <div class="pr-actions">
+            <a class="btn btn-primary btn-sm" href="/playground/">Try it free</a>
+          </div>
+        </div>
+
+        <div class="card pr-card">
+          <span class="pr-tag">Pay per call</span>
+          <div class="pr-price">$0.02<span> / call</span></div>
+          <p class="pr-desc">USDC on Base via x402. An agent pays and retries automatically; a human can pay the same way from the playground, once the free calls run out.</p>
+          <div class="pr-actions">
+            <a class="btn btn-ghost btn-sm" href="/playground/">Open the playground</a>
+          </div>
+        </div>
+
+        <div class="card pr-card">
+          <span class="pr-tag">0200 Pass</span>
+          <div class="pr-price">$9<span> one time</span></div>
+          <p class="pr-desc">10,000 calls over 30 days. A bearer token, not an account — nothing to cancel, because nothing recurs.</p>
+          <p class="pr-url-label">Setup is one URL, pasted into any MCP client:</p>
+          <div class="pr-url">https://base-tx-explain.fly.dev/mcp/btxp_&lt;your token&gt;</div>
+
+          <div class="pr-buy-wallet" id="pass-wallet">
+            <p>Pay with a Base wallet:</p>
+            <button class="btn btn-primary btn-sm" type="button" id="pass-buy-btn">Buy the pass — $9</button>
+            <div id="pass-wallet-panel"></div>
+          </div>
+
+          <div class="pr-actions">
+            <button class="btn btn-ghost btn-sm btn-disabled" type="button" disabled title="Card checkout is in test mode and not live yet">Pay with card — coming soon</button>
+          </div>
+        </div>
+
+        <div class="card pr-card">
+          <span class="pr-tag">0200 Developer</span>
+          <div class="pr-price">$9<span> / month</span></div>
+          <p class="pr-desc">The same 10,000 calls as the Pass, renewing automatically instead of being bought again by hand. Comes with a managed URL, and — once card checkout is live — a rotatable key. Cancel anytime through a Stripe-hosted portal; there is no account on our side to close.</p>
+          <div class="pr-actions">
+            <button class="btn btn-ghost btn-sm btn-disabled" type="button" disabled title="Card checkout is in test mode and not live yet">Pay with card — coming soon</button>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="panel pr-callout reveal">
+        <p><strong>Have a card and no wallet at all?</strong> The Apify Store listing bills $20 / 1,000 calls — the same $0.02 per call — directly through Apify. It's a working card path today, no wallet required.</p>
+        <a class="btn btn-ghost btn-sm" href="https://apify.com/0200project/base-tx-explain" rel="noopener">Open the Apify listing</a>
+      </div>
+
+      <div class="pr-faq reveal">
+        <h3>Why do the Pass and Developer plan cost the same?</h3>
+        <p>Deliberately. The usage is identical: 10,000 calls, 30 days. The Pass is bought by hand and expires; Developer renews itself and adds a managed URL. Pick whichever matches how you want to think about it — a top-up, or a subscription.</p>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/" aria-label="0200project home">
+          <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+          0200project
+        </a>
+      </div>
+      <nav aria-label="Product">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/tools/">Tools</a></li>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/docs/#request-format">API reference</a></li>
+          <li><a href="/pricing/">Pricing</a></li>
+          <li><a href="/changelog/">Changelog</a></li>
+          <li><a href="/faq/">FAQ</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Developers">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="/playground/">Playground</a></li>
+          <li><a href="https://github.com/0200project">GitHub</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-tx-explain">MCP Registry</a></li>
+          <li><a href="/status/">Status</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Company">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/#about">About</a></li>
+          <li><a href="/security/">Security</a></li>
+          <li><a href="https://github.com/0200project/base-tx-explain/issues">Support</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 0200project <span class="faint">&middot;</span> <span class="mono">base-tx-explain v0.1.2 &middot; Base mainnet</span></span>
+      <a class="pill footer-status" href="/status/"><span class="dot"></span><span id="ft-status">Checking status&hellip;</span></a>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/pay.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var ENDPOINT = 'https://base-tx-explain.fly.dev/mcp';
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* ---- Buy the pass with a wallet: same shape as the playground's
+     continue-and-pay, calling buy_pass instead of explain_transaction.
+     Uses whichever pay.js is already deployed -- no picker, no redeploy,
+     matching the hold on that surface until Coinbase Wallet is tested. ---- */
+
+  function rpcBody(name, payment) {
+    var params = { name: name, arguments: {} };
+    if (payment) params._meta = { 'x402/payment': payment };
+    return JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: params });
+  }
+
+  function parseEnvelope(text) {
+    var t = String(text || '').trim();
+    if (!t) return null;
+    if (t.charAt(0) === '{' || t.charAt(0) === '[') {
+      try { return JSON.parse(t); } catch (e) { return null; }
+    }
+    var lines = t.split(/\r?\n/).filter(function (l) { return l.indexOf('data:') === 0; });
+    if (!lines.length) return null;
+    try { return JSON.parse(lines[lines.length - 1].slice(5).trim()); } catch (e) { return null; }
+  }
+
+  function payloadFrom(result) {
+    if (result && result.structuredContent) return result.structuredContent;
+    if (result && result.content && result.content.length) {
+      var c0 = result.content[0];
+      if (c0 && typeof c0.text === 'string') {
+        try { return JSON.parse(c0.text); } catch (e) { return { text: c0.text }; }
+      }
+    }
+    return null;
+  }
+
+  function isX402(payload) {
+    return !!(payload && payload.x402Version !== undefined && payload.accepts);
+  }
+
+  function callBuyPass(payment) {
+    return fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream' },
+      body: rpcBody('buy_pass', payment)
+    }).then(function (res) {
+      return res.text().then(function (text) { return { status: res.status, text: text }; });
+    }).then(function (r) {
+      var env = parseEnvelope(r.text);
+      if (!env || env.error) throw new Error('The server did not return a usable response.');
+      var result = env.result || {};
+      var payload = payloadFrom(result);
+      return { result: result, payload: payload };
+    });
+  }
+
+  var panel = document.getElementById('pass-wallet-panel');
+  var buyBtn = document.getElementById('pass-buy-btn');
+  var priceDisplay = null;
+
+  function payAmountDisplay(challenge) {
+    var a = (challenge.accepts && challenge.accepts[0]) || {};
+    var amt = (a.maxAmountRequired != null) ? a.maxAmountRequired : a.amount;
+    if (amt == null || !window.x402Pay) return null;
+    var n = Number(amt) / 1e6;
+    return '$' + (n === Math.round(n * 100) / 100 ? n.toFixed(2) : String(n));
+  }
+
+  function shortAddr(a) {
+    return (a && a.length > 10) ? a.slice(0, 6) + '…' + a.slice(-4) : a;
+  }
+
+  function renderPanel(html) { panel.innerHTML = html; }
+
+  function renderInsufficient(info) {
+    renderPanel('<p>This wallet (' + esc(shortAddr(info.account)) + ') holds ' + esc(info.heldDisplay) + ' USDC on Base; the pass needs ' + esc(info.requiredDisplay) + '.</p>');
+  }
+
+  function renderConfirm(challenge, info) {
+    renderPanel(
+      '<p>Wallet ' + esc(shortAddr(info.account)) + ' holds ' + esc(info.heldDisplay) + ' USDC on Base — enough to pay ' + esc(info.requiredDisplay) + '.</p>' +
+      '<button class="btn btn-primary btn-sm" type="button" id="pass-sign-btn">Sign &amp; pay ' + esc(info.requiredDisplay) + ' USDC</button>'
+    );
+    document.getElementById('pass-sign-btn').addEventListener('click', function () {
+      runPurchase(challenge);
+    });
+  }
+
+  var STATE_LABEL = {
+    connecting: 'Connecting wallet…',
+    network: 'Checking network…',
+    balance: 'Checking balance…',
+    signing: 'Waiting for your signature…',
+    signed: 'Submitting payment…'
+  };
+
+  function renderError(challenge, err) {
+    var code = err && err.code;
+    var msg;
+    if (code === 'INSUFFICIENT_FUNDS' && err.detail && window.x402Pay) {
+      msg = 'This wallet holds ' + window.x402Pay.formatUnits(err.detail.held, 6) + ' USDC on Base; the pass needs ' + window.x402Pay.formatUnits(err.detail.required, 6) + '.';
+    } else {
+      msg = (err && err.message) || 'The payment could not be completed.';
+    }
+    renderPanel('<p>' + esc(msg) + '</p><button class="btn btn-ghost btn-sm" type="button" id="pass-retry-btn">Try again</button>');
+    document.getElementById('pass-retry-btn').addEventListener('click', function () { startBuy(); });
+  }
+
+  function renderSuccess(payload) {
+    var token = payload && payload.pass_token;
+    var url = token ? 'https://base-tx-explain.fly.dev/mcp/' + token : null;
+    renderPanel(
+      '<p>Paid. This is the only proof of purchase — save it now.</p>' +
+      (url
+        ? '<div class="pr-url" style="margin-top:0.75rem">' + esc(url) + '</div>'
+        : '<p>' + esc((payload && (payload.note || payload.keep_this_token)) || 'Check the response for your token.') + '</p>')
+    );
+    buyBtn.textContent = 'Paid';
+    buyBtn.disabled = true;
+  }
+
+  function runPurchase(challenge) {
+    renderPanel('<p id="pass-status">Connecting wallet…</p>');
+    window.x402Pay.payChallenge(challenge, {
+      onState: function (state) {
+        var s = document.getElementById('pass-status');
+        if (s && STATE_LABEL[state]) s.textContent = STATE_LABEL[state];
+      }
+    }).then(function (signed) {
+      renderPanel('<p>Payment signed — completing your purchase…</p>');
+      return callBuyPass(signed.payment);
+    }).then(function (res) {
+      if (isX402(res.payload)) {
+        renderPanel('<p>The signature went through, but the purchase did not settle. Nothing should have been charged. <button class="btn btn-ghost btn-sm" type="button" id="pass-retry-btn2">Try again</button></p>');
+        var retry = document.getElementById('pass-retry-btn2');
+        if (retry) retry.addEventListener('click', function () { startBuy(); });
+        return;
+      }
+      renderSuccess(res.payload);
+    }).catch(function (err) {
+      renderError(challenge, err);
+    });
+  }
+
+  function startBuy() {
+    if (!window.x402Pay || !window.x402Pay.available()) {
+      renderPanel('<p>No browser wallet detected. Install one (MetaMask, Coinbase Wallet, or similar) to pay this way, or use an x402-capable agent with the <code class="inline">buy_pass</code> tool.</p>');
+      return;
+    }
+    buyBtn.disabled = true;
+    buyBtn.textContent = 'Checking…';
+    renderPanel('<p>Reading the current price…</p>');
+    callBuyPass(null).then(function (res) {
+      var challenge = res.payload;
+      if (!isX402(challenge)) {
+        // Free tier or already-passed clients would land here; buy_pass has
+        // no free tier, so anything other than a challenge is unexpected.
+        renderPanel('<p>Unexpected response from the server. Try again in a moment.</p>');
+        buyBtn.disabled = false;
+        buyBtn.textContent = 'Buy the pass — $9';
+        return;
+      }
+      priceDisplay = payAmountDisplay(challenge);
+      buyBtn.disabled = false;
+      buyBtn.textContent = 'Buy the pass' + (priceDisplay ? ' — ' + priceDisplay : ' — $9');
+      renderPanel('<p>Checking your wallet…</p>');
+      window.x402Pay.inspect(challenge).then(function (info) {
+        if (info.canPay) renderConfirm(challenge, info);
+        else renderInsufficient(info);
+      }).catch(function (err) {
+        renderError(challenge, err);
+      });
+    }).catch(function () {
+      renderPanel('<p>Could not reach the server to read the price. Try again in a moment.</p>');
+      buyBtn.disabled = false;
+      buyBtn.textContent = 'Buy the pass — $9';
+    });
+  }
+
+  buyBtn.addEventListener('click', startBuy);
+
+  /* ---- Stripe redirect-back: /pricing/?session_id=... after a card payment.
+     Not live yet (Stripe is in test mode), but this is the whole reason the
+     server exposes GET /paid, so it is built now against the documented
+     response shape rather than guessed later. ---- */
+  (function () {
+    var params = new URLSearchParams(window.location.search);
+    var sessionId = params.get('session_id');
+    if (!sessionId) return;
+    var box = document.getElementById('pr-success');
+    var meta = document.getElementById('pr-success-meta');
+    var body = document.getElementById('pr-success-body');
+    box.className = 'panel show';
+    meta.textContent = 'checking…';
+    body.innerHTML = '<p class="pg-hint">Confirming your payment…</p>';
+    fetch('https://base-tx-explain.fly.dev/paid?session_id=' + encodeURIComponent(sessionId))
+      .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+      .then(function (r) {
+        if (r.status === 404) {
+          meta.textContent = 'not ready yet';
+          body.innerHTML = '<p>' + esc(r.body.error || 'Your payment is still processing. Reload this page in a few seconds.') + '</p>';
+          return;
+        }
+        if (!r.body || !r.body.mcp_url) {
+          meta.textContent = 'error';
+          body.innerHTML = '<p>Something unexpected came back. If you were charged, contact <a href="mailto:security@0200project.com">security@0200project.com</a> with this page\'s URL.</p>';
+          return;
+        }
+        meta.textContent = r.body.kind === 'subscription' ? '0200 developer' : '0200 pass';
+        body.innerHTML =
+          '<p>' + esc(r.body.warning || 'Save this URL — it is the only proof of purchase.') + '</p>' +
+          '<div class="pr-url" style="margin-top:0.75rem">' + esc(r.body.mcp_url) + '</div>';
+      })
+      .catch(function () {
+        meta.textContent = 'error';
+        body.innerHTML = '<p>Could not reach the server to confirm your payment. Reload this page in a few seconds.</p>';
+      });
+  })();
+})();
+</script>
+<script src="/assets/site.js" defer></script>
+</body>
+</html>

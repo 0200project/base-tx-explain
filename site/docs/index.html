@@ -84,7 +84,7 @@
       <li><a href="/tools/">Tools</a></li>
       <li><a href="/playground/">Playground</a></li>
       <li><a href="/docs/" aria-current="page">Docs</a></li>
-      <li><a href="/docs/#pricing">Pricing</a></li>
+      <li><a href="/pricing/">Pricing</a></li>
       <li class="nav-cta"><a class="btn btn-ghost btn-sm" href="https://github.com/0200project">GitHub</a></li>
       <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/playground/">Try it free</a></li>
     </ul></nav>
@@ -566,7 +566,8 @@ npm run dev</code></pre>
       <p><strong>Non-custodial.</strong> The x402 facilitator (PayAI) verifies and settles payments but cannot move or redirect funds. The server never holds user assets and never asks for private keys.</p>
 
       <h3 id="pass">The $9 pass</h3>
-      <p>For heavy use, a pass replaces per-call payments: <strong>$9 buys 30 days and up to 10,000 calls</strong>, rate-limited to 60 calls per minute. It is bought with a single x402 payment &mdash; <code class="inline">POST /pass</code> over HTTP, or the <code class="inline">buy_pass</code> tool over MCP. The response is a bearer token: present it as the <code class="inline">X-BTX-Pass</code> header on <code class="inline">POST /explain</code>, or at <code class="inline">_meta["btx/pass"]</code> on MCP calls.</p>
+      <p>For heavy use, a pass replaces per-call payments: <strong>$9 buys 30 days and up to 10,000 calls</strong>, rate-limited to 60 calls per minute. It is bought with a single x402 payment &mdash; <code class="inline">POST /pass</code> over HTTP, or the <code class="inline">buy_pass</code> tool over MCP.</p>
+      <p>The response is a bearer token. The simplest way to use it: paste <code class="inline">https://base-tx-explain.fly.dev/mcp/&lt;token&gt;</code> into any MCP client's server-URL field &mdash; that's the whole setup, no separate credential to configure. It also works the older ways, for clients that expect one: the <code class="inline">X-BTX-Pass</code> header on <code class="inline">POST /explain</code>, <code class="inline">Authorization: Bearer &lt;token&gt;</code> (the form claude.ai custom connectors require), or <code class="inline">_meta["btx/pass"]</code> on MCP calls.</p>
       <ul>
         <li><strong>No account.</strong> The token is the only proof of purchase. It is transferable &mdash; anyone holding it can spend its calls &mdash; and a lost token is a lost pass, so store it like a key.</li>
         <li><strong>Not a subscription.</strong> x402 payments are one-shot, caller-signed authorizations, so nothing here can auto-renew or silently charge you. When a pass expires or runs out, calls fall back to the standard flow &mdash; any free calls you have left, then the per-call 402 &mdash; and an agent renews by buying a new pass in the same loop.</li>
@@ -590,11 +591,12 @@ npm run dev</code></pre>
             <tr><td>Free tier</td><td>$0</td><td>First 10 calls, metered per client IP. No signup.</td></tr>
             <tr><td>Per call</td><td>$0.02</td><td>USDC on Base via x402, paid per call.</td></tr>
             <tr><td>Pass</td><td>$9</td><td>30 days, up to 10,000 calls, 60/min. Bearer token via <a href="#pass">one x402 payment</a> &mdash; no account, not a subscription.</td></tr>
+            <tr><td>Developer</td><td>$9/mo</td><td>Same usage as the Pass, renewing automatically. Card only, via Stripe.</td></tr>
             <tr><td>Marketplace-hosted</td><td>&mdash;</td><td>Via the <a href="https://apify.com/0200project/base-tx-explain" rel="noopener">Apify Store listing</a>: runs on your own Apify plan's compute, no per-call charge from us.</td></tr>
           </tbody>
         </table>
       </div>
-      <p>No accounts, no API keys, no minimums. Self-hosting is free under an MIT-style license — see <a href="#installation">Installation</a>.</p>
+      <p>No accounts, no API keys, no minimums. Self-hosting is free under an MIT-style license — see <a href="#installation">Installation</a>. Full comparison and checkout: <a href="/pricing/">pricing</a>.</p>
 
     </article>
 
@@ -616,7 +618,7 @@ npm run dev</code></pre>
           <li><a href="/tools/">Tools</a></li>
           <li><a href="/docs/">Documentation</a></li>
           <li><a href="/docs/#request-format">API reference</a></li>
-          <li><a href="/docs/#pricing">Pricing</a></li>
+          <li><a href="/pricing/">Pricing</a></li>
           <li><a href="/changelog/">Changelog</a></li>
           <li><a href="/faq/">FAQ</a></li>
         </ul>
