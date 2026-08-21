@@ -20,8 +20,15 @@ const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const SERVER = process.env.PUBLIC_URL ?? 'https://base-tx-explain.fly.dev';
 const WALLET = '0xd4ec730ab062f20460727710fce70664948a6bc9';
 const USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
-/** Clients recorded while only we were calling it (2026-08-20 baseline). */
-const KNOWN_CLIENTS = 2;
+/**
+ * Before 2026-08-21 the server had no way to self-identify our own traffic, so
+ * every client fingerprint - ours or a stranger's - counted the same way. This
+ * baseline is that blind spot: unique_clients at the moment internal-call
+ * marking shipped. external_clients (below) is authoritative for anything NEW
+ * from here; this constant exists only to explain historical unique_clients,
+ * which stays permanently overcounted for clients first seen before the fix.
+ */
+const PRE_MARKER_CLIENTS = 6;
 /** Our own test payments: never count these as customer revenue. */
 const KNOWN_PAYMENT_TXS = new Set([
   '0x2a2aaa3a79c3a394081df1a642046c88349a1397b27d97d8cb2292d71e61939f', // founder's $0.02 PayAI test, 2026-08-20 17:08 (pre-ledger)
@@ -66,7 +73,16 @@ if (stats) {
   const todayRow = stats.daily.at(-1);
   say(`## Usage (source: server ledger)\n`);
   say(`Lifetime: ${lt.calls} calls · ${lt.free} free · ${lt.wall_hits} paywall hits · ${lt.paid_calls} payment attempts · ${lt.settlements} settlements ($${lt.revenue_usd}) · ${lt.unique_clients} unique clients`);
-  say(`New clients beyond our own machines (baseline ${KNOWN_CLIENTS}): **${Math.max(0, lt.unique_clients - KNOWN_CLIENTS)}**`);
+  if (typeof lt.external_clients === 'number') {
+    const newSincePreMarker = Math.max(0, lt.external_clients - PRE_MARKER_CLIENTS);
+    say(
+      `External clients (never sent our internal marker): **${lt.external_clients}** ` +
+        `- authoritative for anyone first seen after 2026-08-21; ${PRE_MARKER_CLIENTS} of those predate the marker ` +
+        `and are an overcount inherited from before it existed. New external clients since the marker shipped: **${newSincePreMarker}**.`,
+    );
+  } else {
+    say(`External-client marking not yet deployed on this server build; unique_clients (${lt.unique_clients}) cannot distinguish us from strangers.`);
+  }
   for (const [label, row] of [['Today', todayRow], ['Yesterday', yesterday]]) {
     if (row) say(`${label} (${row.day}): ${row.calls} calls (${row.free} free / ${row.wall_hits} wall / ${row.paid_calls} pay-attempts), ${row.settlements} settled, ${row.unique_clients} clients`);
   }
