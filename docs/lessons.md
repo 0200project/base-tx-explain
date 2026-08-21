@@ -373,3 +373,45 @@ is a zod **discriminated union on `x402Version`**, so a payload lacking that key
 fails at the discriminator before any field is examined. Not "missing `accepts`
 so the parse fails" — it never reaches `accepts`. Same conclusion, firmer floor,
 and now written down instead of living in a thread.
+
+## A test that passes for the wrong reason is worse than no test
+
+Four times in one day a green suite confirmed something untrue, each from a
+different angle:
+
+1. The reconciler's tests asserted a contract its caller never honoured.
+2. Platform's `PAYMENT_MODE=none` shim survived review in a mode nobody ran.
+3. The `authOnce` cap was off by one, and only failed when a test was written to
+   answer a reviewer's question.
+4. Every attribution test called `attribute()` before `settle()`. Production can
+   only do the reverse — the webhook arrives, a human promotes minutes later. The
+   dimension that mattered was the ORDER, and no test varied it, so 312 passing
+   tests confirmed a sequence that cannot occur.
+
+The fourth one carried the sharpest version, and it is platform's sentence:
+**a test passing for the wrong reason is worse than a missing test, because it
+consumes the suspicion that would have found the bug.** Their `unattribute` test
+asserted that money "returns to unattributed" — and passed, because the money had
+never left. A gap in coverage is visible to anyone who looks. A test that passes
+while asserting the wrong thing actively spends the attention that would have
+looked.
+
+### The common shape
+
+Not carelessness. **The author picks the scenario, and the author has already
+imagined the world working.** Every one of these four tests encodes the sequence
+its writer had in mind, which is the sequence in which the code makes sense. The
+order production actually produces was never chosen against, because choosing it
+would have required believing it might differ.
+
+### The tell
+
+For any test of a stateful path, ask: *what ORDER do these operations arrive in
+outside this file, and does any test use that order?* Setup-then-act is the
+author's order. Production has its own, and it is usually the reverse — the event
+arrives before the human reacts to it, not after.
+
+And when a test passes, check that it would have failed. The cap test, the
+ordering tests, and the ERC-1155 truncation test were all written to fail first;
+each one did, and each one found something. The tests that were never seen red
+are the ones that have never yet been evidence of anything.
