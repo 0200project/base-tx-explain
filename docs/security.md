@@ -405,16 +405,33 @@ Settled decisions:
   loss should be visible in minutes. Nobody should sign their name to "completely
   secure."
 
-**NARROWED 2026-08-21 (same day, later):** "spend that gets us clients" resolves
-to CARD (§9a), not x402. The $20 USDC is for x402 only. So the hard build below —
-arbitrary destinations, no ability to pin `to` — may not be needed at all.
+**RESOLVED 2026-08-21:** ads and tools are CARD (§9a). For x402, the founder's
+answer was conditional: *"if any agent finds an x402 service that requires company
+spend to grow, then yeah."*
 
-**The one open question:** is there any third-party x402 service we would actually
-pay, or is x402 spend just dogfooding our own endpoint? If dogfooding, pin `to` to
-our own payTo and a fully compromised agent can do nothing but pay us — near-total
-mitigation for near-zero effort, and the allowlist-versus-caps tradeoff below
-disappears entirely because there is nothing to allowlist. Do not build the hard
-case until someone has actually named a third-party service worth paying.
+Read that precisely, because the design follows from the grammar. It is an
+IF/THEN, not a present requirement. **No third-party x402 service has been named.**
+So:
+
+- **TODAY: pin `to` to our own payTo.** There is nothing else to pay, so pinning
+  costs exactly nothing and buys near-total mitigation — a fully compromised
+  agent can do nothing but pay us, which is a no-op. Build this. Do not build an
+  unconstrained signer against a service nobody has identified.
+- **TRIGGER TO EXPAND:** an agent identifies a SPECIFIC x402 service that requires
+  spend to grow. That named payee is then approved and added. Caps and balance
+  apply as the backstop.
+
+**His answer IS the allowlist**, arrived at from the product side rather than
+imposed as a security constraint — "an agent finds a service, then we pay it"
+describes a payee being named before it is paid. Nobody had to narrow his scope;
+the scope was already shaped that way. Worth noting because it also means the
+allowlist-versus-caps question does not need re-asking: caps remain the backstop,
+the allowlist is simply how his conditional gets exercised.
+
+**One approval model across both rails**, which is worth keeping deliberately: an
+agent proposes, a human approves, then it executes. On card the human enters the
+details (§9a); on x402 the human approves the payee once and it is then automatic
+within caps. Same shape, simpler to reason about and to build than two models.
 
 **The risk that is specific to this answer, and it is the crux.** The payee is
 chosen by the agent, and the agent's inputs are attacker-reachable. A manipulated
