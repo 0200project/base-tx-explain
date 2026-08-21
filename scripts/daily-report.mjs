@@ -65,19 +65,19 @@ if (stats) {
   const yesterday = stats.daily.at(-2);
   const todayRow = stats.daily.at(-1);
   say(`## Usage (source: server ledger)\n`);
-  say(`Lifetime: ${lt.calls} calls · ${lt.free} free · ${lt.wall_hits} paywall hits · ${lt.paid_calls} paid calls · ${lt.settlements} settlements ($${lt.revenue_usd}) · ${lt.unique_clients} unique clients`);
+  say(`Lifetime: ${lt.calls} calls · ${lt.free} free · ${lt.wall_hits} paywall hits · ${lt.paid_calls} payment attempts · ${lt.settlements} settlements ($${lt.revenue_usd}) · ${lt.unique_clients} unique clients`);
   say(`New clients beyond our own machines (baseline ${KNOWN_CLIENTS}): **${Math.max(0, lt.unique_clients - KNOWN_CLIENTS)}**`);
   for (const [label, row] of [['Today', todayRow], ['Yesterday', yesterday]]) {
-    if (row) say(`${label} (${row.day}): ${row.calls} calls (${row.free} free / ${row.wall_hits} wall / ${row.paid_calls} paid), ${row.settlements} settled, ${row.unique_clients} clients`);
+    if (row) say(`${label} (${row.day}): ${row.calls} calls (${row.free} free / ${row.wall_hits} wall / ${row.paid_calls} pay-attempts), ${row.settlements} settled, ${row.unique_clients} clients`);
   }
   const last7 = stats.daily.slice(-7);
   const wk = (k) => last7.reduce((a, r) => a + r[k], 0);
-  say(`Last 7 days: ${wk('calls')} calls · ${wk('wall_hits')} wall hits · ${wk('paid_calls')} paid · $${wk('revenue_usd').toFixed(2)} settled`);
+  say(`Last 7 days: ${wk('calls')} calls · ${wk('wall_hits')} wall hits · ${wk('paid_calls')} payment attempts · $${wk('revenue_usd').toFixed(2)} settled`);
   say(`\n### Conversion funnel (lifetime)\n`);
   const pct = (a, b) => (b > 0 ? `${((100 * a) / b).toFixed(0)}%` : 'n/a');
   say(`free tester -> hit paywall: ${lt.wall_hits > 0 ? 'yes' : 'not yet'} (${lt.wall_hits} wall hits)`);
-  say(`paywall hit -> paid call: ${pct(lt.paid_calls, lt.wall_hits)} (${lt.paid_calls}/${lt.wall_hits})`);
-  say(`paid call -> settled payment: ${pct(lt.settlements, lt.paid_calls)} (${lt.settlements}/${lt.paid_calls})`);
+  say(`paywall hit -> payment attempted: ${pct(lt.paid_calls, lt.wall_hits)} (${lt.paid_calls}/${lt.wall_hits})`);
+  say(`payment attempted -> settled: ${pct(lt.settlements, lt.paid_calls)} (${lt.settlements}/${lt.paid_calls})`);
   say(`Visitor -> tester is unmeasurable (static site, no analytics by design; Search Console pending founder signup).`);
 }
 

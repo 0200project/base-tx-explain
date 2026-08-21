@@ -440,7 +440,7 @@ npm run dev</code></pre>
       </ul>
 
       <h3><code>risk_flags</code> values</h3>
-      <p>A flag always means evidence was found — a failed lookup never produces a flag, which is why <a href="#response"><code class="inline">checks</code></a> below tells you whether the lookup happened. Sources: Sourcify and Basescan verification status, the ScamSniffer and MyEtherWallet public blocklists (consumed at runtime, refreshed twice daily), and approval semantics.</p>
+      <p>A flag always means evidence was found — a failed lookup never produces a flag, which is why <a href="#checks"><code class="inline">checks</code></a> below tells you whether the lookup happened. Sources: Sourcify and Basescan verification status, the ScamSniffer and MyEtherWallet public blocklists (consumed at runtime, refreshed twice daily), and approval semantics.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -459,7 +459,7 @@ npm run dev</code></pre>
         </table>
       </div>
 
-      <h3><code>checks</code></h3>
+      <h3 id="checks"><code>checks</code></h3>
       <p>Because a failed lookup never produces a flag, an empty <code class="inline">risk_flags</code> has two possible meanings: nothing was found, or nothing was looked at. <code class="inline">checks</code> tells you which one you are holding. Each check reports one of four values:</p>
       <div class="table-wrap">
         <table>

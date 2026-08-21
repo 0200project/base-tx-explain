@@ -21,7 +21,14 @@ interface DayAgg {
   wall_hits: number;
   /** Calls covered by a purchased pass. */
   pass_calls: number;
-  /** Calls that arrived carrying an x402 payment (settlement is tracked separately). */
+  /**
+   * Calls that ARRIVED carrying an x402 payment payload. This is payment
+   * attempted, not payment succeeded: the flag is set from the presence of the
+   * payload before any verification, and settlement is tracked separately in
+   * `settlements`. A high count here with zero settlements means payments were
+   * offered and did not complete, NOT that calls were served without paying.
+   * Exposed as `payment_attempted` in snapshots for exactly that reason.
+   */
   paid_calls: number;
   settlements: number;
   revenue_usd: number;
@@ -125,6 +132,7 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
       free: agg?.free ?? 0,
       wall_hits: agg?.wall_hits ?? 0,
       paid_calls: agg?.paid_calls ?? 0,
+      payment_attempted: agg?.paid_calls ?? 0,
       pass_calls: agg?.pass_calls ?? 0,
       settlements: agg?.settlements ?? 0,
       revenue_usd: Number((agg?.revenue_usd ?? 0).toFixed(6)),
@@ -136,6 +144,13 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
     first_event_at: firstEventAt,
     lifetime: {
       ...lifetime,
+      // `paid_calls` counts calls that ARRIVED carrying a payment payload, not
+      // calls that were paid for. Sitting next to revenue_usd on a public
+      // endpoint it reads as "served paid calls, booked no revenue", and two
+      // separate readers drew that false alarm from it in one night. The honest
+      // name is emitted alongside; the old key stays until the public status
+      // page, which reads it, has been republished.
+      payment_attempted: lifetime.paid_calls,
       revenue_usd: Number(lifetime.revenue_usd.toFixed(6)),
       unique_clients: lifetimeClients.size,
     },

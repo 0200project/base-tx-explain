@@ -75,7 +75,7 @@ console.log('  base-tx-explain');
 console.log('  ' + '-'.repeat(46));
 console.log(`  wallet balance     $${(balance ?? 0).toFixed(2)} USDC${balance === null ? ' (lookup failed)' : ''}`);
 console.log(`  settled payments   ${lt.settlements}`);
-console.log(`  total calls        ${lt.calls}  (${lt.free} free, ${lt.paid_calls} with payment)`);
+console.log(`  total calls        ${lt.calls}  (${lt.free} free, ${lt.paid_calls} arrived with a payment attached)`);
 console.log(`  paywall hits       ${lt.wall_hits}  (someone ran out of free calls)`);
 console.log(`  unique clients     ${lt.unique_clients}  (baseline ${KNOWN_CLIENTS} = us)`);
 console.log('');
@@ -94,7 +94,7 @@ if (active.length > 0) {
   console.log('');
   console.log('  recent days');
   for (const d of active) {
-    console.log(`    ${d.day}  calls ${String(d.calls).padStart(4)}  clients ${String(d.unique_clients).padStart(3)}  paid ${d.paid_calls}  $${d.revenue_usd.toFixed(2)}`);
+    console.log(`    ${d.day}  calls ${String(d.calls).padStart(4)}  clients ${String(d.unique_clients).padStart(3)}  pay-attempts ${d.paid_calls}  settled $${d.revenue_usd.toFixed(2)}`);
   }
 }
 console.log('');

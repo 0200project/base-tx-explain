@@ -410,7 +410,7 @@ const DASH_SCRIPT = `
     var settled = Number(L.settlements) || 0;
     $('conv-line').textContent = 'Lifetime conversion: ' + wall +
       (wall === 1 ? ' request' : ' requests') + ' hit the paywall; ' + paid +
-      (paid === 1 ? ' call was' : ' calls were') + ' paid; ' + settled +
+      (paid === 1 ? ' call arrived' : ' calls arrived') + ' carrying a payment; ' + settled +
       (settled === 1 ? ' payment' : ' payments') + ' settled on-chain.';
   }
 
@@ -506,7 +506,7 @@ export function dashboardPage(): string {
     '<div class="tile"><div class="n" id="t-calls">&mdash;</div><div class="l">Total calls</div></div>' +
     '<div class="tile"><div class="n" id="t-free">&mdash;</div><div class="l">Free calls</div></div>' +
     '<div class="tile"><div class="n" id="t-wall">&mdash;</div><div class="l">Wall hits</div></div>' +
-    '<div class="tile"><div class="n" id="t-paid">&mdash;</div><div class="l">Paid calls</div></div>' +
+    '<div class="tile"><div class="n" id="t-paid">&mdash;</div><div class="l">Payment attempts</div></div>' +
     '<div class="tile"><div class="n" id="t-clients">&mdash;</div><div class="l">Unique clients</div></div>' +
     '</div>' +
     '<p class="small faint usage-note" id="usage-note">Wall hits are 402 payment challenges served.</p>' +
@@ -524,7 +524,7 @@ export function dashboardPage(): string {
     '<h3 class="stats-h">Last 7 days</h3>' +
     '<div class="table-wrap stats-table-wrap">' +
     '<table class="stats-table">' +
-    '<thead><tr><th>Day</th><th class="num">Calls</th><th class="num">Free</th><th class="num">Wall hits</th><th class="num">Paid</th><th class="num">Settled $</th></tr></thead>' +
+    '<thead><tr><th>Day</th><th class="num">Calls</th><th class="num">Free</th><th class="num">Wall hits</th><th class="num">Pay attempts</th><th class="num">Settled $</th></tr></thead>' +
     '<tbody id="stats-tbody"></tbody>' +
     '</table>' +
     '</div>' +
