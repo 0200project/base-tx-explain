@@ -265,6 +265,7 @@ clients have actually been identified (see D-5):**
 | `1b624776` | Unexplained, organic, 1 call, never returned | 0 | — |
 | `81238a28` | **Genuine external arrival — confirmed, not us, not the Founder** (19:35Z) | 0 | — |
 | `5245eb45` | **Genuine external arrival — confirmed by marked test call** (20:42Z) | 0 | — |
+| 3 new clients (incl. `0a43aec8`) | **First channel-attributed arrivals — see caveat below** (20:57Z burst) | 0 | — |
 
 **`81238a28`, resolved 2026-08-21 by elimination, both steps checked rather
 than assumed.** First matched the `53d7ceaf` shape and was wrong — platform
@@ -294,8 +295,34 @@ Each is one free call, no return visit, no paywall hit, no payment attempt.
 Neither is a lead or a prospect signal — a single free call is not evidence of
 anything beyond a visitor who looked once. **0/10 target unchanged.**
 
-**The honest read: five genuinely unattributed one-off visitor touches
-today** (three still fully unexplained, two now confirmed as real strangers),
+**20:57Z burst — 3 new clients, one channel-attributed for the first time,
+one real caveat.** Platform found a third client (`0a43aec8`, 20:57:20Z)
+beyond the two growth first saw. All 3 confirmed external via the ledger's
+`internal: false` flag on each — none of us. `0a43aec8` is genuinely
+notable: `channel=outreach` on the tagged link, **the first channel-
+attributed arrival this instrument has ever recorded** — the attribution
+system platform proposed earlier tonight (build it before buying an eighth
+listing) just produced its first real data point.
+
+**Not celebrating it, and neither is growth.** Three distinct addresses
+hitting within 57 seconds, with a 5-second gap between the first two, is
+more consistent with automated link-preview/scanner fetchers reacting to a
+posted link than three independent humans reading it in the same minute. No
+user-agent logging exists yet to tell human from crawler (a deploy freeze is
+in effect), so this is genuinely unresolved rather than downgraded on a
+guess — same discipline as `81238a28` and `5245eb45`, just an honest "cannot
+tell yet" instead of a resolved answer. None of the three returned for a
+second call.
+
+**Treatment, verified by Finance directly against `/stats` rather than taken
+from the report: `unique_clients` reads 11, matching exactly.** Recorded as
+arrivals, not leads, not customers — the tagged link registered its first
+hit, which is real signal that the channel works technically, but whether
+that hit was a person is not yet known.
+
+**The honest read: eight genuinely unattributed one-off visitor touches
+today** (three still fully unexplained, two confirmed real strangers, three
+from tonight's burst — channel-attributed but human-vs-bot unresolved),
 **zero repeat visits, zero payment attempts from any of them, zero
 customers.**
 
