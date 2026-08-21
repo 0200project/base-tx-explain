@@ -17,7 +17,17 @@ import { registerPassRoutes, registerRestRoutes } from './rest.js';
 import { declaredWithdrawn, reconcile } from './reconcile.js';
 import { getTreasury } from './treasury.js';
 import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
-import { passFromHeaders, passFromPath } from './passUrl.js';
+import { passFromHeaders, passFromPath, passUrl } from './passUrl.js';
+import {
+  alreadyHandled,
+  passForSession,
+  passForSubscription,
+  recordDelivery,
+  sessionKind,
+  validSessionId,
+  verifyStripeSignature,
+  type StripeEvent,
+} from './stripe.js';
 import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, passSnapshot, refundPassUse, activatePass, revokePass, revokePendingPass, usePass } from './passes.js';
 import { HOUR, TtlCache } from './cache.js';
 import { APIFY_BILLING_ACTIVE, initApifyBilling, chargeApifyCall } from './apifyBilling.js';
@@ -505,6 +515,18 @@ const app = express();
 // whole client-supplied X-Forwarded-For chain, which let anyone mint a fresh
 // free tier per request with a forged header.
 app.set('trust proxy', 1);
+
+// Registered BEFORE the JSON parser, deliberately. Stripe signs the exact bytes
+// it sent, so the signature must be checked against the RAW body: re-serialising
+// parsed JSON changes whitespace and key order and would fail every legitimate
+// event while accepting nothing. Once express.json() has consumed the stream the
+// original bytes are gone, so this route has to come first.
+app.post(
+  '/stripe/webhook',
+  express.raw({ type: 'application/json', limit: '256kb' }),
+  (req, res) => handleStripeWebhook(req, res),
+);
+
 app.use(express.json({ limit: '256kb' }));
 
 // On Fly the edge stamps Fly-Client-IP itself; elsewhere fall back to
@@ -572,6 +594,136 @@ app.get('/favicon.ico', (_req, res) => {
 // Since-boot demand counters: enough to see whether strangers are calling,
 // deliberately nothing that identifies them.
 const metrics = { tool_calls: 0, free: 0, paywalled: 0, booted_at: new Date().toISOString() };
+
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? '';
+
+/**
+ * Stripe webhook. Mints a pass once a payment is confirmed by Stripe itself.
+ *
+ * Always answers 2xx once the signature verifies, even for events we ignore.
+ * A non-2xx tells Stripe to retry, and retrying an event we simply do not care
+ * about accomplishes nothing except eventually disabling the endpoint.
+ */
+function handleStripeWebhook(req: express.Request, res: express.Response): void {
+  if (!STRIPE_WEBHOOK_SECRET) {
+    // No secret configured means we cannot tell Stripe from anyone else, and
+    // minting on an unverifiable event would hand out passes for free.
+    console.error('[stripe] webhook received but STRIPE_WEBHOOK_SECRET is unset; ignoring');
+    res.status(503).json({ error: 'stripe webhook not configured' });
+    return;
+  }
+
+  const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : '';
+  const verdict = verifyStripeSignature(raw, req.headers['stripe-signature'] as string | undefined, STRIPE_WEBHOOK_SECRET);
+  if (!verdict.ok) {
+    console.error('[stripe] signature rejected:', verdict.reason);
+    res.status(400).json({ error: 'invalid signature' });
+    return;
+  }
+
+  let event: StripeEvent;
+  try {
+    event = JSON.parse(raw) as StripeEvent;
+  } catch {
+    res.status(400).json({ error: 'invalid json' });
+    return;
+  }
+
+  // Stripe retries until it sees a 2xx, so a slow response is redelivered as a
+  // matter of course. Without this check one purchase would mint several passes.
+  if (alreadyHandled(event.id)) {
+    res.json({ received: true, duplicate: true });
+    return;
+  }
+
+  const obj = (event.data?.object ?? {}) as Record<string, unknown>;
+
+  try {
+    if (event.type === 'checkout.session.completed') {
+      // `paid` is the one that matters: a completed session with an unpaid
+      // status (async payment methods) must not deliver anything yet.
+      if (obj.payment_status !== 'paid') {
+        console.log('[stripe] session completed but not paid yet; waiting');
+        res.json({ received: true });
+        return;
+      }
+      const sessionId = validSessionId(obj.id);
+      if (sessionId) {
+        const kind = sessionKind(obj);
+        const minted = mintPass({ payer: typeof obj.customer === 'string' ? obj.customer : undefined });
+        recordDelivery(sessionId, {
+          ...minted,
+          kind,
+          subscription_id: typeof obj.subscription === 'string' ? obj.subscription : undefined,
+          delivered_at: Date.now(),
+        });
+        recordEvent({
+          t: new Date().toISOString(),
+          e: 'settled',
+          client: 'stripe',
+          amount_usd: typeof obj.amount_total === 'number' ? obj.amount_total / 100 : 0,
+        });
+        console.log(`[stripe] ${kind} PAID, pass minted for session ${sessionId.slice(0, 12)}...`);
+      }
+    } else if (event.type === 'customer.subscription.deleted') {
+      // Cancelled or ended. Revoke so a lapsed subscriber stops getting calls.
+      const subId = typeof obj.id === 'string' ? obj.id : '';
+      const existing = subId ? passForSubscription(subId) : null;
+      if (existing) {
+        revokePass(existing.token);
+        console.log(`[stripe] subscription ${subId.slice(0, 12)}... ended, pass revoked`);
+      }
+    }
+    // invoice.paid on renewal is deliberately NOT handled yet: extending an
+    // existing pass needs a mutation the pass store does not expose, and
+    // silently doing nothing is better than pretending to renew. Filed.
+  } catch (err) {
+    // The payment already happened; a failure on our side must not tell Stripe
+    // to retry forever. Log loudly and accept.
+    console.error('[stripe] handler threw AFTER a confirmed payment:', err);
+  }
+
+  res.json({ received: true });
+}
+
+/**
+ * Where Stripe sends the buyer after paying: hands over the pass URL.
+ *
+ * Looks up only what the webhook already minted. The session id arrives in a
+ * URL from a browser and proves nothing on its own, so a value that matches
+ * nothing gets the same answer as one whose window has closed — telling a
+ * stranger which of those happened would confirm a guessed id was real.
+ */
+app.get('/paid', (req, res) => {
+  const sessionId = validSessionId(req.query.session_id);
+  // Referer would otherwise carry the session id to any link this page shows,
+  // and no-store keeps a token out of a shared browser's back button.
+  res.set('Referrer-Policy', 'no-referrer').set('Cache-Control', 'no-store');
+
+  if (!sessionId) {
+    res.status(400).json({ error: 'missing or malformed session_id', code: 'invalid_session' });
+    return;
+  }
+  const pass = passForSession(sessionId);
+  if (!pass) {
+    // Also the honest answer while a webhook is still in flight: the buyer
+    // should retry rather than be told their purchase failed.
+    res.status(404).json({
+      error: 'No pass is available for that session yet. If you just paid, wait a few seconds and reload.',
+      code: 'not_ready',
+    });
+    return;
+  }
+  res.json({
+    mcp_url: passUrl(PUBLIC_URL, pass.token),
+    pass_token: pass.token,
+    expires_at: pass.expires_at,
+    call_cap: pass.call_cap,
+    kind: pass.kind,
+    how: 'Paste mcp_url into your MCP client as a remote server URL. It is the whole setup.',
+    warning: 'Save this URL. It is the only proof of purchase and anyone holding it can spend your calls.',
+  });
+});
 
 app.get('/healthz', (_req, res) => {
   const snapshot = usageSnapshot(1) as { lifetime: Record<string, unknown> };
