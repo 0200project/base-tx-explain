@@ -227,6 +227,31 @@ trusting an automatic subtraction, which is exactly the discipline this
 ledger has run on all day, now enforced by the endpoint itself rather than by
 habit alone.
 
+**Known gap in that promotion mechanism, verified by Finance directly against
+`src/attribution.ts`, `src/usage.ts` and `src/index.ts` — not taken on
+report.** `attribute(id)` and the reconciliation read at `usage.ts:279` both
+key on a settlement's `id` field only. Reading the actual `recordEvent` calls
+for each rail confirms exactly which ones have one:
+
+| Rail | `id` set? | Promotable today? |
+|---|---|---|
+| Stripe checkout (`checkout.session.completed`) | Yes — the session id | **Yes** |
+| Stripe subscription renewal (`invoice.paid`) | **No** | **No** — confirmed independently by Finance reading `index.ts:816`, matches security's claim |
+| x402 per-call settlement | No — only `tx` | **No** |
+| x402 pass via MCP settlement | No — only `tx` | **No** |
+| x402 pass via REST | Yes — a synthetic id, not the tx | Yes |
+
+**Practical consequence for tonight, stated in advance so a real sale is never
+misread as a failed promotion:** x402 is the rail with a demonstrated
+end-to-end path (the Circadian probe), and it is the one that currently
+*cannot* be promoted. If an x402 sale settles before this ships, Finance will
+see `revenue_usd` move and the money sit correctly in `unattributed_revenue_usd`
+— the ledger is not wrong, it has simply reached the edge of what it can
+finish without a deploy. **Do not conclude the sale is unreal or the
+promotion is broken.** Check which rail it came in on before assuming either.
+Fix (widen the promotion predicate to `id` or `tx`, matching the write-off
+check three lines away in the same file) is with platform, one line.
+
 ## Growth / customer-acquisition expenses
 
 | Date | Agent | Amount | Channel | Purpose | Result |
@@ -389,6 +414,18 @@ today** (three still fully unexplained, two confirmed real strangers, six
 from tonight's two bursts — channel-attributed where tagged, human-vs-bot
 still unresolved for the paired ones), **zero repeat visits, zero payment
 attempts from any of them, zero customers.**
+
+**Real technical validation, no commitment, not a customer — worth recording
+as evidence of interest without overstating it.** Growth confirmed `kindrat86`
+(via agentmail outreach) actually ran the decoder — the client's arrival
+matches `channel=outreach` 14.5 seconds before their comment, a real
+correlation, not an assumption. They said per-call at $0.02 beats a
+subscription for their use case (occasional dispute verification). **No
+payment, no commitment, and not the $9/mo target even if it eventually
+happens** — a stated preference for per-call pricing points toward the x402
+rail, not the card-rail products this target is counting. Genuinely the
+first piece of product-market signal tonight that isn't a raw arrival count.
+0/10 unchanged.
 
 Attribution is not known and will not be guessed. If a customer arrives, CAC is
 only calculable if Growth can tell me which spend, if any, produced them.
