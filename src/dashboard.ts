@@ -142,6 +142,10 @@ const DASH_CSS =
   .tile { background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.125rem; }
   .tile .n { font-family: var(--mono); font-size: 1.375rem; color: var(--fg-strong); letter-spacing: -0.01em; }
   .tile .l { font-family: var(--mono); font-size: 0.65625rem; letter-spacing: 0.07em; text-transform: uppercase; color: var(--fg-faint); margin-top: 0.25rem; }
+  .recon { margin-top: 0.75rem; }
+  .recon .tile.flag { border-color: #b4791f; }
+  .recon .tile.flag .n { color: #e0a244; }
+  .recon-note { margin-top: 0.625rem; }
   .usage-note { margin-top: 0.75rem; }
 
   .chart-panel { padding: 1.25rem; margin-top: 1.25rem; }
@@ -203,6 +207,33 @@ const DASH_SCRIPT = `
   // treasury block, read via Base RPC with failover). The per-payment list
   // below is a public-explorer nicety and degrades on its own: Blockscout
   // being down must never blank the number this page exists to show.
+  // Booked revenue vs. the chain. The payment path serves the caller when a
+  // settlement is ambiguous (deliberately - denying a real payer is the worse
+  // error), so these two numbers can drift apart for good reasons. This panel
+  // exists so the drift is a named number instead of a silent discrepancy:
+  // without it, money that arrived but never booked reads as $0 earned.
+  function renderReconciliation(r) {
+    if (!r) return;
+    var tile = $('rc-delta-tile');
+    var note = $('rc-note');
+    $('rc-booked').textContent = usd(r.booked_usd);
+    $('rc-chain').textContent = r.received_usd === null ? '\\u2014' : usd(r.received_usd);
+
+    if (r.delta_usd === null) {
+      $('rc-delta').textContent = '\\u2014';
+      $('rc-delta-label').textContent = 'Unbooked';
+      tile.className = 'tile';
+      note.textContent = r.note || '';
+      return;
+    }
+    var d = Number(r.delta_usd);
+    $('rc-delta').textContent = usd(Math.abs(d));
+    $('rc-delta-label').textContent = d < 0 ? 'Overbooked' : 'Unbooked';
+    // Flag only a real divergence; a reconciled ledger stays quiet.
+    tile.className = r.status === 'reconciled' ? 'tile' : 'tile flag';
+    note.textContent = r.note || '';
+  }
+
   function renderTreasury(t) {
     if (!t) return;
     var bal = Number(t.usdc_balance);
@@ -426,6 +457,7 @@ const DASH_SCRIPT = `
       })
       .then(function (d) {
         renderTreasury(d.treasury);
+        renderReconciliation(d.reconciliation);
         var daily = d.daily || [];
         renderChart(daily);
         renderStatsTable(daily);
@@ -497,6 +529,12 @@ export function dashboardPage(): string {
     '<div class="rev-target"><div class="small faint" id="rev-target-label">$25 validation target</div>' +
     '<div class="progress"><i id="rev-bar"></i></div></div>' +
     '</div></div>' +
+    '<div class="tiles recon">' +
+    '<div class="tile"><div class="n" id="rc-booked">&mdash;</div><div class="l">Booked revenue</div></div>' +
+    '<div class="tile"><div class="n" id="rc-chain">&mdash;</div><div class="l">Received on chain</div></div>' +
+    '<div class="tile" id="rc-delta-tile"><div class="n" id="rc-delta">&mdash;</div><div class="l" id="rc-delta-label">Unbooked</div></div>' +
+    '</div>' +
+    '<p class="small faint recon-note" id="rc-note"></p>' +
     '<div id="rev-table"></div>' +
     '<p class="small faint section-msg" id="rev-msg"></p>' +
     '</section>' +

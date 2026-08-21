@@ -65,26 +65,62 @@ if (!statsRes.ok) {
 const stats = (await statsRes.json()) as {
   lifetime: { calls: number; free: number; wall_hits: number; paid_calls: number; settlements: number; revenue_usd: number; unique_clients: number };
   daily: Array<{ day: string; calls: number; unique_clients: number; paid_calls: number; settlements: number; revenue_usd: number }>;
+  // Present from v0.1.3 on. Older deploys omit it, so every use is guarded.
+  reconciliation?: {
+    status: 'reconciled' | 'unbooked_revenue' | 'overbooked' | 'unknown';
+    booked_usd: number;
+    wallet_usd: number | null;
+    withdrawn_usd: number;
+    received_usd: number | null;
+    delta_usd: number | null;
+    unbooked_paid_calls: number;
+    unbooked_notional_usd: number;
+    note: string;
+  };
 };
 
 const lt = stats.lifetime;
+const rec = stats.reconciliation;
 const strangers = lt.unique_clients - KNOWN_CLIENTS;
+// Prefer the server's reading (same Base RPC client, with failover) and fall
+// back to the direct lookup so this still works against an older deploy.
+const walletUsd = rec?.wallet_usd ?? balance;
 
 console.log('');
 console.log('  base-tx-explain');
 console.log('  ' + '-'.repeat(46));
-console.log(`  wallet balance     $${(balance ?? 0).toFixed(2)} USDC${balance === null ? ' (lookup failed)' : ''}`);
-console.log(`  settled payments   ${lt.settlements}`);
+console.log(`  wallet balance     $${(walletUsd ?? 0).toFixed(2)} USDC${walletUsd === null ? ' (lookup failed)' : ''}`);
+console.log(`  booked revenue     $${lt.revenue_usd.toFixed(2)}  (${lt.settlements} settled payment${lt.settlements === 1 ? '' : 's'})`);
+if (rec && rec.delta_usd !== null) {
+  // The number this check exists for: money on chain the ledger never booked.
+  const d = rec.delta_usd;
+  const label = d > 0 ? 'unbooked' : d < 0 ? 'OVERBOOKED' : 'difference';
+  console.log(`  ${label.padEnd(17)}  $${Math.abs(d).toFixed(2)}${d > 0 ? '  (arrived on chain, never recorded)' : d < 0 ? '  (booked but not on chain)' : '  (ledger matches the chain)'}`);
+} else if (rec) {
+  console.log('  unbooked            unknown  (wallet balance could not be read)');
+}
 console.log(`  total calls        ${lt.calls}  (${lt.free} free, ${lt.paid_calls} arrived with a payment attached)`);
 console.log(`  paywall hits       ${lt.wall_hits}  (someone ran out of free calls)`);
 console.log(`  unique clients     ${lt.unique_clients}  (baseline ${KNOWN_CLIENTS} = us)`);
 console.log('');
 
+if (rec && rec.status !== 'reconciled') {
+  console.log(`  ${rec.note}`);
+  console.log('');
+}
+
 if (strangers > 0) {
   console.log(`  *** ${strangers} STRANGER${strangers === 1 ? '' : 'S'} HAVE CALLED IT ***`);
-  console.log(lt.settlements > 0
-    ? '  And a payment has settled. That is the signal you were waiting for.'
-    : '  None have paid yet. A paywall hit means one considered it.');
+  // "Nobody paid" must key off the chain, not off the booked counter: money can
+  // arrive without a settlement being booked, and this line is the one the
+  // founder reads to decide whether the funnel converts.
+  const reachedWallet = (rec?.received_usd ?? 0) > 0;
+  console.log(
+    lt.settlements > 0
+      ? '  And a payment has settled. That is the signal you were waiting for.'
+      : reachedWallet
+        ? '  Money has reached the wallet, but no settlement was booked - see the unbooked line above.'
+        : '  None have paid yet. A paywall hit means one considered it.');
 } else {
   console.log('  No strangers yet. Every call so far is ours.');
 }

@@ -170,3 +170,35 @@ git merge-base --is-ancestor <your-commit> HEAD && echo "already in HEAD"
 and read the live boot log to see what production is actually running. Cheaper
 than asking a teammate, and it does not depend on anyone having read a message in
 time.
+
+---
+
+## A number that adds up is not the same as a number that is explained
+
+_2026-08-20, from the revenue reconciliation work._
+
+The ledger showed 3 paid calls, 0 settlements, $0 revenue; the payout wallet
+held $0.02. That arithmetic invites one tidy story — three calls served against
+one payment's worth of USDC, so settlement booking must be dropping two of three
+— and the obvious next move is to loosen `settledOk`, the gate that decides
+whether money is recorded as earned.
+
+The raw events said otherwise. The $0.02 landed 37 minutes *before* the ledger's
+first line, on the ephemeral disk that preceded the Fly volume; the three paid
+calls moved no money at all, which the chain confirms twice over (no inbound
+transfer after that one, and the payer wallet has exactly one outbound transfer
+in its life). Two unrelated facts that happened to sum to a plausible third.
+Loosening `settledOk` would have booked revenue that does not exist, in a system
+whose whole defence against phantom revenue is that gate.
+
+Two things generalise:
+
+1. **The tidy explanation arrived before the evidence and fit it well enough to
+   stop the search.** Cost of checking: reading 76 lines of JSONL and one
+   `getLogs` scan. Always affordable, and it inverted the conclusion.
+2. **A counter that can only under-report is still dangerous if nothing compares
+   it to ground truth.** `settledOk` is deliberately strict and the payment path
+   deliberately serves on ambiguity, so booked revenue drifting below reality is
+   by design and correct. The bug was never the drift — it was that no surface
+   subtracted the two numbers, so the drift was indistinguishable from failure.
+   See `docs/reconciliation.md`.

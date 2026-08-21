@@ -14,6 +14,7 @@ import { FAVICON_PNG } from './favicon.js';
 import { withAcceptedFieldRepair } from './cdpCompat.js';
 import { buildOpenApiDocument } from './openapi.js';
 import { registerPassRoutes, registerRestRoutes } from './rest.js';
+import { declaredWithdrawn, reconcile } from './reconcile.js';
 import { getTreasury } from './treasury.js';
 import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
 import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, passSnapshot, refundPassUse, activatePass, revokePass, revokePendingPass, usePass } from './passes.js';
@@ -38,7 +39,7 @@ const TOOL_DESCRIPTION =
   'first_time_counterparty, nonstandard_token_symbol, impersonated_token, ' +
   'transaction_reverted), checks, gas_paid_usd, timestamp, basescan_url. ' +
   'Risk checks fail open, so read `checks` before drawing any conclusion from an empty ' +
-  'risk_flags: it reports whether each check ran (ok / partial / unavailable / inconclusive / not_applicable), ' +
+  'risk_flags: it reports whether each check ran (ok / partial / unavailable / not_applicable), ' +
   'and no flags alongside a non-ok status means not checked, not clean. ' +
   'Deterministic onchain decode - no LLM in the response path. Base mainnet (chain id 8453) only.';
 
@@ -674,13 +675,28 @@ app.get('/stats', async (req, res) => {
   // Read the payout balance server-side: the dashboard should not depend on a
   // third-party explorer being up to show the number that matters most.
   const treasury = await getTreasury(process.env.X402_PAY_TO ?? '');
+  const usage = usageSnapshot(30) as {
+    lifetime: { revenue_usd: number; settlements: number; paid_calls: number };
+  };
+  // Booked revenue against the chain. The payment path serves on ambiguous
+  // settlements by design, so the two can legitimately diverge; what was
+  // missing was any surface that said so out loud.
+  const reconciliation = reconcile({
+    treasury,
+    booked_usd: usage.lifetime.revenue_usd,
+    settlements: usage.lifetime.settlements,
+    paid_calls: usage.lifetime.paid_calls,
+    price_usd: Number.parseFloat(PRICE_USD),
+    withdrawn_usd: declaredWithdrawn(),
+  });
   res.status(200).json({
     version: VERSION,
     payment_mode: PAYMENT_MODE,
     price_usd: PRICE_USD,
     since_boot: metrics,
     treasury,
-    ...usageSnapshot(30),
+    reconciliation,
+    ...usage,
     passes: passSnapshot(),
   });
 });
