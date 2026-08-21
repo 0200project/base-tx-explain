@@ -5,7 +5,7 @@ import { createCdpFacilitatorClient } from '@coinbase/cdp-sdk/x402';
 import { HTTPFacilitatorClient, x402ResourceServer, type FacilitatorClient } from '@x402/core/server';
 import { ExactEvmScheme } from '@x402/evm/exact/server';
 import { declareDiscoveryExtension } from '@x402/extensions/bazaar';
-import { createPaymentWrapper, type ToolResult } from '@x402/mcp';
+import { createPaymentWrapper, type MCPToolContext, type ToolResult } from '@x402/mcp';
 import express from 'express';
 import * as z from 'zod/v4';
 import { dashboardPage, loginPage } from './dashboard.js';
@@ -99,17 +99,54 @@ const BAZAAR_EXTENSIONS = declareDiscoveryExtension({
 });
 
 /**
- * Did this settlement affirmatively succeed?
+ * Did this settlement affirmatively succeed? Used to decide whether to BOOK
+ * REVENUE, where the safe default is strictness: never record money we cannot
+ * confirm arrived. Under-reporting is always recoverable from the payout wallet
+ * on-chain; over-reporting is invisible from inside the ledger.
  *
- * The asymmetry matters. `success: false` is the facilitator stating that no
- * funds moved — safe to act on. Anything else (field absent, response shape we
- * do not recognise) is UNKNOWN, and the one error we can never make is taking a
- * customer's money and withholding what they bought. So unknown reads as
- * success: we keep the ledger honest about explicit failures without ever
- * punishing a payer for an ambiguous response.
+ * Do NOT reuse this to decide whether to withhold something from a customer.
+ * `success: false` does not mean the funds stayed put — see provablyUnpaid.
  */
 function settledOk(settlement: unknown): boolean {
   return Boolean(settlement) && (settlement as { success?: unknown }).success === true;
+}
+
+/**
+ * Settle failures that provably happened BEFORE anything was broadcast, so no
+ * funds can have moved. Only these justify taking a pass back.
+ *
+ * `success: false` on its own does NOT mean the money stayed put:
+ * `settlement_pending` carries a real tx hash when the receipt wait timed out
+ * after broadcast, and `transfer_event_mismatch` means the transfer MINED and
+ * only the log check failed. Revoking on either would rob a customer who paid.
+ * The facilitator sets `transaction: ""` only in the catch around the broadcast
+ * call, so an empty hash plus one of these validation reasons is the one
+ * combination that is safe to act on.
+ */
+const PRE_BROADCAST_REJECTIONS = new Set([
+  'invalid_exact_evm_scheme',
+  'invalid_exact_evm_network_mismatch',
+  'invalid_exact_evm_missing_eip712_domain',
+  'invalid_exact_evm_recipient_mismatch',
+  'invalid_exact_evm_signature',
+  'invalid_exact_evm_payload_authorization_valid_before',
+  'invalid_exact_evm_payload_authorization_valid_after',
+  'invalid_exact_evm_authorization_value',
+  'invalid_exact_evm_payload_authorization_value_mismatch',
+  'invalid_exact_evm_token_name_mismatch',
+  'invalid_exact_evm_token_version_mismatch',
+  'invalid_exact_evm_eip3009_not_supported',
+  'invalid_exact_evm_insufficient_balance',
+  'invalid_exact_evm_transaction_simulation_failed',
+  'asset_not_deployed_contract',
+]);
+
+/** True only when we can prove the payment never left the ground. */
+function provablyUnpaid(settlement: unknown): boolean {
+  const s = settlement as { success?: unknown; transaction?: unknown; errorReason?: unknown } | undefined;
+  if (!s || s.success !== false) return false;
+  if (typeof s.transaction === 'string' && s.transaction !== '') return false; // broadcast happened
+  return typeof s.errorReason === 'string' && PRE_BROADCAST_REJECTIONS.has(s.errorReason);
 }
 
 /** The EIP-3009 authorization nonce identifies one payment across the hooks. */
@@ -259,6 +296,28 @@ async function initPayments(): Promise<void> {
     hooks: {
       onAfterSettlement: ({ settlement, paymentPayload }) => {
         const nonce = authNonceOf(paymentPayload);
+        // Only an affirmative pre-broadcast rejection takes the pass back.
+        // Every other non-success (settlement_pending with a real tx hash, a
+        // mined-but-mismatched transfer, anything unrecognised) may mean the
+        // customer's money moved, so the pass is ACTIVATED and the operator is
+        // alerted. Withholding on ambiguity is the same $9 theft in a
+        // safer-looking shape.
+        if (!settledOk(settlement) && !provablyUnpaid(settlement) && nonce) {
+          console.error(
+            `[pass] $${PASS_PRICE_USD} SETTLE AMBIGUOUS - activating the pass and alerting; funds may have moved. ` +
+              `nonce=${nonce} payer=${(settlement as { payer?: string })?.payer ?? 'unknown'} ` +
+              `tx=${(settlement as { transaction?: string })?.transaction || 'none'} ` +
+              `reason=${(settlement as { errorReason?: string })?.errorReason ?? 'unknown'} ` +
+              `detail=${JSON.stringify(settlement).slice(0, 400)}`,
+          );
+          const why =
+            `${(settlement as { errorReason?: string })?.errorReason ?? 'unknown'}` +
+            ` tx=${(settlement as { transaction?: string })?.transaction || 'none'}`;
+          if (!activatePass(nonce, (settlement as { payer?: string })?.payer, why)) {
+            console.error(`[pass] no pending pass matched nonce=${nonce} - manual follow-up needed`);
+          }
+          return;
+        }
         if (!settledOk(settlement)) {
           // No money moved, so the token minted by the handler must never
           // become usable. The caller still receives the string; it buys
@@ -288,26 +347,72 @@ async function initPayments(): Promise<void> {
       },
     },
   });
-  buyPassHandler = paidPass(async (_args: Record<string, never>, extra: unknown) => {
-    // Minted PENDING: the wrapper hands this result to the caller before it
-    // settles, so the token must not work until onAfterSettlement confirms the
-    // $9 actually moved. Correlated by the payment authorization nonce.
-    const nonce = authNonceOf((extra as { _meta?: Record<string, unknown> } | undefined)?._meta?.['x402/payment']);
-    const pass = mintPass({ pending: true, nonce: nonce ?? undefined });
-    const payload = {
-      pass_token: pass.token,
-      expires_at: pass.expires_at,
-      call_cap: pass.call_cap,
-      how_to_use: {
-        mcp: 'attach the token at _meta["btx/pass"] on tools/call',
-        rest: `POST ${PUBLIC_URL}/explain with header "X-BTX-Pass: <token>"`,
-      },
-      keep_this_token: 'This is a bearer pass. It is the only proof of purchase; store it now.',
-    };
-    return {
-      content: [{ type: 'text', text: JSON.stringify(payload) }],
-      structuredContent: payload as unknown as Record<string, unknown>,
-    };
+  // Per call so the minted token is captured without shared mutable state.
+  // Wrapper built per call so the minted token is captured without shared
+  // mutable state between concurrent buyers.
+  buyPassHandler = (async (args: Record<string, never>, extra: unknown) => {
+    const minted: { token?: string; nonce?: string; payload?: Record<string, unknown> } = {};
+    const wrapped = paidPass(async (_args: Record<string, never>, ctx: MCPToolContext) => {
+      // Minted PENDING: the wrapper hands this result to the caller before it
+      // settles, so the token must not work until settlement is resolved.
+      //
+      // NOTE the shape: the wrapper does NOT forward the MCP SDK's `extra`. It
+      // builds its own context `{ toolName, arguments, meta }` and passes that,
+      // so the payment rides at ctx.meta - reading extra._meta silently yields
+      // undefined, and every paid pass would mint uncorrelated and never
+      // activate: a 100% failure rate on real sales that tests calling
+      // activatePass directly cannot see.
+      // Typed, not cast: if the library ever renames this field the build
+      // breaks instead of silently yielding undefined (which is precisely how
+      // the extra._meta version passed tsc and failed every real sale).
+      const nonce = authNonceOf(ctx?.meta?.['x402/payment']);
+      const pass = mintPass({ pending: true, nonce: nonce ?? undefined });
+      minted.token = pass.token;
+      minted.nonce = nonce ?? undefined;
+      const payload = {
+        pass_token: pass.token,
+        expires_at: pass.expires_at,
+        call_cap: pass.call_cap,
+        how_to_use: {
+          mcp: 'attach the token at _meta["btx/pass"] on tools/call',
+          rest: `POST ${PUBLIC_URL}/explain with header "X-BTX-Pass: <token>"`,
+        },
+        keep_this_token: 'This is a bearer pass. It is the only proof of purchase; store it now.',
+      };
+      minted.payload = payload;
+      return {
+        content: [{ type: 'text', text: JSON.stringify(payload) }],
+        structuredContent: payload as unknown as Record<string, unknown>,
+      };
+    });
+
+    const result = await wrapped(args, extra);
+
+    // Settle THREW (facilitator timeout, non-2xx, unparseable body). No
+    // settlement hook fires on that path and the wrapper discards our result
+    // for a fresh 402, so the customer would be told to pay again while their
+    // payment may be confirming, and the pass would sit pending forever.
+    // Having minted means verify passed, so a payment was authorised: activate
+    // and hand the token back rather than stranding them.
+    if (result?.isError && minted.token && minted.nonce) {
+      console.error(
+        `[pass] $${PASS_PRICE_USD} SETTLE THREW - activating and returning the token; funds may be in flight. ` +
+          `nonce=${minted.nonce}`,
+      );
+      activatePass(minted.nonce, undefined, 'settle threw; no settlement response');
+      const payload = {
+        ...(minted.payload ?? {}),
+        settlement: 'confirming',
+        note:
+          'Your payment was authorised but the settlement response did not arrive in time. This pass is active. ' +
+          'Do not pay again; if anything is wrong the operator has been alerted with your payment reference.',
+      };
+      return {
+        content: [{ type: 'text', text: JSON.stringify(payload) }],
+        structuredContent: payload as unknown as Record<string, unknown>,
+      };
+    }
+    return result;
   }) as typeof buyPassHandler;
   httpPaymentRequired = {
     x402Version: 2,

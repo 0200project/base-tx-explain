@@ -6,7 +6,7 @@ import { join } from 'node:path';
 // Point the pass store at a throwaway dir BEFORE the module reads DATA_DIR.
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'btx-pass-test-'));
 
-const { initPasses, mintPass, usePass, passSnapshot, activatePass, revokePendingPass, PASS_CALL_CAP } =
+const { initPasses, mintPass, usePass, passSnapshot, activatePass, revokePendingPass, listUnconfirmed, PASS_CALL_CAP } =
   await import('../src/passes.js');
 
 describe('passes', () => {
@@ -102,5 +102,15 @@ describe('passes — a pass is worthless until its payment settles', () => {
   it('the REST rail mints active (its middleware withholds the token on failure)', () => {
     const { token } = mintPass();
     expect(usePass(token).ok).toBe(true);
+  });
+
+  it('activating on an ambiguous settle records WHY on the entry, not just in logs', () => {
+    const { token } = mintPass({ pending: true, nonce: '0xn-ambig' });
+    expect(activatePass('0xn-ambig', '0xpayer', 'settlement_pending tx=0xdeadbeef')).toBe(true);
+    // The customer is not blocked...
+    expect(usePass(token).ok).toBe(true);
+    // ...and the unconfirmed activation is queryable from the store.
+    const unconfirmed = listUnconfirmed();
+    expect(unconfirmed.some((u) => u.reason.includes('settlement_pending'))).toBe(true);
   });
 });

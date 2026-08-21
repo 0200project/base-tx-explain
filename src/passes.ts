@@ -29,6 +29,12 @@ interface PassEntry {
   /** payer address from settlement, for support/forensics only */
   payer?: string;
   /**
+   * Set when a pass was activated WITHOUT a confirmed settlement (ambiguous or
+   * missing settle response). Recorded on the entry, not just in the logs, so
+   * an unpaid activation can be found by querying the store instead of grepping.
+   */
+  unconfirmed?: string;
+  /**
    * A pass is usable only once its $9 payment is CONFIRMED settled.
    *
    * On the MCP rail the payment wrapper runs the handler before it settles and
@@ -145,7 +151,7 @@ export function mintPass(
  * nothing to activate (unknown nonce, already reaped) — the caller should log
  * loudly rather than mint a replacement.
  */
-export function activatePass(nonce: string, payer?: string): boolean {
+export function activatePass(nonce: string, payer?: string, unconfirmedReason?: string): boolean {
   const pending = pendingByNonce.get(nonce);
   if (!pending) return false;
   pendingByNonce.delete(nonce);
@@ -153,8 +159,12 @@ export function activatePass(nonce: string, payer?: string): boolean {
   if (!entry) return false;
   entry.active = true;
   if (payer) entry.payer = payer;
+  if (unconfirmedReason) entry.unconfirmed = unconfirmedReason;
   flush();
-  console.log(`[pass] ACTIVATED ${pending.key.slice(0, 12)} payer=${payer ?? 'unknown'}`);
+  console.log(
+    `[pass] ACTIVATED ${pending.key.slice(0, 12)} payer=${payer ?? 'unknown'}` +
+      (unconfirmedReason ? ` UNCONFIRMED (${unconfirmedReason})` : ''),
+  );
   return true;
 }
 
@@ -224,6 +234,20 @@ export function refundPassUse(token: string): void {
   if (!entry || entry.calls_used <= 0) return;
   entry.calls_used--;
   flush();
+}
+
+/**
+ * Passes that were activated without a confirmed settlement. These are the only
+ * ones that could turn out to be unpaid, so they are the reconciliation
+ * worklist: check each against the payout wallet / authorizationState on-chain.
+ * Returns hashed keys, never tokens.
+ */
+export function listUnconfirmed(): Array<{ key: string; reason: string; payer?: string; issued: number }> {
+  const out: Array<{ key: string; reason: string; payer?: string; issued: number }> = [];
+  for (const [key, e] of passes) {
+    if (e.unconfirmed) out.push({ key: key.slice(0, 12), reason: e.unconfirmed, payer: e.payer, issued: e.issued });
+  }
+  return out;
 }
 
 /** Aggregate stats for /stats and the daily report. */
