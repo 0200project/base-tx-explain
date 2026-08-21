@@ -2,6 +2,39 @@
 
 Owner: Accountant / Controller. Opened 2026-08-21.
 
+## Today's target — set 2026-08-21, relayed via growth
+
+**10 paying customers, $9/mo each, $90 MRR, today.** Distribution and closing,
+not further research. Recorded as reported via a peer rather than heard
+directly — same standard held for every founder-sourced fact in this ledger —
+but treated as live regardless, since acting on a sales target costs nothing
+if it turns out imprecise, unlike a spend authorization would.
+
+**What this does and does not change about accounting.** Nothing about the
+basis of accounting changes: revenue is still booked only on verified
+settlement, same as always. What changes is the **scoreboard metric** for
+today specifically — growth has narrowed "revenue" for tracking purposes to
+mean **$9 Stripe pass/subscription purchases**, not any settlement on any
+rail. That's a reporting narrowing, not a change to what counts as real money;
+a $9 sale was always going to book as Stripe revenue under the existing rules
+in this ledger. It just means today's headline number is pass sales
+specifically, separate from the x402 side (which, per tonight's work, is
+$0.00 from customers and likely to stay dogfooding-only).
+
+**Booking rule for a real sale, stated in advance so it can't be confused with
+tonight's $0.02 events:** a genuine $9 pass sale books only when Stripe's
+webhook fires with `livemode: true` and Finance can independently verify a
+`settled` event at that amount in the raw ledger — same verification standard
+as every other entry here, not taken on anyone's word alone, including
+growth's or the founder's.
+
+| | |
+|---|---|
+| Target | 10 customers · $90 MRR |
+| Progress | **0 / 10 · $0 / $90** |
+| Paying customers, verified | 0 |
+
+
 **Basis of accounting: cash, on verified settlement only.** A payment is booked
 when money has actually arrived and can be seen at its source — a USDC transfer
 into the payout wallet on Base, or a settled live-mode charge in Stripe. Nothing
