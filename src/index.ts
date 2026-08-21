@@ -1358,8 +1358,14 @@ const port = Number.parseInt(
   10,
 );
 
-// Before the ledger replays: replay decides which settlements count as
-// customer revenue and needs the promoted set already loaded.
+// Order between these two NO LONGER MATTERS, and the reason is worth keeping:
+// the revenue split is derived at read time from (settlements, attribution
+// set), not accumulated during replay, so replay never consults the promoted
+// set. This comment used to claim the opposite and was true when the buckets
+// were chosen at ingest — which is exactly the arrangement that let the
+// promotion endpoint report success and move nothing. Leaving the old note
+// would have advertised a load-bearing constraint that is not real, and the
+// next person would have preserved it for a reason that no longer exists.
 initAttribution();
 initUsageLedger();
 initFreeTier();

@@ -290,3 +290,74 @@ describe('settlement attribution in the ledger', () => {
     expect(lt(usage).revenue_from_customers_usd).toBeGreaterThanOrEqual(0);
   });
 });
+
+/**
+ * Restart stability.
+ *
+ * The buckets are derived at read time; the ledger is replayed at boot. If
+ * those two paths could ever disagree about the same file, the number would
+ * change on restart with nobody editing anything — and the last bug in this
+ * area looked exactly like that from the outside, catching up silently at the
+ * next deploy and appearing to attribute itself.
+ *
+ * Suggested by Security as the thing to test before anything else, which was
+ * the right call: rules about money that fire rarely are where a wrong branch
+ * survives.
+ */
+describe('replay agrees with derive', () => {
+  const TX = '0x6ce5e3948c9c6b8e0ef8413f3c29623163bb7b58155eda90a67464f3bb119110';
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  async function bootAgainst(dir: string) {
+    vi.resetModules();
+    process.env.DATA_DIR = dir;
+    const attribution = await import('../src/attribution.js');
+    attribution._resetAttribution();
+    attribution.initAttribution();
+    const usage = await import('../src/usage.js');
+    usage.initUsageLedger();
+    const l = (usage.usageSnapshot() as { lifetime: Record<string, number> }).lifetime;
+    return {
+      raw: l.revenue_usd,
+      self: l.self_revenue_usd,
+      attributed: l.attributed_revenue_usd,
+      known: l.known_non_revenue_usd,
+      unattributed: l.unattributed_revenue_usd,
+      customer: l.revenue_from_customers_usd,
+    };
+  }
+
+  it('gives the same answer on a second boot from the same files', async () => {
+    const { mkdirSync, writeFileSync } = await import('node:fs');
+    const dir = `/tmp/replay-${Math.random().toString(36).slice(2)}`;
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      `${dir}/events.jsonl`,
+      [
+        { t: '2026-08-21T20:00:00.000Z', e: 'settled', client: 'x', amount_usd: 0.02, tx: TX },
+        { t: '2026-08-21T20:01:00.000Z', e: 'settled', client: 'stripe', amount_usd: 9, id: 'cs_self', self: true },
+        { t: '2026-08-21T20:02:00.000Z', e: 'settled', client: 'stripe', amount_usd: 9, id: 'cs_real' },
+      ]
+        .map((e) => JSON.stringify(e))
+        .join('\n') + '\n',
+    );
+    writeFileSync(
+      `${dir}/attributed-revenue.json`,
+      JSON.stringify({ attributed: ['cs_real'], at: { cs_real: '2026-08-21T20:05:00.000Z' } }),
+    );
+
+    const first = await bootAgainst(dir);
+    const second = await bootAgainst(dir);
+
+    expect(second).toEqual(first);
+    // And the values are the RIGHT ones, not merely stable at something wrong.
+    expect(first).toEqual({
+      raw: 18.02, self: 9, attributed: 9, known: 0.02, unattributed: 0, customer: 9,
+    });
+  });
+});
