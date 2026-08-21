@@ -6,6 +6,21 @@
 app = 'base-tx-explain'
 primary_region = 'iad'
 
+# SHUTDOWN CONTRACT. Both values are load-bearing and were both absent, which is
+# why a deploy killed in-flight paid requests outright.
+#
+# kill_signal: pinned to what Fly ACTUALLY sends rather than left to a default —
+# verified in our own logs (3x "Sending signal SIGINT to main child process",
+# zero SIGTERM). src/index.ts handles both, but stating it here means a future
+# change to Fly's default cannot silently move it out from under us.
+#
+# kill_timeout: the default is FIVE SECONDS to SIGKILL. An x402 settle involves
+# an on-chain broadcast and exceeds that, so a drain handler under the default
+# would look correct and still be shot mid-settle. 30s comfortably covers a
+# settle; the in-process grace is 25s so we exit on our own terms first.
+kill_signal = 'SIGINT'
+kill_timeout = '30s'
+
 [build]
 [env]
   BASE_RPC_URLS = 'https://mainnet.base.org,https://base-rpc.publicnode.com,https://base.llamarpc.com'

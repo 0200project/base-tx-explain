@@ -47,7 +47,7 @@ import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, renewPa
 import { HOUR, TtlCache } from './cache.js';
 import { APIFY_BILLING_ACTIVE, initApifyBilling, chargeApifyCall } from './apifyBilling.js';
 import { checkHealthSnapshot } from './checkHealth.js';
-import { initUsageLedger, recordEvent, usageSnapshot } from './usage.js';
+import { initUsageLedger, recordEvent, usageSnapshot, flushCheckHealth} from './usage.js';
 
 const VERSION = '0.1.2';
 const NETWORK = 'eip155:8453' as const; // Base mainnet
@@ -1396,9 +1396,87 @@ logChannelConfig();
  * self-healing. Nothing above this line needs the network, and nothing the free
  * tier serves needs payments, so none of it should wait on them.
  */
-app.listen(port, () => {
+const httpServer = app.listen(port, () => {
   console.log(`base-tx-explain v${VERSION} listening on :${port} (payment mode: ${PAYMENT_MODE})`);
 });
+
+/**
+ * GRACEFUL SHUTDOWN — the half of the pass-restart problem that PREVENTS the
+ * loss rather than recovering it.
+ *
+ * There was no signal handling here at all. Fly sends SIGINT on every deploy and
+ * Node's default for an unhandled SIGINT is to exit immediately, so a request in
+ * flight did not merely RISK being interrupted — it died, always, with no drain.
+ * Both paid rails settle AFTER the handler runs (`settleAfterHandler`), so the
+ * window that got killed is exactly the window where the payer's money has moved
+ * and the response carrying what they bought has not been sent yet. On the pass
+ * rail that stranded a $9 pass; on the per-call rail it takes the payment and
+ * returns no decode. Every deploy on 2026-08-21 — and there were many — would
+ * have done this to anyone mid-purchase.
+ *
+ * Draining is the whole fix: stop accepting new connections, let the requests
+ * already running finish paying and answering, then leave.
+ *
+ * TWO THINGS THAT MAKE THE NAIVE VERSION INSUFFICIENT, both found before writing
+ * this rather than after:
+ *
+ * 1. `server.close()` waits for keep-alive connections to go idle on their own,
+ *    so without `closeIdleConnections()` an ordinary deploy would stall for the
+ *    full grace period against clients holding an open socket and no request.
+ *    Closing an idle keep-alive costs nothing — it carries no work.
+ * 2. Fly's default `kill_timeout` is FIVE SECONDS before SIGKILL. An x402 settle
+ *    involves an on-chain broadcast and exceeds that comfortably, so this
+ *    handler on its own would still be killed mid-settle while looking correct.
+ *    `fly.toml` now sets `kill_timeout = '30s'`, and the grace below is kept
+ *    under it so we exit on our own terms rather than being shot.
+ */
+const SHUTDOWN_GRACE_MS = 25_000; // must stay below fly.toml kill_timeout
+let shuttingDown = false;
+
+function leave(code: number): never {
+  // The only buffered state; ledger, passes and attribution all write
+  // synchronously as they go, so there is nothing else to lose here.
+  try {
+    flushCheckHealth();
+  } catch (err) {
+    console.error('[shutdown] check-health flush failed:', err);
+  }
+  process.exit(code);
+}
+
+function shutdown(signal: string): void {
+  if (shuttingDown) {
+    // A second signal is an operator saying they meant it. Honour that rather
+    // than making them wait out a drain they have just asked to skip.
+    console.error(`[shutdown] second ${signal}, exiting now and abandoning in-flight requests`);
+    leave(1);
+  }
+  shuttingDown = true;
+  console.log(`[shutdown] ${signal}: refusing new connections, draining in-flight requests`);
+
+  httpServer.close(() => {
+    console.log('[shutdown] every in-flight request finished; exiting cleanly');
+    leave(0);
+  });
+
+  // Sockets with no request on them would otherwise hold the drain open.
+  httpServer.closeIdleConnections();
+
+  setTimeout(() => {
+    // Loud, because anything still running here is a request we are about to
+    // kill, and on a paid path that is someone's money.
+    console.error(
+      `[shutdown] GRACE EXPIRED after ${SHUTDOWN_GRACE_MS}ms with requests STILL IN FLIGHT. ` +
+        'A paid request killed here may have settled on chain with nothing returned to the payer. ' +
+        'Check the payout wallet against /stats unattributed[] and listUnconfirmed().',
+    );
+    httpServer.closeAllConnections();
+    leave(1);
+  }, SHUTDOWN_GRACE_MS).unref();
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 /** Retries must never stack a second copy of the paid routes onto the router. */
 let paidRoutesRegistered = false;
