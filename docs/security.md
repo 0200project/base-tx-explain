@@ -274,6 +274,25 @@ a change touches any of:
 - **New attacker-controlled data into output** — any new field sourced from
   on-chain data or a third-party API that reaches `summary`/`assets_moved`/
   `risk_flags`/`counterparties`. Add it to `provenance.untrusted_fields`.
+- **Any new revenue rail, or any change to what counts as a settled payment.**
+  Check it against the invariant below before it ships, and tell the accountant
+  session, whose books are only as honest as that definition.
+
+  > REVENUE IS BOOKED ONLY FROM A CONFIRMED, LIVE, SETTLED PAYMENT, AND EVERY
+  > SURFACE THAT DISPLAYS MONEY MUST DISTINGUISH ATTEMPTED FROM RECEIVED.
+
+  This is written as an invariant because it has now been violated three times on
+  three rails in about twelve hours, each time as a fresh bug rather than a
+  recurrence: x402 booked revenue on an unconfirmed settle; `paid_calls` counted
+  payment *attempts* and sat next to `revenue_usd` on a public endpoint, where two
+  people who knew the system misread it as revenue and one nearly reported a first
+  sale that had not happened; and the Stripe rail booked a real $9 row for a
+  test-mode purchase. Each instance was fixed on its own. The pattern is that a
+  new rail arrives without the rule, so state the rule rather than fixing a fourth
+  instance. Note the reverse direction is deliberate and must stay: a pass
+  activated on ambiguous settlement (`listUnconfirmed()`) is service delivered
+  without confirmed payment, on purpose, because withholding from someone whose
+  money probably moved is the worse error.
 - **A new upstream dependency** or a change to how an existing one's response is
   parsed.
 - **`src/labels.ts` additions are trust assertions, not just display.** A labeled
