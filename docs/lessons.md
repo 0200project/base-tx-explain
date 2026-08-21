@@ -235,3 +235,44 @@ Two things generalise:
    by design and correct. The bug was never the drift — it was that no surface
    subtracted the two numbers, so the drift was indistinguishable from failure.
    See `docs/reconciliation.md`.
+
+## Green tests that assert a contract the caller never honoured
+
+_2026-08-21, from the false drain alarm on /stats._
+
+For most of a day the reconciler reported `overbooked` and printed "USDC was
+swept out of the payout wallet without being declared in
+TREASURY_WITHDRAWN_USD". Nothing had been swept. It subtracted every known
+non-revenue arrival from the received side and none of it from the booked side,
+so the $0.02 favour that was stripped from receipts but left in the books read
+as a $0.02 shortfall. **The comparison was measuring its own exclusion.**
+
+Seventeen tests covered this file and seven of them were green across the whole
+period. They passed `booked_usd` a customer-only figure. `index.ts` passes
+`usage.lifetime.revenue_usd`, the raw ledger total with the favour still in it.
+So the tests encoded a contract no caller ever honoured, and every one of them
+confirmed the bug instead of catching it — a test suite can only check the
+function against the story the test author believed about its inputs.
+
+The generalisable checks, in the order they cost:
+
+1. **When a function takes a number someone else computes, assert on the real
+   call site, not on a plausible value.** One `grep` for `reconcile(` would have
+   shown `booked_usd: usage.lifetime.revenue_usd` and ended it. Cheaper than
+   writing any of the seven tests.
+2. **Two figures compared for a difference must exclude the same things.**
+   Asymmetric adjustment produces a delta that reports the adjustment. This is
+   the seventh appearance of one invariant — revenue is booked only from a
+   confirmed, live, settled payment, and every surface showing money must
+   distinguish attempted from received and earned from merely arrived.
+3. **Grade a control by its failure direction, not its failure rate.** This one
+   failed toward alarm, which reads as the safe direction and is not: a drain
+   alert that is permanently on is one nobody reads on the day it is right. It
+   sat next to a wallet monitor built the same afternoon to detect exactly that
+   event. Compare the risk checks, which failed toward silence — opposite
+   direction, same defect, which is that the output could not distinguish a
+   real answer from no answer.
+
+Found by curling the deployed server and reading the sentence out loud. That is
+now twice in two days that a live read caught what a green suite did not, both
+times on the endpoint where money is described to strangers.
