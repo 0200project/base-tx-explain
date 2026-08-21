@@ -181,10 +181,12 @@ chain. Until the Founder confirms the funding form (which wallet, which card,
 or whether it is yet funded at all), the approvable ceiling is what I can
 verify, not what was stated. *Blocking for any spend above $4.98.*
 
-**2. Who holds COO?** — The spending policy requires Growth → COO + Accountant
-sign-off. The `platform` session states plainly that it is not COO and holds no
-such authority. No session currently claims the role. Until it is assigned, the
-two-key check the policy describes cannot actually be performed. *Needs Founder.*
+**2. ~~Who holds COO?~~ RESOLVED 2026-08-21, directly by the Founder.** No
+session is assigned the COO title, and the Founder has said not to hold
+approvals on that — `platform` fills the senior-review function the spending
+policy assigns to COO, on the standing of an experienced team member, title
+notwithstanding. The two-key check for a Growth spend is now Growth → platform
++ Accountant.
 
 **3. Stripe settlement visibility.** — Card checkout went live tonight. I have
 no read access to Stripe, so I cannot independently verify a settled charge at
@@ -256,13 +258,11 @@ free-tier flush). Under concurrency that blocks the event loop and looks exactly
 like connection failures with no crash and no restart — in which case a constant
 `booted_at` is the confirming signal, not a reassuring one.
 
-**7. Autonomous agent spend — capability does not exist; policy not yet set.**
-Relayed via the platform session, 2026-08-21: the Founder is reported to have
-said "autonomous / automatic spend is approved from the founder, up to you
-guys if it makes sense to spend." **This reached Finance secondhand, through a
-peer's paraphrase, not directly from the Founder in this session.** Recorded
-here as reported, not as a confirmed instruction — the same standard applied to
-every other founder-sourced fact in this ledger.
+**7. Autonomous agent spend — CONFIRMED 2026-08-21, directly by the Founder.**
+First relayed secondhand via the platform session, then confirmed directly to
+Finance the same day: autonomous/automatic spend is approved, at the team's
+judgment on whether it makes sense. No longer recorded as reported-not-verified
+— this is now policy.
 
 What is independently verified, and is the reason this item is not urgent: no
 private key exists anywhere in this system today (platform's audit of `src/`),
@@ -383,10 +383,11 @@ the position *knowable* — opening this ledger, correcting the $0.02 from
 pre-logging an expected non-revenue inbound before it arrives, and flagging an
 automated reconciler that asserts revenue we do not have.
 
-**Blocking Finance, all needing the Founder:** the COO role is unassigned, so
-the two-key spend check cannot run; the funding form of the $20 is unconfirmed,
-capping approvals at $4.98; and the Stripe signing secret rotation is his to
-execute. Nothing has blocked the team yet — no spend above $4.98 has been
+**Blocking Finance, remaining, both needing the Founder:** the funding form of
+the $20 is unconfirmed, capping approvals at $4.98; and the Stripe signing
+secret rotation is his to execute. (The COO question is resolved — see Open
+Item 2 — and autonomous spend is now confirmed policy — see Open Item 7.)
+Nothing has blocked the team yet — no spend above $4.98 has been
 requested.
 
 ---
