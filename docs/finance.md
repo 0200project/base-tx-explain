@@ -410,11 +410,52 @@ this ledger's reconciliation still work — they just carry the whole defense,
 with same-day rather than pre-transaction detection, instead of backstopping
 a signer-level block.
 
-**8. Funding form of the $20 — still open.** Where the $20 should be loaded
-depends on its purpose and has not been decided: USDC into the budget wallet
-for x402-denominated spend, or a card for ads/SaaS. Not interchangeable.
-Needs the Founder's decision, ideally with Finance and platform both present
-since it determines which wallet's balance becomes the approvable ceiling.
+**8. Funding form of the $20 — RESOLVED 2026-08-21, directly by the Founder
+(relayed via platform).** USDC to the budget wallet — already executed, see
+Open Item 1. In the same message the Founder drew a channel split that
+changes what "$20 budget" refers to going forward:
+
+**AUTONOMOUS = x402 only.** The $20 USDC in the SPEND wallet
+(`0x2E31f337…5e3D06FC7`) is the *only* pot anything can spend from without the
+Founder acting himself. Agent-initiated, no per-transaction approval once the
+caps from Open Item 9 are live, bounded by the wallet's balance.
+
+**NOT AUTONOMOUS = card.** Ads, tools, SaaS — anything with a card form. An
+agent proposes, the Founder approves, and **the Founder's own hands enter the
+card details, always.** No agent holds, sees, or types a card number — this
+matches Finance's own standing operating rule (entering payment credentials is
+prohibited, full stop, no exception for founder authorization) and now applies
+to every agent on the team, not just this one. The two-key spend check (Amount
+/ Purpose / Channel / Expected outcome, checked against availability and
+budget) still applies to the *proposal*; execution never does.
+
+**Consequence for what Finance can actually see:** card spend has no wallet,
+no ceiling Finance knows of, and **no balance any monitor can read.** It is
+whatever the Founder approves, on whatever card, and Finance learns of it only
+when told — by the Founder or the proposing agent. This is a structural blind
+spot, not a gap to be fixed: the reconciliation posture from Open Item 9
+(every outflow matched to a pre-justified, named-payee proposal) applies to
+card spend *more* than x402, precisely because a card charge leaves no on-chain
+trace Finance can independently verify — this ledger becomes the *only* record
+that a card charge was ever justified, not a cross-check on one.
+
+**Recorded, not yet mine to decide:** platform proposed, and Finance agrees on
+principle, that an agent's involvement in any card purchase should end at the
+payment form — make the case, name the cost, link the page, then stop. This
+already binds Finance directly under its own operating rules; recording it here
+so it is written down as team policy rather than resting on each agent holding
+the line individually.
+
+**On the open allowlist-vs-caps question (Open Item 9, above): likely
+narrowed, possibly moot.** If "spend that gets us clients" resolves mostly to
+card — which needs no wallet, no key, no signer — then x402 autonomous spend
+may be dogfooding-only, in which case `to` gets pinned to our own `payTo`, a
+fully compromised agent can do nothing but pay us, and there is nothing left
+to allowlist. Security is putting the sharper question to the Founder
+directly: is there any third-party x402 service we would actually pay? Finance
+already put the allowlist framing to him in this chat before this scope change
+arrived — noting that here rather than re-asking, so he isn't asked the same
+decision twice from two directions in one evening.
 
 ## Known corrections to the record
 
@@ -494,7 +535,7 @@ failed read). Not inherited from any report that could not complete.
 | Growth spend | $0.00 |
 | Infrastructure cash out | $0.00 |
 | **Net cash flow** | **$0.00** |
-| Funds on hand | **$20.04** ($20.00 budget, fully funded 2026-08-21 + $0.04 payout) |
+| Funds on hand | **$20.04** ($20.00 budget, fully funded 2026-08-21 + $0.04 payout) — cross-verified against platform's live wallet monitor at `/wallets` (stats-token gated, not public), first read 17:52:48Z, exact match |
 | Growth budget | $20.00 allocated · $0.00 spent · **$20.00 verified available** |
 
 Usage context, not revenue: 126 lifetime calls · 43 paywall hits · 8 payment
