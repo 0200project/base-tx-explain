@@ -319,6 +319,31 @@ prompt-injection target with a payout attached. Every such spend, autonomous or
 not, gets logged the same way as any other expense in this ledger — no
 exception for "automatic."
 
+**9. What is autonomous spend actually FOR? — blocks the security design.**
+Raised 2026-08-21 by security, and it's the right question before any spend
+mechanism gets built: does autonomous spend pay only our own endpoint
+(dogfooding/validation — destination pinnable, a compromised agent becomes a
+no-op), or arbitrary third-party x402 services (destination not pinnable,
+design leans entirely on amount limits and balance)? Materially different
+builds. *Needs the Founder.*
+
+Security's framing of the risk, worth recording verbatim rather than
+paraphrasing: **"the most you can lose from the SPEND wallet is a number you
+choose — today that number is $4.98."** Balance is the control that cannot be
+reasoned around, because no compromise spends money that isn't there. Zero ETH
+in that wallet is *not* a control — EIP-3009 lets a third party submit and pay
+gas on the holder's behalf, so an attacker with the key can still move the
+full balance. Consequence for funding: **top up in small, deliberate
+increments rather than one transfer**, since the balance now doubles as the
+security boundary, not just working capital.
+
+The sharpest finding, recorded here because it is a hard boundary Finance
+should hold the team to regardless of implementation: **if a spending agent
+ever consumes this product's own `explain_transaction` output as a decision
+input, an attacker who crafts a transaction can write text directly into the
+spender's context — a closed loop from attacker-controlled chain data to our
+own money.** Must never be wired that way.
+
 **8. Funding form of the $20 — still open.** Where the $20 should be loaded
 depends on its purpose and has not been decided: USDC into the budget wallet
 for x402-denominated spend, or a card for ads/SaaS. Not interchangeable.
