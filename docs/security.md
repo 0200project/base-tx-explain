@@ -147,8 +147,8 @@ data. Keep that list honest as fields change.
   18-decimal fallback (10^n wrong for stablecoins) for the whole process life.
   `TtlCache.getOrLoad` now accepts a per-result TTL; a `null` is cached for only
   `NEGATIVE_TTL` (10 min) and self-heals, while a real result is still kept long.
-  The same mechanism is available to close the `verification.ts` / `drainers.ts`
-  negatives (Open #3).
+  The same mechanism has since closed the `verification.ts` / `firstTime.ts` /
+  `drainers.ts` negatives (below).
 - **Token-symbol impersonation** (canonical cross-check). A contract that
   self-reports a valid ticker (e.g. "USDC") from an address that is not that
   token's canonical one is shown as its address, not the ticker, and carries a
@@ -190,7 +190,54 @@ data. Keep that list honest as fields change.
   write, degrades to in-memory on file error — over-granting, never wrongly
   charging). Verified live: `/data/free-tier.json` initializes on boot. (Minor
   residual: the key salt is a constant prefix, so file keys are IP-reversible the
-  same way the logged `ipTag` is — same class as the ipTag item in #7, not new.)
+  same way the logged `ipTag` is — same class as the ipTag item in Open #5, not new.)
+
+- **One signed authorization could buy an unbounded number of decodes**
+  (`src/authOnce.ts`). An EIP-3009 nonce is not consumed until SETTLE, and our
+  path is verify → decode → settle. N concurrent requests carrying ONE
+  authorization therefore all pass verify legitimately — the facilitator's
+  simulation is a question about present chain state, and the honest answer to
+  all N is yes — so each ran a full decode while exactly one settled. The revenue
+  loss (N × $0.02) was never the point: each decode spends real upstream RPC
+  calls, so one payment bought an unbounded multiple of our most expensive
+  resource. Cost amplification, not a revenue bug, and only we could close it,
+  because nothing is wrong on-chain until settle. Now single-flighted on
+  `(payer, nonce)`: every caller of one authorization gets the SAME decode,
+  computed once. It DEDUPES rather than rejects on purpose — a client whose
+  response was lost retries with the same authorization, and rejecting that
+  after the first settled would take the money and withhold the decode, which is
+  the one error this service must never make. Errors are not retained (a failed
+  decode does not settle, so its authorization is still unspent). Fails open: an
+  unreadable payload disables dedup rather than withholding work. Residual, by
+  design: per-process, so multiple instances divide the amplification by instance
+  count instead of eliminating it — the unbounded case is gone either way.
+  NOT demonstrated against production, per the rules of engagement; code-level
+  argument plus `test/auth-once.test.ts`.
+- **A reverted transaction reported a phantom ETH movement** (`b1baeac`), and an
+  **ERC-1155 batch truncated at 60 while claiming completeness** (`ceaabec`).
+  Both made `assets_moved` assert something false — the first contradicted
+  `status`, the `transaction_reverted` flag and the summary's own "no assets
+  moved" inside one response.
+- **Security-signal negative-cache poisoning** (`2d446d2`, `4ca22dc`, `ea44a8e`).
+  `verification.ts` cached a transient `'unknown'` for a DAY keyed on address
+  only, so one Sourcify blip suppressed `unverified_contract` for that contract
+  for 24h across every client; `firstTime.ts` did the same with a `null` verdict.
+  Live-exercised on 2026-08-20 by a 16-minute Blockscout outage that poisoned
+  keys long after recovery. Both now use `NEGATIVE_TTL`. `drainers.ts`
+  separately retried a failed blacklist load only after the full 12-hour refresh
+  interval, leaving a fail-open check dark; it now retries in 60s, and concurrent
+  cold-start callers all await the in-flight load instead of answering from an
+  empty set.
+- **A facilitator outage was a total outage** (`5d3c0bf`). `app.listen()` was
+  gated behind `initPayments()`, so a PayAI blip at boot crash-looped the entire
+  service — including the free tier and `/healthz`, which have nothing to do with
+  payments. The port now binds first and payments initialize in the background
+  with exponential backoff, registering the paid routes when they come up.
+- **`fly deploy` shipped the WORKING DIRECTORY, not HEAD** (`e451b5e`, platform).
+  With 3–4 sessions in one clone, a tree that COMPILES while carrying someone
+  else's uncommitted changes shipped them silently — no commit, no review, and a
+  deployed artifact corresponding to no inspectable commit. That voids the
+  guarantee the whole review process rests on. Now gated by `scripts/predeploy.sh`.
 
 ## 5. Open (known, unfixed) — ranked
 
@@ -203,47 +250,7 @@ data. Keep that list honest as fields change.
    forged token legs show as addresses. A swap is not a custody-safety claim, so
    this ranks below the closed cases. Candidate fix: require corroborating
    fungible movements before trusting a swap event.
-2. **Reverted tx with value reports a phantom ETH movement**; ERC-1155 batch
-   truncates at 60 with `truncated:false`. Both make `assets_moved` assert
-   something false.
-3. **Negative-cache poisoning of security signals — now live-exercised, and the
-   fix is two one-liners.** `verification.ts:15` caches a transient `'unknown'`
-   for a DAY, keyed on ADDRESS ONLY — so one Sourcify blip suppresses
-   `unverified_contract` for that contract for 24h across every transaction and
-   every client. `firstTime.ts:40` does the same with a `null` verdict (keyed
-   including `beforeBlock`, so narrower impact). Base Blockscout returned HTTP
-   500 at 22:04 on 2026-08-20 and 200 by 22:20 — a 16-minute outage that poisoned
-   those keys for 24 hours, long after recovery. The `checks` field now makes the
-   resulting degradation visible, which is a real improvement, but the poisoning
-   itself is unchanged. The machinery to fix it already exists (per-result TTL in
-   `TtlCache.getOrLoad`, plus `NEGATIVE_TTL`):
-   - `verification.ts`: pass `(v) => (v === 'unknown' ? NEGATIVE_TTL : DAY)` as
-     the `getOrLoad` TTL.
-   - `firstTime.ts`: `cache.set(cacheKey, verdict, verdict === null ? NEGATIVE_TTL : DAY)`.
-   Priority note: this is cheaper and closes more than the deferred
-   truncated-vs-unreachable status split, which is a return-type change touching
-   these same cache semantics. Do these first.
-4. **`fly deploy` ships the WORKING DIRECTORY, not HEAD — uncommitted code can
-   reach production unreviewed.** Discovered 2026-08-21 when a deploy picked up
-   another session's half-finished edits. That failure was benign because the
-   tree did not compile and the build failed loudly. The dangerous version is the
-   one that has not happened yet: a tree that COMPILES while carrying
-   uncommitted changes from any of the 3-4 concurrent sessions ships them
-   silently — no commit, no review, no audit trail, and the deployed artifact
-   corresponds to no commit anyone can inspect afterwards. This voids the
-   guarantee the whole review process rests on: "reviewed before it ships" means
-   nothing if the deploy ships something other than the reviewed diff. A clean
-   `git log` and a green local `tsc` are NOT sufficient preconditions.
-   Mitigation (not yet built): refuse to deploy when tracked files under the
-   image's COPY paths (`src/`, `package.json`, `tsconfig.json`,
-   `package-lock.json` — note `site/` is NOT in the image) are dirty:
-   `git status --porcelain -- src package.json tsconfig.json package-lock.json`
-   must be empty. Until that exists, check it by hand every time.
-5. **Facilitator outage = total outage** — `app.listen()` is gated behind
-   `initPayments()`; a PayAI blip at boot crash-loops the whole service. Bind
-   first, init payments in the background.
-6. _(moved to Fixed: IPv6 /64 normalisation)_
-7. **Ambiguous pass activation (residual of the fix below).** A pass activated
+2. **Ambiguous pass activation (residual of the $9-pass fix in §4).** A pass activated
    because settlement was ambiguous rather than confirmed could, in principle,
    turn out to be unpaid — bounded at $9 of calls. Deliberately NOT capped: this
    path produced two serious bugs in one evening precisely because it accumulated
@@ -251,7 +258,7 @@ data. Keep that list honest as fields change.
    The correct close is a reconciler against `authorizationState(payer, nonce)`
    (the same call verify uses) plus the payout wallet, not a cap that papers over
    it.
-8. **UNVERIFIED: that the Stripe signing secret in Fly is the newly-ROLLED one.**
+3. **UNVERIFIED: that the Stripe signing secret in Fly is the newly-ROLLED one.**
    The malformed entry whose NAME was a secret value is confirmed deleted, and a
    secret is loaded and verifying (an unsigned POST to `/stripe/webhook` returns
    400, not 503). But deleting that entry removed a COPY of the secret; it does
@@ -265,7 +272,7 @@ data. Keep that list honest as fields change.
    exercised it. Closes on the first real delivery, or a Stripe "send test event"
    — Stripe's dashboard was erroring when we tried. This also gates card payments
    working at all: a stale value means charged-at-Stripe, no pass minted.
-8. **Test files are never typechecked**, so a signature change silently leaves
+4. **Test files are never typechecked**, so a signature change silently leaves
    stale callers. `tsconfig.json` includes only `src/**/*.ts`; `npm run typecheck`
    therefore passes while a test calls a function with the wrong shape. Found when
    adding a required field to `buildAssetsMoved` produced no error in
@@ -277,7 +284,7 @@ data. Keep that list honest as fields change.
    `src` and `test`, wired to a `typecheck:test` script. Not done here: it touches
    shared build config and would surface errors across test files owned by several
    sessions, so it wants its own change rather than riding along with a bug fix.
-8. **Info/ops:** `/healthz` publishes lifetime revenue + funnel unauthenticated;
+5. **Info/ops:** `/healthz` publishes lifetime revenue + funnel unauthenticated;
    payer EIP-3009 signature written to logs on facilitator error; `ipTag` is a
    reversible 32-bit hash; unbounded usage-ledger Sets on a 256 MB box.
 
@@ -288,7 +295,8 @@ data. Keep that list honest as fields change.
 - **Refund abuse for free _successful_ decodes** — `refundFreeCall` fires only
   when the call returned `isError`; you cannot get a real decode and a refund.
 - **Facilitator outage _during verify_** — verify precedes the handler, so it
-  fails closed (no free decode). Only settle-after leaks (Open #7).
+  fails closed (no free decode). The settle-after window leaked until the
+  authorization single-flight closed it (§4).
 - **Non-string `tx_hash` crash** — the MCP SDK's zod layer rejects it (`-32602`)
   before `runExplain`. Confirmed live.
 - **Malformed-JSON stack leak** — Express 5 under `NODE_ENV=production` returns a
@@ -534,7 +542,8 @@ Mechanism, given an unconstrained destination:
 `fly deploy` from the repo root — and note it builds the WORKING DIRECTORY, not
 HEAD, so verify `git status --porcelain -- src package.json tsconfig.json
 package-lock.json` is empty first or you may ship another session's uncommitted
-work (Open #4). Also confirm your commit is not already live
+work. `scripts/predeploy.sh` now enforces this; do not bypass it. Also confirm
+your commit is not already live
 (`git merge-base --is-ancestor <commit> HEAD`) before restarting a service real
 users are mid-session on. After: confirm `/healthz` still shows the
 lifetime ledger (it survives restarts via the `/data` volume) and that the 402

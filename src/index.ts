@@ -6,6 +6,7 @@ import { HTTPFacilitatorClient, x402ResourceServer, type FacilitatorClient } fro
 import { ExactEvmScheme } from '@x402/evm/exact/server';
 import { declareDiscoveryExtension } from '@x402/extensions/bazaar';
 import { createPaymentWrapper, type MCPToolContext, type ToolResult } from '@x402/mcp';
+import { authKeyOf, forgetAuthorization, onceByAuthorization } from './authOnce.js';
 import express from 'express';
 import * as z from 'zod/v4';
 import { dashboardPage, loginPage } from './dashboard.js';
@@ -306,7 +307,19 @@ async function initPayments(): Promise<void> {
   });
   sharedResourceServer = resourceServer;
   sharedPayTo = payTo;
-  paidHandler = paid(runExplain) as typeof paidHandler;
+  // One signed authorization buys one decode: N concurrent copies of the same
+  // authorization all pass verify (the nonce is not consumed until settle), and
+  // without this each would run its own decode against the upstream RPC. See
+  // src/authOnce.ts for why this shares the result rather than rejecting.
+  const chargedExplain = paid(runExplain);
+  paidHandler = (async (args: { tx_hash: string }, extra: unknown) => {
+    const key = authKeyOf(extra);
+    const result = await onceByAuthorization(key, async () => chargedExplain(args, extra as never));
+    // An errored decode does not settle, so that authorization is still unspent
+    // and a retry has to really run instead of replaying the failure.
+    if ((result as { isError?: boolean } | null)?.isError) forgetAuthorization(key);
+    return result;
+  }) as typeof paidHandler;
 
   // The $9 pass tool rides the same resource server with its own price.
   // Mint happens in the handler (post-verify); if settlement then fails we
