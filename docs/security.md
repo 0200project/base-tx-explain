@@ -421,6 +421,22 @@ So:
   spend to grow. That named payee is then approved and added. Caps and balance
   apply as the backstop.
 
+**Checked, not merely unnamed (2026-08-21).** Growth looked and found no x402
+vendor worth paying: the ones with verified evidence are either free and keyless
+(GoPlus, Blockscout — both verified responding live) or direct competitors selling
+into our buyer, where paying them funds a competitor's traffic. No vendor was
+identified that would materially improve our own product. That is a real negative
+result rather than an absence of effort, so the pinned default is the ANSWER, not
+a placeholder awaiting research. Re-open only on a specific vendor with a price
+and a reason, not on a hunch that one must exist.
+
+**Forward note, since those free APIs were surfaced as candidates:** free does not
+mean safe to consume. Wiring a third-party token-security verdict (GoPlus or
+similar) into `risk_flags` would make our safety signal depend on their
+correctness and availability, and would add another attacker-influenceable input
+to output that other agents act on. That is a §7 re-review trigger (new upstream
+dependency AND new attacker-controlled data reaching output), not a drop-in.
+
 **His answer IS the allowlist**, arrived at from the product side rather than
 imposed as a security constraint — "an agent finds a service, then we pay it"
 describes a payee being named before it is paid. Nobody had to narrow his scope;
