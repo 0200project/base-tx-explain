@@ -194,3 +194,64 @@ Concretely: **do not spend the $20 on acquisition tests against a funnel four
 strangers have entered.** Spend nothing until the top of the funnel is non-zero.
 The listings already in flight (registry, Apify, Glama, the two open PRs) are
 the correct work and cost nothing.
+
+---
+
+# §6 answered: the unverified-contract wedge is dead
+
+_Platform, 2026-08-21. Measured with `scripts/unverified-gap.ts`._
+
+The research called this "the only defensible wedge I could produce
+empirically" and then refused to call it a finding, because the gap was
+confirmed at n=1 and nobody had checked whether **we** close it. Now measured.
+
+## Result
+
+14 recent Base transactions whose target contract is unverified:
+
+```
+our decoder answered                     14/14
+blockscout decoded_input was NULL        13/14   <- the gap is real and common
+  ...of those, WE named the function      0/13   <- and we do not close it
+  ...of those, WE listed assets moved     2/13
+  ...of those, WE produced a summary     13/13
+```
+
+**Zero of thirteen.** Where Blockscout returns a bare selector, we return a bare
+selector: *"called contract 0x… (unrecognized function, selector 0x7b84f330)"*.
+
+## It is not a bug on our side, which was the thing worth ruling out
+
+`0/13` could equally have meant our selector lookup was broken, in which case the
+wedge would be recoverable. It is not. Queried directly against the Sourcify
+signature database that `src/decode/selectors.ts` uses:
+
+| selector | signature DB answer |
+|---|---|
+| `0xa9059cbb` (control) | `transfer(address,uint256)` |
+| `0x1667d875` | `null` |
+| `0x7b84f330` | `null` |
+
+The control resolves, so the lookup works. Those selectors are simply **not in
+any public signature database**, and no amount of effort on our side changes
+that: naming a function on an unverified contract requires the ABI, and not
+having the ABI is what "unverified" means. This is structural, not a gap in our
+implementation.
+
+## What this kills, and what it does not
+
+**Kills:** any claim that we decode unverified contracts better than the free
+alternative. It must not be said to a prospect. The 40%-of-Base-traffic figure
+describes a real hole that nobody fills, including us.
+
+**Does not kill:** the things that were already verified and remain ours — one
+call returning strict JSON with assets, counterparties, gas in USD and risk
+flags; deterministic with no LLM in the response path; no account; and the
+`checks` object, which is genuine provenance no explorer publishes. Note that
+we still produced a useful summary on 13/13 and assets on 2/13 — we degrade
+honestly rather than failing. That is a quality argument, not a capability gap
+in our favour, and it should be sold as the former.
+
+With this, every hypothesis §6 flagged as unverified has been tested or
+retired. Nothing in the segment research is now waiting on evidence except the
+accounting/tax segment, which was never fetched at all.

@@ -11,37 +11,40 @@
  *
  *   npx tsx scripts/unverified-gap.ts [sample-size]
  *
- * Reads INTERNAL_MARKER so the sample does not land in the ledger looking like
- * a stranger — the mistake paid-call.ts made.
+ * Calls the decoder in-process, so it neither consumes the free tier nor lands
+ * in the ledger looking like a stranger.
  */
-import { readFileSync } from 'node:fs';
+import { explainTransaction } from '../src/explain.js';
 
 const BS = 'https://base.blockscout.com/api/v2';
-const SERVER = process.env.PUBLIC_URL ?? 'https://base-tx-explain.fly.dev';
 const WANT = Number.parseInt(process.argv[2] ?? '12', 10);
-
-function marker(): string {
-  if (process.env.INTERNAL_MARKER) return process.env.INTERNAL_MARKER;
-  try {
-    return readFileSync(new URL('../.internal-marker', import.meta.url), 'utf8').trim();
-  } catch {
-    return '';
-  }
-}
-
-const MARKER = marker();
-if (!MARKER) console.warn('WARNING: no INTERNAL_MARKER — this sample will count as external traffic.\n');
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Blockscout rate-limits an unauthenticated caller, and a silent null here
+ * produced a run that reported "sampled 0" as though no unverified contracts
+ * exist on Base. An empty sample and a throttled sample must not look alike —
+ * the same silence-reads-as-a-result failure this codebase keeps finding.
+ */
 async function j<T>(url: string, headers: Record<string, string> = {}): Promise<T | null> {
-  try {
-    const res = await fetch(url, { headers, signal: AbortSignal.timeout(30_000) });
-    if (!res.ok) return null;
-    return (await res.json()) as T;
-  } catch {
-    return null;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const res = await fetch(url, { headers, signal: AbortSignal.timeout(30_000) });
+      if (res.ok) return (await res.json()) as T;
+      if (res.status === 429 || res.status >= 500) {
+        const wait = 1500 * 2 ** attempt;
+        console.log(`   [blockscout ${res.status}] backing off ${wait}ms`);
+        await sleep(wait);
+        continue;
+      }
+      return null;
+    } catch {
+      await sleep(1500 * 2 ** attempt);
+    }
   }
+  console.log('   [blockscout] gave up after 4 attempts');
+  return null;
 }
 
 interface BsTx {
@@ -59,7 +62,9 @@ async function findUnverified(want: number): Promise<BsTx[]> {
   let next = '';
   for (let page = 0; page < 8 && out.length < want; page++) {
     const body = await j<{ items: BsTx[]; next_page_params: Record<string, unknown> | null }>(
-      `${BS}/transactions?filter=validated${next}`,
+      // No `filter=validated`: Blockscout 500s on it intermittently, which cost
+      // a run. Plain /transactions is stable; filter client-side instead.
+      `${BS}/transactions${next ? `?${next.slice(1)}` : ''}`,
     );
     if (!body?.items) break;
     for (const t of body.items) {
@@ -89,44 +94,58 @@ interface Ours {
   [k: string]: unknown;
 }
 
-/** POST /explain — the REST face. A GET there is a 405 by design. */
+/**
+ * Call the decoder IN-PROCESS rather than over HTTP.
+ *
+ * The first attempt went through `POST /explain` and scored 0 of 12 — not
+ * because the decoder failed but because this IP had exhausted its own free
+ * tier, so every call came back paywalled. A run that measures our billing
+ * instead of our decoding, and reports the result as a capability finding, is
+ * worse than no run: it produced a confident "we never name the function"
+ * that happened to point the same way as the truth, for entirely the wrong
+ * reason.
+ *
+ * The question is about the decoder, so ask the decoder.
+ */
 async function ours(hash: string): Promise<Ours | null> {
   try {
-    const res = await fetch(`${SERVER}/explain`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        ...(MARKER ? { 'x-btx-internal': MARKER } : {}),
-      },
-      body: JSON.stringify({ tx_hash: hash }),
-      signal: AbortSignal.timeout(45_000),
-    });
-    if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as { code?: string; error?: string };
-      // A paywall or an exhausted free tier is not a decode failure, and
-      // silently scoring it as one would understate our own capability.
-      console.log(`   [${res.status} ${body.code ?? ''}] ${String(body.error ?? '').slice(0, 80)}`);
-      return null;
-    }
-    return (await res.json()) as Ours;
-  } catch {
+    return (await explainTransaction(hash)) as unknown as Ours;
+  } catch (err) {
+    console.log(`   [decode failed] ${err instanceof Error ? err.message.slice(0, 90) : 'unknown'}`);
     return null;
   }
 }
 
-/** Any human-readable function name anywhere in our payload. */
+/**
+ * The function name we resolved, or null if we only had a bare selector.
+ *
+ * Read out of the summary rather than a field, because that is where it
+ * actually lives. The decoder emits one of two shapes:
+ *
+ *   "... called contract 0x… (function: updatePrice)"
+ *   "... called contract 0x… (unrecognized function, selector 0x7b84f330)"
+ *
+ * An earlier version scanned the whole payload for a `method`-ish key. No such
+ * key exists, so it returned null unconditionally and would have scored a
+ * perfect decoder as useless. It agreed with the truth by accident, which is
+ * the most dangerous way for a measurement to be right.
+ */
 function methodNamed(o: Ours | null): string | null {
-  if (!o) return null;
-  const blob = JSON.stringify(o);
-  // A named call looks like `someFunction(` — a bare selector does not.
-  const m = blob.match(/"(?:method|action|function|method_call)"\s*:\s*"([^"]{2,80})"/);
-  if (m?.[1] && !/^0x[0-9a-f]{8}$/i.test(m[1])) return m[1];
-  return null;
+  const summary = typeof o?.summary === 'string' ? o.summary : '';
+  const named = summary.match(/\(function:\s*([^)]{1,80})\)/);
+  return named?.[1]?.trim() ?? null;
 }
 
 const rows: Array<Record<string, unknown>> = [];
 
 const sample = await findUnverified(WANT);
+if (sample.length === 0) {
+  console.error(
+    '\nNO SAMPLE. This is a failed run, not a finding — Blockscout returned nothing,\n' +
+      'most likely rate limiting. Do not read it as "no unverified contracts exist".\n',
+  );
+  process.exit(2);
+}
 console.log(`Sampled ${sample.length} Base transactions to UNVERIFIED contracts.\n`);
 
 for (const t of sample) {
@@ -164,7 +183,7 @@ const weSummarised = bsBlank.filter((r) => r.ours_summary);
 
 console.log('='.repeat(72));
 console.log(`sampled                                  ${rows.length}`);
-console.log(`our endpoint answered                    ${served.length}/${rows.length}`);
+console.log(`our decoder answered                     ${served.length}/${rows.length}`);
 console.log(`blockscout decoded_input was NULL        ${bsBlank.length}/${rows.length}`);
 console.log(`  ...of those, WE named the function     ${weNamed.length}/${bsBlank.length}`);
 console.log(`  ...of those, WE listed assets moved    ${weAddedAssets.length}/${bsBlank.length}`);
