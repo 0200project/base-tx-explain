@@ -126,6 +126,16 @@ recommendation, name the primary source you checked it against. If the answer is
 "the task that said so," it has not been checked. See also the entry on
 third-party claims — same failure, pointed inward.
 
+**Corollary — a control has to differ from the suspect in exactly the dimension
+being tested.** Two sessions independently near-reported a production outage on
+the same day. Both offered a control: other hosts were reachable, so "it is not
+my network." Neither control host was on the same platform as the service, so
+they established "not my laptop" and nothing more — the suspect dimension was the
+platform, and the controls did not vary it. The evidence was equally consistent
+with the platform's edge misbehaving, which is what it turned out to be. Before
+citing a control, say out loud which single variable it isolates; if it isolates
+a different one, it is decoration.
+
 ## The deploy does not build what you committed
 
 _2026-08-21._
