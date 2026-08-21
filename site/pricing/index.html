@@ -367,7 +367,7 @@
 
   function renderSuccess(payload) {
     var token = payload && payload.pass_token;
-    var url = token ? 'https://base-tx-explain.fly.dev/mcp/' + token : null;
+    var url = (payload && payload.mcp_url) || (token ? 'https://base-tx-explain.fly.dev/mcp/' + token : null);
     renderPanel(
       '<p>Paid. This is the only proof of purchase — save it now.</p>' +
       (url
