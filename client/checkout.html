@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Checkout — base-tx-explain</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<!--
+  Checkout UI for the x402 payment path. Not yet wired into the site.
+
+  The visual grammar is deliberately conventional — one column, a line item, a
+  total, one primary action — because that grammar is what makes a payment feel
+  routine. The mechanism underneath is not conventional at all: no account, no
+  card, no processor, and a signature made in the payer's own wallet. Familiar
+  frame, honest contents.
+
+  Nothing here is decorative reassurance. There are no security badges, no lock
+  icons and no invented guarantees. The only claims made are ones that are
+  literally true of this flow.
+-->
+<style>
+  :root {
+    --bg: #08080a;
+    --card: #101013;
+    --card-2: #16161a;
+    --line: #232329;
+    --line-2: #1b1b20;
+    --fg: #f2f2f5;
+    --dim: #9a9aa4;
+    --faint: #64646d;
+    --accent: #4e9eff;
+    --accent-ink: #06121f;
+    --ok: #3fb950;
+    --bad: #f2665c;
+    --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.25rem 4rem;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+
+  .checkout { width: 100%; max-width: 25.5rem; }
+
+  .brand {
+    display: flex; align-items: center; gap: .55rem;
+    margin: 0 0 1.5rem; padding-left: .1rem;
+  }
+  .brand svg { width: 1.55rem; height: auto; display: block; }
+  .brand span { font-weight: 600; font-size: .95rem; letter-spacing: -.01em; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  /* ---- line item ---- */
+  .item { padding: 1.4rem 1.4rem 1.15rem; }
+  .item-label {
+    font: 500 .68rem/1 var(--mono);
+    letter-spacing: .13em; text-transform: uppercase;
+    color: var(--faint); margin: 0 0 .85rem;
+  }
+  .item-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+  .item-name { font-weight: 500; margin: 0; }
+  .item-sub { color: var(--dim); font-size: .855rem; margin: .15rem 0 0; }
+  .item-price {
+    font: 500 1.05rem/1 var(--mono);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .total {
+    border-top: 1px solid var(--line-2);
+    padding: 1rem 1.4rem;
+    display: flex; align-items: baseline; justify-content: space-between;
+    background: var(--card-2);
+  }
+  .total-label { color: var(--dim); font-size: .9rem; }
+  .total-amount {
+    font: 600 1.5rem/1 var(--sans);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.02em;
+  }
+  .total-unit { color: var(--faint); font-size: .8rem; font-weight: 400; margin-left: .3rem; }
+
+  /* ---- action area ---- */
+  .action { padding: 1.15rem 1.4rem 1.3rem; }
+
+  button.primary {
+    width: 100%;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: 0; border-radius: 8px;
+    font: 600 .95rem/1 var(--sans);
+    padding: .85rem 1rem;
+    cursor: pointer;
+    transition: background .15s ease, opacity .15s ease;
+    display: flex; align-items: center; justify-content: center; gap: .5rem;
+    min-height: 2.85rem;
+  }
+  button.primary:hover:not(:disabled) { background: #6aaeff; }
+  button.primary:disabled { opacity: .45; cursor: not-allowed; }
+  button.primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  button.link {
+    background: none; border: 0; color: var(--dim);
+    font: 400 .85rem/1.4 var(--sans); cursor: pointer; padding: 0;
+    text-decoration: underline; text-underline-offset: 2px;
+  }
+  button.link:hover { color: var(--fg); }
+
+  .assurance {
+    margin: .95rem 0 0;
+    font-size: .8rem; line-height: 1.5; color: var(--faint);
+    text-align: center;
+  }
+
+  /* ---- wallet strip ---- */
+  .wallet {
+    display: flex; align-items: center; gap: .6rem;
+    padding: .7rem .8rem; margin-bottom: .9rem;
+    background: var(--card-2); border: 1px solid var(--line-2);
+    border-radius: 8px; font-size: .845rem;
+  }
+  .dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--faint); flex: none; }
+  .dot.on { background: var(--ok); }
+  .dot.off { background: var(--bad); }
+  .wallet-text { color: var(--dim); min-width: 0; }
+  .wallet-text strong { color: var(--fg); font-weight: 500; }
+  .addr { font-family: var(--mono); font-size: .8rem; }
+
+  /* ---- progress ---- */
+  .progress { margin: .2rem 0 0; }
+  .prog-row {
+    display: flex; align-items: center; gap: .6rem;
+    font-size: .855rem; color: var(--faint);
+    padding: .28rem 0;
+    transition: color .2s ease;
+  }
+  .prog-row .ic { width: 1rem; height: 1rem; flex: none; display: grid; place-items: center; }
+  .prog-row.active { color: var(--fg); }
+  .prog-row.done { color: var(--dim); }
+
+  .spinner {
+    width: .8rem; height: .8rem; border-radius: 50%;
+    border: 1.5px solid rgba(78,158,255,.25);
+    border-top-color: var(--accent);
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .tick { color: var(--ok); font-size: .8rem; line-height: 1; }
+  .pip { width: .3rem; height: .3rem; border-radius: 50%; background: currentColor; opacity: .5; }
+
+  /* ---- messages ---- */
+  .note {
+    border-radius: 8px; padding: .75rem .85rem; margin: .9rem 0 0;
+    font-size: .855rem; line-height: 1.5;
+  }
+  .note.bad { background: rgba(242,102,92,.09); border: 1px solid rgba(242,102,92,.25); color: #ffb0a8; }
+  .note.info { background: rgba(78,158,255,.07); border: 1px solid rgba(78,158,255,.2); color: #a9cfff; }
+  .note strong { color: inherit; font-weight: 600; }
+
+  /* ---- success ---- */
+  .done-wrap { padding: 2rem 1.4rem 1.6rem; text-align: center; }
+  .done-mark {
+    width: 2.75rem; height: 2.75rem; margin: 0 auto .9rem;
+    border-radius: 50%; background: rgba(63,185,80,.12);
+    border: 1px solid rgba(63,185,80,.35);
+    display: grid; place-items: center; color: var(--ok); font-size: 1.15rem;
+    animation: pop .35s cubic-bezier(.2,.9,.3,1.3);
+  }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .done-title { font-size: 1.05rem; font-weight: 600; margin: 0 0 .3rem; }
+  .done-sub { color: var(--dim); font-size: .875rem; margin: 0; }
+
+  .receipt {
+    margin: 1.2rem 0 0; text-align: left;
+    border-top: 1px solid var(--line-2); padding-top: .9rem;
+    display: grid; grid-template-columns: auto 1fr; gap: .35rem .9rem;
+    font-size: .8rem;
+  }
+  .receipt dt { color: var(--faint); }
+  .receipt dd { margin: 0; font-family: var(--mono); font-size: .78rem; word-break: break-all; }
+
+  .result {
+    margin: 1rem 0 0; text-align: left;
+    background: #060608; border: 1px solid var(--line-2); border-radius: 8px;
+    padding: .8rem; font: 400 11.5px/1.65 var(--mono); color: var(--dim);
+    max-height: 15rem; overflow: auto; white-space: pre-wrap; word-break: break-word;
+  }
+
+  .footnote {
+    margin: 1.15rem 0 0; text-align: center;
+    font-size: .78rem; color: var(--faint); line-height: 1.6;
+  }
+  .footnote a { color: var(--dim); }
+</style>
+</head>
+<body>
+
+<div class="checkout">
+
+  <div class="brand">
+    <svg viewBox="0 0 64 36" aria-hidden="true">
+      <rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/>
+      <rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/>
+      <rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/>
+      <rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/>
+      <rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/>
+      <rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/>
+      <rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/>
+    </svg>
+    <span>0200project</span>
+  </div>
+
+  <div class="card" id="card">
+
+    <!-- ===== purchase view ===== -->
+    <div id="view-buy">
+      <div class="item">
+        <p class="item-label">Paying for</p>
+        <div class="item-row">
+          <div>
+            <p class="item-name" id="item-name">One transaction decode</p>
+            <p class="item-sub" id="item-sub">base-tx-explain · Base mainnet</p>
+          </div>
+          <div class="item-price" id="item-price">—</div>
+        </div>
+      </div>
+
+      <div class="total">
+        <span class="total-label">Total</span>
+        <span><span class="total-amount" id="total-amount">—</span><span class="total-unit">USDC</span></span>
+      </div>
+
+      <div class="action">
+        <div class="wallet" id="wallet-strip">
+          <span class="dot" id="wallet-dot"></span>
+          <span class="wallet-text" id="wallet-text">Checking for a wallet…</span>
+        </div>
+
+        <button class="primary" id="btn-main" disabled>
+          <span id="btn-label">Loading…</span>
+        </button>
+
+        <div class="progress" id="progress" hidden></div>
+        <div id="message"></div>
+
+        <p class="assurance" id="assurance">
+          No account. Your wallet signs the payment; this page never sees a key.
+        </p>
+      </div>
+    </div>
+
+    <!-- ===== success view ===== -->
+    <div id="view-done" hidden>
+      <div class="done-wrap">
+        <div class="done-mark">✓</div>
+        <p class="done-title">Paid</p>
+        <p class="done-sub" id="done-sub">Your decode is below.</p>
+
+        <dl class="receipt">
+          <dt>Amount</dt><dd id="r-amount">—</dd>
+          <dt>From</dt><dd id="r-from">—</dd>
+          <dt>Network</dt><dd>Base mainnet</dd>
+        </dl>
+
+        <div class="result" id="r-body">—</div>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="footnote" id="footnote">
+    Paid in USDC on Base. Nothing is stored and there is no account to cancel.
+  </p>
+
+</div>
+
+<script src="./pay.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var ENDPOINT = 'https://base-tx-explain.fly.dev/mcp';
+  var TX = '0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var challenge = null;
+  var payerAccount = null;
+
+  /* ---------- small view helpers ---------- */
+
+  function setWallet(state, html) {
+    $('wallet-dot').className = 'dot' + (state ? ' ' + state : '');
+    $('wallet-text').innerHTML = html;
+  }
+
+  function setButton(label, enabled) {
+    $('btn-label').textContent = label;
+    $('btn-main').disabled = !enabled;
+  }
+
+  function message(kind, html) {
+    $('message').innerHTML = kind ? '<div class="note ' + kind + '">' + html + '</div>' : '';
+  }
+
+  var STEP_TEXT = {
+    connecting: 'Connecting your wallet',
+    network: 'Switching to Base',
+    balance: 'Checking your balance',
+    signing: 'Confirm in your wallet',
+    signed: 'Completing your request',
+  };
+  var STEP_ORDER = ['connecting', 'network', 'balance', 'signing', 'signed'];
+
+  function renderProgress(current, failed) {
+    var box = $('progress');
+    box.hidden = false;
+    var idx = STEP_ORDER.indexOf(current);
+    box.innerHTML = STEP_ORDER.map(function (key, i) {
+      if (i > idx) return '';
+      var isNow = i === idx;
+      var cls = isNow ? (failed ? '' : 'active') : 'done';
+      var icon = isNow
+        ? (failed ? '<span class="tick" style="color:var(--bad)">✕</span>' : '<span class="spinner"></span>')
+        : '<span class="tick">✓</span>';
+      return '<div class="prog-row ' + cls + '"><span class="ic">' + icon + '</span>' + STEP_TEXT[key] + '</div>';
+    }).join('');
+  }
+
+  /* ---------- network ---------- */
+
+  function callTool(payment) {
+    var params = { name: 'explain_transaction', arguments: { tx_hash: TX } };
+    if (payment) params._meta = { 'x402/payment': payment };
+    return fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method: 'tools/call', params: params }),
+    }).then(function (r) { return r.text(); }).then(function (text) {
+      var body = text.trim();
+      var lines = body.split('\n').filter(function (l) { return l.indexOf('data:') === 0; });
+      if (lines.length) body = lines[lines.length - 1].slice(5).trim();
+      return JSON.parse(body);
+    });
+  }
+
+  /* ---------- flow ---------- */
+
+  function start() {
+    // Load the price FIRST and unconditionally. Someone without a wallet still
+    // deserves to see what this costs before being told what it takes to pay —
+    // gating the price behind a wallet check shows them a dash and asks them to
+    // install software to find out the number.
+    var hasWallet = window.x402Pay.available();
+    setButton('Loading…', false);
+    if (hasWallet) setWallet('', 'Wallet detected.');
+    else setWallet('off', 'No wallet detected in this browser.');
+
+    callTool(null).then(function (res) {
+      var ch = window.x402Pay.challengeFrom(res);
+      if (!ch) {
+        // Free tier still covers this caller: nothing to charge for.
+        showFree(res);
+        return;
+      }
+      challenge = ch;
+      var price = window.x402Pay.formatUnits(ch.accepts[0].amount, 6);
+      $('item-price').textContent = '$' + price;
+      $('total-amount').textContent = '$' + price;
+
+      if (hasWallet) {
+        setButton('Pay $' + price, true);
+        setWallet('', 'Wallet detected. Connect to continue.');
+      } else {
+        setButton('Pay $' + price, false);
+        message('bad',
+          'Paying needs a browser wallet such as MetaMask or Coinbase Wallet. ' +
+          'Everything here happens between you and the network, so there is no card form to fall back to.');
+      }
+    }).catch(function (e) {
+      setButton('Unavailable', false);
+      message('bad', 'Could not reach the service to read the price. ' + e.message);
+    });
+  }
+
+  function showFree(res) {
+    $('item-price').textContent = 'Free';
+    $('total-amount').textContent = '$0.00';
+    setButton('Nothing to pay', false);
+    setWallet('on', 'No payment needed right now.');
+    message('info',
+      '<strong>This call is still free.</strong> Free calls have not run out for this browser, ' +
+      'so there is nothing to charge. The paywall appears once they do.');
+    $('view-done').hidden = false;
+    $('view-buy').hidden = true;
+    $('done-sub').textContent = 'This one was free — no payment required.';
+    $('r-amount').textContent = '$0.00';
+    $('r-from').textContent = 'free tier';
+    renderResult(res);
+  }
+
+  function renderResult(res) {
+    try {
+      var text = res.result.content[0].text;
+      var parsed = JSON.parse(text);
+      $('r-body').textContent = JSON.stringify(parsed, null, 2);
+    } catch (e) {
+      $('r-body').textContent = JSON.stringify(res.result, null, 2);
+    }
+  }
+
+  $('btn-main').addEventListener('click', function () {
+    if (!challenge) return;
+    setButton('Working…', false);
+    message('');
+    var last = null;
+
+    window.x402Pay.payChallenge(challenge, {
+      onState: function (s) { last = s; renderProgress(s, false); },
+    }).then(function (signed) {
+      payerAccount = signed.payer;
+      renderProgress('signed', false);
+      return callTool(signed.payment);
+    }).then(function (res) {
+      if (window.x402Pay.challengeFrom(res)) {
+        // Signed, but the payment did not settle. Say so precisely: the person
+        // approved something and deserves to know whether money moved.
+        renderProgress(last, true);
+        message('bad',
+          '<strong>The payment did not go through.</strong> Your wallet signed, but the payment was not ' +
+          'accepted, so nothing was charged. You can try again.');
+        setButton('Try again', true);
+        return;
+      }
+      succeed(res);
+    }).catch(function (e) {
+      renderProgress(last || 'connecting', true);
+      setButton('Try again', true);
+      if (e.code === 'REJECTED') {
+        message('info', 'Payment cancelled. Nothing was charged.');
+      } else if (e.code === 'INSUFFICIENT_FUNDS') {
+        var held = window.x402Pay.formatUnits(e.detail.held, 6);
+        var need = window.x402Pay.formatUnits(e.detail.required, 6);
+        message('bad',
+          '<strong>Not enough USDC.</strong> This wallet holds $' + held + ' on Base and this costs $' + need + '.');
+      } else if (e.code === 'WRONG_NETWORK') {
+        message('bad', '<strong>Wrong network.</strong> Payment happens on Base. Switch networks in your wallet and try again.');
+      } else if (e.code === 'NO_WALLET') {
+        message('bad', 'No browser wallet is available to sign the payment.');
+      } else {
+        message('bad', 'Something went wrong preparing the payment. Nothing was charged.');
+      }
+    });
+  });
+
+  function succeed(res) {
+    var price = window.x402Pay.formatUnits(challenge.accepts[0].amount, 6);
+    $('r-amount').textContent = '$' + price + ' USDC';
+    $('r-from').textContent = payerAccount || '—';
+    renderResult(res);
+    $('view-buy').hidden = true;
+    $('view-done').hidden = false;
+    $('footnote').textContent = 'Paid in USDC on Base. No account was created and there is nothing to cancel.';
+  }
+
+  start();
+})();
+</script>
+</body>
+</html>
