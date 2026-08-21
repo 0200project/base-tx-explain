@@ -195,13 +195,29 @@ data. Keep that list honest as fields change.
    Priority note: this is cheaper and closes more than the deferred
    truncated-vs-unreachable status split, which is a return-type change touching
    these same cache semantics. Do these first.
-4. **Facilitator outage = total outage** — `app.listen()` is gated behind
+4. **`fly deploy` ships the WORKING DIRECTORY, not HEAD — uncommitted code can
+   reach production unreviewed.** Discovered 2026-08-21 when a deploy picked up
+   another session's half-finished edits. That failure was benign because the
+   tree did not compile and the build failed loudly. The dangerous version is the
+   one that has not happened yet: a tree that COMPILES while carrying
+   uncommitted changes from any of the 3-4 concurrent sessions ships them
+   silently — no commit, no review, no audit trail, and the deployed artifact
+   corresponds to no commit anyone can inspect afterwards. This voids the
+   guarantee the whole review process rests on: "reviewed before it ships" means
+   nothing if the deploy ships something other than the reviewed diff. A clean
+   `git log` and a green local `tsc` are NOT sufficient preconditions.
+   Mitigation (not yet built): refuse to deploy when tracked files under the
+   image's COPY paths (`src/`, `package.json`, `tsconfig.json`,
+   `package-lock.json` — note `site/` is NOT in the image) are dirty:
+   `git status --porcelain -- src package.json tsconfig.json package-lock.json`
+   must be empty. Until that exists, check it by hand every time.
+5. **Facilitator outage = total outage** — `app.listen()` is gated behind
    `initPayments()`; a PayAI blip at boot crash-loops the whole service. Bind
    first, init payments in the background.
-5. **IPv6 /64 not normalized** — free-tier/rate-limit keyed on the full address;
+6. **IPv6 /64 not normalized** — free-tier/rate-limit keyed on the full address;
    a routed /64 mints many tiers. Mask to /64. (Bounded by machine throughput;
    the real harm is upstream-quota exhaustion.)
-6. **Ambiguous pass activation (residual of the fix below).** A pass activated
+7. **Ambiguous pass activation (residual of the fix below).** A pass activated
    because settlement was ambiguous rather than confirmed could, in principle,
    turn out to be unpaid — bounded at $9 of calls. Deliberately NOT capped: this
    path produced two serious bugs in one evening precisely because it accumulated
@@ -209,7 +225,7 @@ data. Keep that list honest as fields change.
    The correct close is a reconciler against `authorizationState(payer, nonce)`
    (the same call verify uses) plus the payout wallet, not a cap that papers over
    it.
-7. **Info/ops:** `/healthz` publishes lifetime revenue + funnel unauthenticated;
+8. **Info/ops:** `/healthz` publishes lifetime revenue + funnel unauthenticated;
    payer EIP-3009 signature written to logs on facilitator error; `ipTag` is a
    reversible 32-bit hash; unbounded usage-ledger Sets on a 256 MB box.
 
@@ -275,7 +291,12 @@ Watch the diffs, not just the commit subjects.
 
 ## 8. Notes for whoever deploys
 
-`fly deploy` from the repo root. After: confirm `/healthz` still shows the
+`fly deploy` from the repo root — and note it builds the WORKING DIRECTORY, not
+HEAD, so verify `git status --porcelain -- src package.json tsconfig.json
+package-lock.json` is empty first or you may ship another session's uncommitted
+work (Open #4). Also confirm your commit is not already live
+(`git merge-base --is-ancestor <commit> HEAD`) before restarting a service real
+users are mid-session on. After: confirm `/healthz` still shows the
 lifetime ledger (it survives restarts via the `/data` volume) and that the 402
 body still carries `accepts` + the `bazaar` extension (discovery crawlers read
 it). A broken deploy is visible to real outside users now.

@@ -63,6 +63,33 @@ subtle bugs. A lower call cap for unconfirmed passes was proposed and rejected f
 this reason — the downside was already bounded and queryable, and the third bug
 gets written where the second and fourth rules interact.
 
+## The deploy does not build what you committed
+
+_2026-08-21._
+
+`fly deploy` builds the WORKING DIRECTORY, not HEAD. A deploy picked up another
+session's half-finished edits; it failed loudly only because that code did not
+compile.
+
+The version that has not happened yet is the one to fear: a working tree that
+compiles while carrying someone's uncommitted changes ships them silently, with
+no commit, no review and no audit trail — and afterwards the running artifact
+matches no commit anyone can inspect. Every "I will review the diff before it
+ships" agreement in this repo is void against that, because the deploy can ship
+something other than the diff.
+
+**Practice:** a clean `git log` and a green local `tsc` are not sufficient
+preconditions. Before deploying, confirm the tree is clean for the paths the
+image actually contains:
+
+```bash
+git status --porcelain -- src package.json tsconfig.json package-lock.json
+```
+
+Empty, or do not deploy. (`site/` is not in the image, which is the only reason
+two earlier deploys with a dirty `site/` were harmless — that was the Dockerfile
+saving us, not the process.)
+
 ## Deploying from a shared branch ships everything, not your commit
 
 _2026-08-20._
