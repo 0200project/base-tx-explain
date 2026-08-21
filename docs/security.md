@@ -8,7 +8,7 @@ old ground or reopens a closed question.
 Keep it current: when a finding is fixed, move it from **Open** to **Fixed**
 with the commit; when you clear a hypothesis, add it to **Checked and safe**.
 
-_Last reviewed: 2026-08-20, live at `8c76f44` (free-tier persistence + 19-ticker label table)._
+_Last reviewed: 2026-08-21, live at `be8a858` (pass settlement integrity)._
 
 ---
 
@@ -90,6 +90,29 @@ data. Keep that list honest as fields change.
   with 0 crashes, and every partial was an app-specific unrecognized-event
   contract or a batch transfer hitting the 60-asset display cap — none came from
   the emitter gating. The safety-over-recall trade cost no measurable coverage._
+- **$9 pass issued without payment / phantom revenue** (`649c763`, `38bc986`,
+  `be8a858`). `buy_pass` minted inside the x402 handler, which runs BEFORE
+  settle, and @x402/mcp returns the handler's result even when settle answers
+  `200 {success:false}` — a caller whose payment never landed received a live
+  $9 bearer token, repeatably (an authorization can pass verify and fail settle;
+  the EIP-3009 nonce is only consumed at settle). MCP passes now mint inert and
+  activate only when settlement resolves; REST already withheld the token
+  (@x402/express discards the buffered body on failed settle) so it mints active
+  — minting pending there would have stranded real payers. Revenue is booked on
+  both rails only once a sale is confirmed/delivered.
+  **Two corrections found by adversarial verification, both worse than the
+  original bug:** (1) the nonce was read from `extra._meta`, but the wrapper
+  passes its own `{toolName, arguments, meta}` context — always null, so every
+  paid pass would have been dead on arrival (100% failure on real sales). Now
+  typed as the library's `MCPToolContext`, so that mistake is a build error.
+  (2) revoking on `success===false` is WRONG: `settlement_pending` carries a real
+  tx hash after broadcast and `transfer_event_mismatch` means the transfer mined.
+  A pass is now taken back only on a provably pre-broadcast rejection (no tx hash
+  + a recognised validation reason); everything else activates and alerts.
+  _Design rule this established: on a payment path, ambiguity must fail toward
+  the customer. "Withhold, maybe activate" looks safer than "grant, maybe
+  revoke" but flips the ambiguous cases — where real payers sit — from fail-open
+  to fail-closed._
 - **Metadata negative-cache poisoning** (per-result cache TTL). `getTokenMeta`,
   `getContractName`, and `getTokenSupply` returned `null` on any read failure and
   cached it FOREVER, so one transient RPC blip rendered a token's amounts at the
@@ -167,22 +190,14 @@ data. Keep that list honest as fields change.
 5. **IPv6 /64 not normalized** — free-tier/rate-limit keyed on the full address;
    a routed /64 mints many tiers. Mask to /64. (Bounded by machine throughput;
    the real harm is upstream-quota exhaustion.)
-6. **Phantom settlement — now amplified to $9 by the pass rail.** The x402 flow
-   is verify → run handler → settle, and `@x402/mcp` returns the handler's result
-   even when settle comes back `200 {success:false}`; `onAfterSettlement` fires
-   unconditionally, booking revenue that never arrived. Originally worth one
-   $0.02 decode. `buyPassHandler` now mints inside that same handler
-   (`src/index.ts:244-245` → `mintPass()`), so the artifact handed over on a
-   failed settle is a **durable, transferable $9 bearer token good for 10,000
-   calls**. Two exposures: (a) a facilitator answering `200 {success:false}`
-   yields a free pass plus a fake $9 ledger entry; (b) no server-side dedup on
-   the payment authorization means N concurrent buys carrying the SAME signed
-   payload all pass verify (nonce not yet consumed on-chain) and all mint
-   distinct passes, while only one settles. Fix: gate `onAfterSettlement` on
-   `settlement.success === true`, and do not release the minted token unless the
-   settle succeeded — mint after settlement, or mint-then-revoke on failure; plus
-   a short-TTL dedup keyed on the authorization nonce. This is now the
-   highest-value open money bug.
+6. **Ambiguous pass activation (residual of the fix below).** A pass activated
+   because settlement was ambiguous rather than confirmed could, in principle,
+   turn out to be unpaid — bounded at $9 of calls. Deliberately NOT capped: this
+   path produced two serious bugs in one evening precisely because it accumulated
+   conditional rules, and `listUnconfirmed()` makes every such pass queryable.
+   The correct close is a reconciler against `authorizationState(payer, nonce)`
+   (the same call verify uses) plus the payout wallet, not a cap that papers over
+   it.
 7. **Info/ops:** `/healthz` publishes lifetime revenue + funnel unauthenticated;
    payer EIP-3009 signature written to logs on facilitator error; `ipTag` is a
    reversible 32-bit hash; unbounded usage-ledger Sets on a 256 MB box.
