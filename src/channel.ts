@@ -88,6 +88,11 @@ const DEFAULT_CHANNELS = [
   'site',
   'github',
   'readme',
+  // Direct outreach — issues we opened on someone's repo, and replies in them.
+  // One tag rather than one per prospect: the decision-relevant question is
+  // whether outreach produces arrivals at all, versus whether listings do, and
+  // a per-prospect tag also puts the prospect's own name in a URL we hand them.
+  'outreach',
 ];
 
 function loadAllowed(): Set<string> {
