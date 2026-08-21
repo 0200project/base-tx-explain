@@ -258,12 +258,13 @@ clients have actually been identified (see D-5):**
 | Client | Identity | Paid attempts | Settled |
 |---|---|---|---|
 | `3f4d2c03` | Us — established since day one | 4 | 0 |
-| `53d7ceaf` | Us — `paid-call.ts` gap, fixed `ded8d41` | 2 | 0 |
+| `53d7ceaf` | Us — `paid-call.ts` gap, fixed `ded8d41`; also carried platform's own unmarked post-deploy verification calls (19:41:50, 19:42:01) | 2+ | 0 |
 | `8f92f999` | Circadian — matched to settlement second by growth | 2 | 1, booked $0.00 (favor) |
 | `56cb6309` | Unexplained, organic, 3 calls, never returned | 0 | — |
 | `c63f048f` | Unexplained, organic, 1 call, never returned | 0 | — |
 | `1b624776` | Unexplained, organic, 1 call, never returned | 0 | — |
-| `81238a28` | **Genuine external arrival — confirmed, not us, not the Founder** | 0 | — |
+| `81238a28` | **Genuine external arrival — confirmed, not us, not the Founder** (19:35Z) | 0 | — |
+| `5245eb45` | **Genuine external arrival — confirmed by marked test call** (20:42Z) | 0 | — |
 
 **`81238a28`, resolved 2026-08-21 by elimination, both steps checked rather
 than assumed.** First matched the `53d7ceaf` shape and was wrong — platform
@@ -274,16 +275,29 @@ question — his own phone, or a stranger — the Founder answered directly:
 **not him.** By elimination, this is the **first confirmed genuine external
 arrival since the internal-call marker shipped today.**
 
-**Treatment, held to exactly what was agreed before the answer came back: an
-arrival, not a customer.** One free call, no return visit, no paywall hit, no
-payment attempt. Not a lead, not a prospect signal — a single free call is not
-evidence of anything beyond a visitor who looked once. **0/10 target
-unchanged.**
+**`5245eb45`, resolved the same way, faster the second time.** Confirmed
+directly by a marked test call rather than by elimination — the method
+platform's first check established now gets reused instead of re-derived.
+**Second confirmed genuine external arrival tonight.**
 
-**The honest read: four genuinely unattributed one-off visitor touches
-today** (three still fully unexplained, one now confirmed as a real stranger
-by elimination), **zero repeat visits, zero payment attempts from any of
-them, zero customers.**
+**A correction folded in along the way, worth naming rather than silently
+absorbing:** platform flagged that two calls briefly counted toward tonight's
+"external" total (19:41:50, 19:42:01) were their own unmarked post-deploy
+verification, both from the already-known `53d7ceaf` tag — not new strangers,
+not a new attribution. Verified against `/stats` directly: `unique_clients`
+now reads **8**, matching 7 previously-attributed clients plus `5245eb45` —
+consistent with the correction, not contradicting it. No new unexplained
+client was hiding in those two calls.
+
+**Treatment, held to the same standard for both: an arrival, not a customer.**
+Each is one free call, no return visit, no paywall hit, no payment attempt.
+Neither is a lead or a prospect signal — a single free call is not evidence of
+anything beyond a visitor who looked once. **0/10 target unchanged.**
+
+**The honest read: five genuinely unattributed one-off visitor touches
+today** (three still fully unexplained, two now confirmed as real strangers),
+**zero repeat visits, zero payment attempts from any of them, zero
+customers.**
 
 Attribution is not known and will not be guessed. If a customer arrives, CAC is
 only calculable if Growth can tell me which spend, if any, produced them.
