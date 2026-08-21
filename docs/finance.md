@@ -258,6 +258,27 @@ free-tier flush). Under concurrency that blocks the event loop and looks exactly
 like connection failures with no crash and no restart — in which case a constant
 `booted_at` is the confirming signal, not a reassuring one.
 
+**D-3. The public `/healthz` endpoint now shows revenue a stranger would
+misread as a paying customer.** Raised 2026-08-21 by security. `revenue_usd`
+on `/healthz` — public, no auth — reads **$0.02**, because the Circadian favor
+settled through the normal payment code path and the code cannot distinguish a
+pre-arranged favor from a commercial sale at settlement time; only Finance's
+out-of-band knowledge can. These books correctly show **$0.00**. The
+divergence is intentional and explained internally (see the Non-revenue
+inbound entry above), but `/healthz` is a public surface, and anyone reading
+it — a stranger, a writeup, a would-be customer sizing us up — sees $0.02 with
+none of that context. That is the exact shape of the invariant security wrote
+into `docs/security.md` ("every surface that displays money must distinguish
+attempted from received"), except this is settled-but-not-a-sale rather than
+attempted-but-not-settled — a case the invariant did not anticipate. The
+reconciler and the daily report already apply a known-non-revenue exclusion
+(`KNOWN_FAVOR_TXS` / `known_non_revenue_usd`) to keep this exact confusion out
+of internal numbers; the public `revenue_usd` field does not. Flagged to
+platform, who owns the endpoint; implementation is theirs to choose — apply
+the same exclusion, or label the field so it can't be read as vetted
+commercial revenue. Not urgent (traffic is negligible today), but it should
+not sit indefinitely on a field anyone can curl.
+
 **7. Autonomous agent spend — CONFIRMED 2026-08-21, directly by the Founder.**
 First relayed secondhand via the platform session, then confirmed directly to
 Finance the same day: autonomous/automatic spend is approved, at the team's
