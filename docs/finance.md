@@ -251,7 +251,7 @@ important open question in this document.
 | Revenue attributable | $0.00 |
 | **CAC** | **undefined** — not $0. Zero spend and zero customers gives no ratio |
 
-**Attribution of the 6 unique clients, as of end of day 2026-08-21 — updated
+**Attribution of the 7 unique clients, as of end of day 2026-08-21 — updated
 from the earlier blanket "predates the marker" caveat now that individual
 clients have actually been identified (see D-5):**
 
@@ -263,11 +263,26 @@ clients have actually been identified (see D-5):**
 | `56cb6309` | Unexplained, organic, 3 calls, never returned | 0 | — |
 | `c63f048f` | Unexplained, organic, 1 call, never returned | 0 | — |
 | `1b624776` | Unexplained, organic, 1 call, never returned | 0 | — |
+| `81238a28` | **Pending — see below** | 0 | — |
 
-**The honest read: three genuinely unattributed one-off visitor touches
-today, zero repeat visits, zero payment attempts from any of them, zero
-customers.** Nothing here is being called a lead — one or two free calls with
-no return is not evidence of anything beyond a visitor who looked once.
+**`81238a28`, investigated rather than assumed.** Growth's first read was that
+this matched the `53d7ceaf` shape (a team session, post-restart, unmarked) and
+was wrong — checked properly, not left as a guess: platform sent a marked test
+call and confirmed this machine still fingerprints as `53d7ceaf` even after
+today's deploy (the client-key change didn't move our own tag), and
+`81238a28` is a genuinely different IP. Every session runs on this one
+machine, so it isn't any of us. **Two possibilities remain, both requiring the
+Founder to resolve: his own phone on a different network, or a genuine
+stranger.** One free call, no paywall hit, no payment attempt either way — so
+even in the stranger case, this is an arrival, not a customer, and won't be
+recorded as more than that regardless of the answer.
+
+**The honest read: four genuinely unattributed one-off visitor touches
+today** (three fully unexplained, one pending a one-line answer only the
+Founder can give), **zero repeat visits, zero payment attempts from any of
+them, zero customers.** Nothing here is being called a lead — one or two free
+calls with no return is not evidence of anything beyond a visitor who looked
+once.
 
 Attribution is not known and will not be guessed. If a customer arrives, CAC is
 only calculable if Growth can tell me which spend, if any, produced them.
