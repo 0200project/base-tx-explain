@@ -235,6 +235,18 @@ data. Keep that list honest as fields change.
    The correct close is a reconciler against `authorizationState(payer, nonce)`
    (the same call verify uses) plus the payout wallet, not a cap that papers over
    it.
+8. **Test files are never typechecked**, so a signature change silently leaves
+   stale callers. `tsconfig.json` includes only `src/**/*.ts`; `npm run typecheck`
+   therefore passes while a test calls a function with the wrong shape. Found when
+   adding a required field to `buildAssetsMoved` produced no error in
+   `test/assets.test.ts` — the missing field became `undefined`, read as falsy,
+   and the test kept passing while asserting the wrong behaviour. Given that both
+   of the serious bugs on 2026-08-20 shipped with a green suite, a test that is
+   quietly testing the wrong thing is worth closing. Fix: a `tsconfig.test.json`
+   extending the base with `rootDir` at the project root and `include` covering
+   `src` and `test`, wired to a `typecheck:test` script. Not done here: it touches
+   shared build config and would surface errors across test files owned by several
+   sessions, so it wants its own change rather than riding along with a bug fix.
 8. **Info/ops:** `/healthz` publishes lifetime revenue + funnel unauthenticated;
    payer EIP-3009 signature written to logs on facilitator error; `ipTag` is a
    reversible 32-bit hash; unbounded usage-ledger Sets on a 256 MB box.

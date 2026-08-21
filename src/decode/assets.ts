@@ -10,12 +10,20 @@ interface TxContext {
   to: Address | null;
   value: bigint;
   wethAddress: Address;
+  /** A reverted transaction moved nothing, whatever value it carried. */
+  reverted: boolean;
 }
 
 /**
  * Translate decoded logs + native value into the assets_moved list.
  * Zero-value ERC-20 transfers (airdrop spam) are dropped. Output is capped;
  * `truncated` tells the caller to mark the result partial.
+ *
+ * A REVERTED transaction moves nothing. Its logs are discarded by the EVM, so
+ * `events` is empty — but `tx.value` still holds whatever the sender attached,
+ * and the EVM refunded it. Reporting that as a movement asserted a transfer that
+ * provably did not happen, and contradicted `status`, the `transaction_reverted`
+ * flag, and the summary's own "no assets moved" in the same response.
  */
 export async function buildAssetsMoved(
   events: DecodedEvent[],
@@ -23,7 +31,9 @@ export async function buildAssetsMoved(
 ): Promise<{ movements: AssetMovement[]; truncated: boolean; flaggedSymbols: Array<{ address: string; status: 'nonstandard' | 'impersonation' }> }> {
   const movements: AssetMovement[] = [];
 
-  if (tx.value > 0n && tx.to) {
+  // Not `tx.value > 0n` alone: on a reverted transaction the value was returned
+  // to the sender, so there is nothing to report.
+  if (!tx.reverted && tx.value > 0n && tx.to) {
     movements.push({
       token: 'ETH',
       amount: formatEther(tx.value),

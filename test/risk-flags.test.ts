@@ -473,3 +473,32 @@ describe('buildRiskFlags — a truncated history is not an outage', () => {
     expect(detailFor(res, 'first_time_counterparty')).toContain(short(other));
   });
 });
+
+/**
+ * Second-order effect of the phantom-ETH bug: the synthetic native movement made
+ * `extendsTrust` true on a reverted transaction, which fired verificationStatus
+ * (Sourcify) and isFirstInteraction (a 1000-row Blockscout fetch) on a call where
+ * no trust was extended — and could emit first_time_counterparty for it. With the
+ * movement gone, a reverted transaction extends no trust and does no lookups.
+ */
+describe('buildRiskFlags — a reverted transaction extends no trust', () => {
+  it('emits no unverified/first-time flags and does not treat the target as trusted', async () => {
+    state.firstTime.add(ATTACKER.toLowerCase()); // would fire if the check ran
+    const res = await buildRiskFlags({
+      from: SENDER,
+      to: ATTACKER, // unlabeled, unverified, never seen before
+      blockNumber: 1000n,
+      reverted: true,
+      classification: { action: 'contract_interaction', detail: {} },
+      events: [], // a reverted receipt carries no logs
+      movements: [], // and now carries no phantom native movement either
+    });
+    expect(flagCodes(res)).toContain('transaction_reverted');
+    expect(flagCodes(res)).not.toContain('unverified_contract');
+    expect(flagCodes(res)).not.toContain('first_time_counterparty');
+    // Nothing was eligible, so the checks report not_applicable rather than a
+    // coverage gap — we did not fail to look, there was nothing to look at.
+    expect(res.checks.contract_verification).toBe('not_applicable');
+    expect(res.checks.first_interaction).toBe('not_applicable');
+  });
+});

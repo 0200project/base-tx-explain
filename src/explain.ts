@@ -137,6 +137,7 @@ export async function explainTransaction(txHashRaw: string): Promise<ExplainResu
     to: tx.to ?? null,
     value: tx.value,
     wethAddress: WETH_ADDRESS as Address,
+    reverted,
   });
 
   // --- Classify ---

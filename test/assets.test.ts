@@ -28,7 +28,7 @@ const transfer = (emitter: Address): DecodedEvent => ({
   args: { from: SENDER, to: OTHER, value: 7211n * 10n ** 18n },
   logIndex: 0,
 });
-const tx = { from: SENDER, to: OTHER, value: 0n, wethAddress: WETH };
+const tx = { from: SENDER, to: OTHER, value: 0n, wethAddress: WETH, reverted: false };
 
 beforeEach(() => meta.map.clear());
 
@@ -51,5 +51,40 @@ describe('buildAssetsMoved — untrusted token symbol surfacing', () => {
     const { movements, flaggedSymbols } = await buildAssetsMoved([transfer(SCAM)], tx);
     expect(flaggedSymbols).toHaveLength(0);
     expect(movements[0]?.token).toBe('USDC');
+  });
+});
+
+/**
+ * A reverted transaction moves nothing. The EVM discards its logs and refunds
+ * the value it carried, so reporting `tx.value` as a movement asserts a transfer
+ * that provably did not happen — and contradicts `status`, the
+ * `transaction_reverted` flag, and the summary's own "no assets moved", all in
+ * the same response.
+ */
+describe('buildAssetsMoved — a reverted transaction moves nothing', () => {
+  const withValue = (reverted: boolean) => ({
+    from: SENDER,
+    to: OTHER,
+    value: 10n ** 18n, // 1 ETH attached
+    wethAddress: WETH,
+    reverted,
+  });
+
+  it('reports NO native movement when the transaction reverted', async () => {
+    // A failed mint/swap that carried ETH: value attached, no logs, refunded.
+    const { movements } = await buildAssetsMoved([], withValue(true));
+    expect(movements).toEqual([]);
+  });
+
+  it('still reports the native movement when it succeeded', async () => {
+    const { movements } = await buildAssetsMoved([], withValue(false));
+    expect(movements).toHaveLength(1);
+    expect(movements[0]).toMatchObject({ token: 'ETH', amount: '1', from: SENDER, to: OTHER, standard: 'native' });
+  });
+
+  it('reports nothing for a reverted transaction even with a large value', async () => {
+    const { movements, truncated } = await buildAssetsMoved([], { ...withValue(true), value: 10n ** 21n });
+    expect(movements).toEqual([]);
+    expect(truncated).toBe(false);
   });
 });
