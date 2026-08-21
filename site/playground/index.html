@@ -103,6 +103,8 @@
   .pg-pay { padding: 1.25rem; border-bottom: 1px solid var(--border); }
   .pg-pay-title { color: var(--fg-strong); font-weight: 600; font-size: 0.9375rem; margin-bottom: 0.5rem; }
   .pg-pay p { color: var(--fg-muted); font-size: 0.875rem; max-width: 42rem; }
+  .pg-pay p + p { margin-top: 0.5rem; }
+  .pg-pay .btn { margin-top: 0.5rem; }
   .pg-pay a { color: var(--accent); }
   .pg-pay a:hover { color: var(--accent-strong); }
   .pg-kv { margin-top: 1rem; display: grid; gap: 0.4rem; }
@@ -181,7 +183,7 @@
 
         <p class="pg-note">The full response schema — all 30 action types and 8 risk flags — is in the <a href="/docs/">docs</a>. If your free tier runs out here, the response is the same x402 payment challenge an agent pays through; this page renders it so you can see what agents see.</p>
 
-        <p class="pg-note"><code class="inline">risk_flags</code> lists only flags backed by evidence — it is never a safety verdict, and no flags does not mean clean. The <code class="inline">checks</code> field alongside it says which underlying lookups actually ran (<code class="inline">ok</code>, <code class="inline">partial</code>, <code class="inline">unavailable</code>, or <code class="inline">not_applicable</code>), with a plain-language <code class="inline">note</code> whenever one didn&rsquo;t — so an empty flag list can be read correctly instead of mistaken for clearance. A stored sample&rsquo;s <code class="inline">checks</code> reflect the moment it was captured; decoding the same hash live right now can show different values if an upstream source is temporarily degraded — that is the tool working honestly, not a bug.</p>
+        <p class="pg-note"><code class="inline">risk_flags</code> lists only flags backed by evidence — it is never a safety verdict, and no flags does not mean clean. The <code class="inline">checks</code> field alongside it says which underlying lookups actually ran (<code class="inline">ok</code>, <code class="inline">partial</code>, <code class="inline">unavailable</code>, <code class="inline">inconclusive</code>, or <code class="inline">not_applicable</code>), with a plain-language <code class="inline">note</code> whenever one didn&rsquo;t — so an empty flag list can be read correctly instead of mistaken for clearance. A stored sample&rsquo;s <code class="inline">checks</code> reflect the moment it was captured; decoding the same hash live right now can show different values if an upstream source is temporarily degraded — that is the tool working honestly, not a bug.</p>
 
       </div>
     </div>
@@ -241,6 +243,7 @@
   </div>
 </footer>
 
+<script src="/assets/pay.js"></script>
 <script>
 (function () {
   'use strict';
@@ -562,12 +565,14 @@
       '</div>';
   }
 
-  function rpcBody(hash) {
+  function rpcBody(hash, payment) {
+    var params = { name: 'explain_transaction', arguments: { tx_hash: hash } };
+    if (payment) params._meta = { 'x402/payment': payment };
     return JSON.stringify({
       jsonrpc: '2.0',
       id: 1,
       method: 'tools/call',
-      params: { name: 'explain_transaction', arguments: { tx_hash: hash } }
+      params: params
     });
   }
 
@@ -631,7 +636,152 @@
     return '<div class="pg-kv-row"><dt>' + esc(k) + '</dt><dd>' + v + '</dd></div>';
   }
 
-  function showPaywall(challenge) {
+  function payAmountDisplay(challenge) {
+    var a = (challenge.accepts && challenge.accepts[0]) || {};
+    var amt = (a.maxAmountRequired != null) ? a.maxAmountRequired : a.amount;
+    return (amt != null && usdcFromAtomic(amt)) || null;
+  }
+
+  function shortAddr(a) {
+    return (a && a.length > 10) ? a.slice(0, 6) + '…' + a.slice(-4) : a;
+  }
+
+  function payPanelEl() {
+    return document.getElementById('pay-panel');
+  }
+
+  /* Every render function below re-queries #pay-panel and compares the node
+     it captured against the current one: if body.innerHTML has since been
+     replaced (a new call started, a chip was clicked), the old panel is a
+     detached, different object even though the id is the same — that is
+     the staleness check, no separate flag needed. */
+
+  function renderPayReady(challenge, hash, priceDisplay) {
+    var el = payPanelEl();
+    if (!el) return;
+    if (!window.x402Pay || !window.x402Pay.available()) {
+      el.innerHTML = '<p>No browser wallet detected. Install one (MetaMask, Coinbase Wallet, or similar) to pay this call yourself, or use an x402-capable agent.</p>';
+      return;
+    }
+    el.innerHTML =
+      '<p>If you&rsquo;re the one calling this, not an agent:</p>' +
+      '<button class="btn btn-primary btn-sm" type="button" data-pay-step="check">Continue &mdash; ' + esc(priceDisplay) + '</button>';
+    el.querySelector('[data-pay-step="check"]').addEventListener('click', function () {
+      el.innerHTML = '<p>Checking your wallet&hellip;</p>';
+      window.x402Pay.inspect(challenge).then(function (info) {
+        if (el !== payPanelEl()) return;
+        if (info.canPay) renderPayConfirm(el, challenge, hash, info);
+        else renderPayInsufficient(el, info);
+      }).catch(function (err) {
+        if (el !== payPanelEl()) return;
+        renderPayError(el, challenge, hash, err);
+      });
+    });
+  }
+
+  function renderPayConfirm(el, challenge, hash, info) {
+    el.innerHTML =
+      '<p>Wallet ' + esc(shortAddr(info.account)) + ' holds ' + esc(info.heldDisplay) + ' USDC on Base &mdash; enough to pay ' + esc(info.requiredDisplay) + '.</p>' +
+      '<button class="btn btn-primary btn-sm" type="button" data-pay-step="sign">Sign &amp; pay ' + esc(info.requiredDisplay) + ' USDC</button>';
+    el.querySelector('[data-pay-step="sign"]').addEventListener('click', function () {
+      runPayment(el, challenge, hash);
+    });
+  }
+
+  function renderPayInsufficient(el, info) {
+    el.innerHTML =
+      '<p>This wallet (' + esc(shortAddr(info.account)) + ') holds ' + esc(info.heldDisplay) + ' USDC on Base; this call needs ' + esc(info.requiredDisplay) + '. Add USDC on Base to pay it yourself, or use an x402-capable agent instead. <a href="/docs/#x402-payments">How agents pay →</a></p>';
+  }
+
+  var PAY_STATE_LABEL = {
+    connecting: 'Connecting wallet…',
+    network: 'Checking network…',
+    balance: 'Checking balance…',
+    signing: 'Waiting for your signature…',
+    signed: 'Submitting payment…'
+  };
+
+  function runPayment(el, challenge, hash) {
+    el.innerHTML = '<p id="pay-status">Connecting wallet&hellip;</p>';
+    window.x402Pay.payChallenge(challenge, {
+      onState: function (state) {
+        if (el !== payPanelEl()) return;
+        var s = document.getElementById('pay-status');
+        if (s && PAY_STATE_LABEL[state]) s.textContent = PAY_STATE_LABEL[state];
+      }
+    }).then(function (result) {
+      if (el !== payPanelEl()) return;
+      el.innerHTML = '<p>Payment signed &mdash; retrying the call&hellip;</p>';
+      retryWithPayment(hash, result.payment);
+    }).catch(function (err) {
+      if (el !== payPanelEl()) return;
+      renderPayError(el, challenge, hash, err);
+    });
+  }
+
+  function renderPayError(el, challenge, hash, err) {
+    var code = err && err.code;
+    var msg;
+    if (code === 'INSUFFICIENT_FUNDS' && err.detail && window.x402Pay) {
+      msg = 'This wallet holds ' + window.x402Pay.formatUnits(err.detail.held, 6) + ' USDC on Base; this call needs ' + window.x402Pay.formatUnits(err.detail.required, 6) + '.';
+    } else {
+      msg = (err && err.message) || 'The payment could not be completed.';
+    }
+    el.innerHTML =
+      '<p>' + esc(msg) + '</p>' +
+      '<button class="btn btn-ghost btn-sm" type="button" data-pay-step="check">Try again</button>';
+    el.querySelector('[data-pay-step="check"]').addEventListener('click', function () {
+      renderPayReady(challenge, hash, payAmountDisplay(challenge) || '$0.02 USDC');
+    });
+  }
+
+  function retryWithPayment(hash, payment) {
+    var my = ++seq;
+    meta.textContent = 'live · confirming payment…';
+    showLoader();
+    fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream' },
+      body: rpcBody(hash, payment)
+    }).then(function (res) {
+      return res.text().then(function (text) { return { status: res.status, text: text }; });
+    }).then(function (r) {
+      if (my !== seq) return;
+      var env = parseEnvelope(r.text);
+      if (!env || env.error) {
+        meta.textContent = 'error · payment_retry_failed';
+        body.innerHTML = '<p class="pg-err-note">The paid retry did not go through. If USDC left your wallet, ' +
+          '<a href="mailto:security@0200project.com">contact us</a> with the transaction hash you paid for — nothing here should take payment without delivering the result.</p>';
+        return;
+      }
+      var result = env.result || {};
+      var payload = payloadFrom(result);
+      if (isX402(payload)) { showPaywall(payload, hash); return; }
+      if (result.isError) { showToolError(payload || { code: 'error', message: 'The tool returned an error with no readable body.' }); return; }
+      if (payload) {
+        meta.textContent = 'explain_transaction · ' + (payload.action_type || 'result') + ' · paid';
+        showJSON(payload);
+        appendPassUpsell();
+        return;
+      }
+      meta.textContent = 'error · unreadable_response';
+      showHttpError(r.status, hash);
+    }).catch(function () {
+      if (my !== seq) return;
+      meta.textContent = 'error · network';
+      body.innerHTML = '<p class="pg-err-note">The paid retry could not reach the server. If USDC left your wallet, ' +
+        '<a href="mailto:security@0200project.com">contact us</a> with the transaction hash you paid for.</p>';
+    });
+  }
+
+  function appendPassUpsell() {
+    var note = document.createElement('p');
+    note.className = 'pg-note';
+    note.innerHTML = 'Calling more than a few of these? The <a href="/docs/#pass">$9 pass</a> covers 10,000 calls over 30 days instead of paying per call.';
+    body.appendChild(note);
+  }
+
+  function showPaywall(challenge, hash) {
     meta.textContent = 'x402 · payment required';
     var a = (challenge.accepts && challenge.accepts[0]) || {};
     var amt = (a.maxAmountRequired != null) ? a.maxAmountRequired : a.amount;
@@ -647,10 +797,12 @@
     body.innerHTML =
       '<div class="pg-pay">' +
       '<p class="pg-pay-title">Payment required — this browser’s free calls are used up.</p>' +
-      '<p>This is the paywall working, not an error. The response below is an x402 challenge: an agent reads it, attaches a signed USDC payment at <code class="inline">_meta["x402/payment"]</code>, and retries the same call. A browser stops here; an agent pays $0.02 and keeps going. <a href="/docs/#x402-payments">How agents pay →</a></p>' +
+      '<p>This is the paywall working, not an error. The response below is an x402 challenge: an agent reads it, attaches a signed USDC payment at <code class="inline">_meta["x402/payment"]</code>, and retries the same call — the same thing you can do below, by hand. <a href="/docs/#x402-payments">How agents pay →</a></p>' +
+      '<div id="pay-panel"></div>' +
       (rows ? '<dl class="pg-kv">' + rows + '</dl>' : '') +
       '</div>' +
       '<pre class="pg-json"><code>' + renderVal(challenge, 0, false, null) + '</code></pre>';
+    renderPayReady(challenge, hash, payAmountDisplay(challenge) || '$0.02 USDC');
   }
 
   /* The endpoint answers either as plain JSON or as an SSE stream
@@ -744,7 +896,7 @@
       var payload = payloadFrom(result);
 
       if (isX402(payload)) {
-        showPaywall(payload);
+        showPaywall(payload, hash);
         return;
       }
       if (result.isError) {
