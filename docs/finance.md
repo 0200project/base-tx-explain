@@ -575,8 +575,14 @@ Current count: to be read at each daily close. Lifetime `pass_calls`: 1.
 
 ## Reconciliation notes
 
-- **Client identity was redefined 2026-08-21 (commit `9ca2cbb`, not yet
-  deployed) — client counts are not comparable across this change.** Security
+- **Client identity is being redefined — a future regime boundary, not yet in
+  effect.** Committed 2026-08-21 as `9ca2cbb`. **Confirmed by Finance directly
+  against the deployed server (as of release v67, ~19:05Z): the old IP-exact
+  keying is still live.** The boundary is the *deploy*, not the commit — until
+  platform ships it, production behavior and today's client counts are
+  unaffected, and no regime shift has happened yet. This entry documents what
+  changes *when it does*, so the date to record is deploy day, not today,
+  unless they land on the same day. Security
   found the free tier and rate limiter keyed on the full IP, which is exact on
   IPv4 but nearly meaningless on IPv6 — a caller controlling one /64 could
   present up to 2^64 distinct "clients," each getting its own free tier and
