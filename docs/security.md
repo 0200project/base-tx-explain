@@ -264,17 +264,27 @@ data. Keep that list honest as fields change.
    forged token legs show as addresses. A swap is not a custody-safety claim, so
    this ranks below the closed cases. Candidate fix: require corroborating
    fungible movements before trusting a swap event.
-2. **A $9 pass whose payment settles during a restart is destroyed SILENTLY, and
-   the money is on-chain with no record anywhere on our side.** Proven by
-   booting the real module twice against the same file, not argued.
-   `activatePass(nonce)` resolves through `pendingByNonce`, an in-memory Map;
-   `PassEntry` carries no nonce, so `passes.json` cannot express the mapping.
-   `initPasses` then deliberately drops every non-active entry on boot — the
-   comment is right that a restored pending pass could never be activated, but
-   the consequence is that the entry disappears with no trace. Measured after a
-   restart: `activatePass` returns false, `usePass` returns `invalid` (not
-   `not_activated` — the token is GONE), `listUnconfirmed()` is empty, and
-   `active_passes` is 0. Nothing logs it.
+2. **A paid request in flight during a deploy loses the payer's money. The loss
+   is now VISIBLE but still NOT RECOVERABLE.**
+   **Scope moved twice on 2026-08-21; both moves are stated rather than silently
+   edited, so a later reader can see what changed.**
+   _As first found:_ a $9 pass whose payment settled during a restart was
+   destroyed silently. `activatePass(nonce)` resolves through `pendingByNonce`,
+   an in-memory Map, and `PassEntry` carried no nonce, so `passes.json` could
+   not express the mapping; `initPasses` then dropped every non-active entry at
+   boot. Measured after a restart: `usePass` returned `invalid` (the token was
+   GONE, not merely inactive), `listUnconfirmed()` was empty, nothing logged it.
+   _Fixed the same night (visibility half only):_ the nonce is persisted,
+   stranded entries are retained and marked instead of deleted, `usePass` now
+   answers `not_activated`, `listUnconfirmed()` returns the entry WITH its
+   nonce, and boot shouts the count and the action. Verified by booting the real
+   module twice — the promise `docs/try-it.md` makes to a 3am debugger holds.
+   **_What is still open, and it is the part that costs money:_ a stranded pass
+   still cannot be activated.** The settlement hook died with the process, so
+   nothing re-applies it. The payer's funds may have moved on chain with no pass
+   issued, and recovery is currently a human comparing the payout wallet against
+   `listUnconfirmed()` by hand. Until `authorizationState(payer, nonce)`
+   reconciliation exists there is no automatic path back.
    The window is between mint (in the handler, post-verify) and `activatePass`
    (in `onAfterSettlement`).
    **CORRECTION, verified 2026-08-21 after platform checked the shutdown path:
