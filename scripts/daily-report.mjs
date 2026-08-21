@@ -138,7 +138,12 @@ if (stats?.check_health) {
 }
 
 // --- 2. On-chain revenue truth ---
-say(`\n## Revenue (source: Base chain)\n`);
+// This section covers the x402/USDC rail only. Stripe (fiat card payments,
+// live-mode-gated as of 2026-08-21) settles to a bank account, never to this
+// wallet - the two rails are genuinely separate, not a reconciliation bug.
+// A real Stripe sale will never move this balance, so treat this section as
+// "on-chain revenue," not "total revenue," once Stripe is live.
+say(`\n## Revenue (source: Base chain - x402/USDC rail only, excludes Stripe)\n`);
 try {
   const bal = await jsonFetch('https://mainnet.base.org', {
     method: 'POST',
