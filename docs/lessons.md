@@ -98,6 +98,34 @@ filing it. Most of the value in a number sits in the second question you ask of
 it, and the cost of not asking is that the finding looks like context rather
 than a finding.
 
+## Verify a claim when it crosses from internal note to founder-facing assertion
+
+_2026-08-21, refined by the session whose writeup it stopped._
+
+A revenue discrepancy was filed as a tracked task — carefully, with real numbers,
+and with an explicit "not asking you to take this." It was ninety seconds from
+appearing in front of the founder as a stated conclusion. It was wrong: the money
+predated the ledger that would have booked it, and the alarming half rested on
+reading a metric that counts payments *attempted* as payments *succeeded*.
+
+What caught it was not diligence in general. "Someone happened to be suspicious"
+is not a control — it does not survive a tired night or a busy one.
+
+The transition is the control. A claim moving from internal note to
+founder-facing assertion is a **checkable event**, not a mood, and that is the
+moment to verify it against a primary source: the ledger, the chain, the library
+source. Not the task that asserted it, and not a teammate's summary of it —
+those are the thing being checked.
+
+The asymmetry is what makes the trigger the right one. An internal note that is
+wrong gets corrected by the next person who looks at it. A founder-facing
+assertion that is wrong becomes a decision.
+
+**Practice:** before a claim goes in a writeup, a dashboard, a public metric or a
+recommendation, name the primary source you checked it against. If the answer is
+"the task that said so," it has not been checked. See also the entry on
+third-party claims — same failure, pointed inward.
+
 ## The deploy does not build what you committed
 
 _2026-08-21._
