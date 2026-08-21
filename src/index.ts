@@ -22,6 +22,7 @@ import { isInternalRequest } from './internal.js';
 import { normalizeMcpPayments } from './mcpPayment.js';
 import { checkWallets, initWalletMonitor } from './walletMonitor.js';
 import {
+  acknowledgeWebhookIncident,
   initWebhookHealth,
   recordWebhookRejected,
   recordWebhookVerified,
@@ -908,6 +909,25 @@ app.get('/wallets', async (req, res) => {
     return;
   }
   res.set('Cache-Control', 'no-store').json(await checkWallets());
+});
+
+/**
+ * Clear a webhook incident once a human has actually dealt with it.
+ *
+ * POST, not GET, because it changes state and a link-preview fetcher must not
+ * be able to silence an alarm that says a customer lost money. Behind the stats
+ * token for the same reason: the alarm is worth something only if a stranger
+ * cannot switch it off.
+ */
+app.post('/webhook-health/ack', (req, res) => {
+  const token = typeof req.query.token === 'string' ? req.query.token : '';
+  if (!STATS_TOKEN || token !== STATS_TOKEN) {
+    res.status(401).json({ error: 'bad token' });
+    return;
+  }
+  const result = acknowledgeWebhookIncident();
+  console.log(`[stripe] webhook incident acknowledged, ${result.cleared} rejection(s) cleared`);
+  res.set('Cache-Control', 'no-store').json({ ...result, webhook: webhookHealth() });
 });
 
 app.get('/stats', async (req, res) => {

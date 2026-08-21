@@ -47,6 +47,10 @@ export interface WebhookHealth {
   bad_signature_count: number;
   /** Unsigned hits: scanners and our own probes. Carries no signal. */
   probe_count: number;
+  /** When a human last cleared an incident, so a live alarm can be dismissed. */
+  last_acknowledged_at: string | null;
+  /** Rejections cleared by acknowledgement over all time. Never reset. */
+  acknowledged_total: number;
   /** True when a human needs to act. */
   needs_attention: boolean;
   note: string;
@@ -59,6 +63,10 @@ interface Stored {
   verified_count: number;
   bad_signature_count: number;
   probe_count: number;
+  /** When a human last confirmed they had dealt with an incident. */
+  last_acknowledged_at: string | null;
+  /** Running total of rejections cleared by acknowledgement, never reset. */
+  acknowledged_total: number;
 }
 
 const EMPTY: Stored = {
@@ -68,6 +76,8 @@ const EMPTY: Stored = {
   verified_count: 0,
   bad_signature_count: 0,
   probe_count: 0,
+  last_acknowledged_at: null,
+  acknowledged_total: 0,
 };
 
 const dataDir = process.env.DATA_DIR ?? './data';
@@ -133,6 +143,35 @@ export function recordWebhookRejected(reason: string, now = new Date()): void {
   persist();
 }
 
+/**
+ * A human has dealt with the incident: clear it.
+ *
+ * WHY THIS HAS TO EXIST. Without it the incident is permanent, and a permanent
+ * alarm is one nobody reads on the day it is right — the precise defect found
+ * in the reconciler hours before this file was written, where /stats reported a
+ * drain that never happened for most of a day. Building a sticky alert with no
+ * way to clear it would have reproduced that bug in a new place while the fix
+ * for the old one was still warm.
+ *
+ * Deliberately NOT automatic on the next successful delivery. A success only
+ * proves the secret is right NOW; it says nothing about whether the buyers who
+ * were turned away in the bad window ever got their passes. Clearing on success
+ * would erase the record exactly when someone is still owed something. So it
+ * takes a person, and the acknowledgement is itself recorded — the count is
+ * moved to a running total rather than deleted, so the history survives.
+ */
+export function acknowledgeWebhookIncident(now = new Date()): {
+  cleared: number;
+  acknowledged_at: string;
+} {
+  const cleared = state.bad_signature_count;
+  state.acknowledged_total += cleared;
+  state.bad_signature_count = 0;
+  state.last_acknowledged_at = now.toISOString();
+  persist();
+  return { cleared, acknowledged_at: state.last_acknowledged_at };
+}
+
 export function webhookHealth(): WebhookHealth {
   const base = {
     last_verified_at: state.last_verified_at,
@@ -141,6 +180,8 @@ export function webhookHealth(): WebhookHealth {
     verified_count: state.verified_count,
     bad_signature_count: state.bad_signature_count,
     probe_count: state.probe_count,
+    last_acknowledged_at: state.last_acknowledged_at,
+    acknowledged_total: state.acknowledged_total,
   };
 
   if (state.bad_signature_count > 0) {

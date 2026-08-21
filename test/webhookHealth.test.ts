@@ -120,3 +120,67 @@ describe('webhookHealth', () => {
     expect(m.webhookHealth().status).toBe('healthy');
   });
 });
+
+describe('acknowledging an incident', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  /**
+   * Without this the alert is permanent, which is the reconciler bug wearing a
+   * different hat: /stats spent most of a day insisting funds had been swept.
+   * A sticky alarm with no off switch is not a stricter control, it is a
+   * broken one.
+   */
+  it('clears a live incident so the alarm can be switched off', async () => {
+    const m = await load();
+    m.recordWebhookRejected('no_matching_signature');
+    expect(m.webhookHealth().needs_attention).toBe(true);
+
+    const r = m.acknowledgeWebhookIncident(new Date('2026-08-21T21:00:00Z'));
+    expect(r.cleared).toBe(1);
+
+    const h = m.webhookHealth();
+    expect(h.needs_attention).toBe(false);
+    expect(h.bad_signature_count).toBe(0);
+  });
+
+  it('keeps the history rather than deleting it', async () => {
+    // The count moves to a running total. Someone auditing later must still be
+    // able to see that deliveries were once turned away.
+    const m = await load();
+    m.recordWebhookRejected('no_matching_signature');
+    m.recordWebhookRejected('no_matching_signature');
+    m.acknowledgeWebhookIncident(new Date('2026-08-21T21:00:00Z'));
+    const h = m.webhookHealth();
+    expect(h.acknowledged_total).toBe(2);
+    expect(h.last_acknowledged_at).toBe('2026-08-21T21:00:00.000Z');
+    expect(h.last_reject_reason).toBe('no_matching_signature');
+  });
+
+  it('does not auto-clear on a later success', async () => {
+    // A success proves the secret is right NOW. It says nothing about whether
+    // the buyers turned away in the bad window ever got their passes, so it
+    // must not erase the record while someone is still owed something.
+    const m = await load();
+    m.recordWebhookRejected('no_matching_signature');
+    m.recordWebhookVerified();
+    expect(m.webhookHealth().needs_attention).toBe(true);
+  });
+
+  it('re-raises if a signed delivery is rejected after an acknowledgement', async () => {
+    const m = await load();
+    m.recordWebhookRejected('no_matching_signature');
+    m.acknowledgeWebhookIncident();
+    expect(m.webhookHealth().needs_attention).toBe(false);
+    m.recordWebhookRejected('no_matching_signature');
+    expect(m.webhookHealth().status).toBe('REJECTING_SIGNED_DELIVERIES');
+  });
+
+  it('is a no-op when there is nothing to clear', async () => {
+    const m = await load();
+    expect(m.acknowledgeWebhookIncident().cleared).toBe(0);
+    expect(m.webhookHealth().status).toBe('never_exercised');
+  });
+});
