@@ -120,7 +120,18 @@ export function initPasses(): void {
       }
     }
     persistent = true;
-    console.log(`passes: ${statePath} (${passes.size} active)`);
+    // COUNT THE TWO KINDS SEPARATELY. `passes.size` meant "active" only while
+    // initPasses restored active entries alone; retaining stranded ones made
+    // the word false. This line is the first thing someone debugging a lost $9
+    // reads, so it was telling the one person who needed to hear "1 stranded"
+    // that there was "1 active".
+    const activeCount = [...passes.values()].filter((e) => e.active).length;
+    const strandedCount = passes.size - activeCount;
+    console.log(
+      `passes: ${statePath} (${activeCount} active` +
+        (strandedCount > 0 ? `, ${strandedCount} STRANDED awaiting a human` : '') +
+        ')',
+    );
   } catch (err) {
     // Never let a broken pass file take the service down. Degrading loses
     // paid passes on restart, which is the one unacceptable direction - so

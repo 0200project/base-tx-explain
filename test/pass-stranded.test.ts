@@ -105,3 +105,45 @@ describe('a pending pass stranded by a restart', () => {
     expect(second.passSnapshot().pass_calls_used).toBe(2);
   });
 });
+
+describe('the boot line a 3am debugger reads first', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  it('counts active and stranded separately, instead of calling both active', async () => {
+    // `passes.size` meant "active" only while initPasses restored active
+    // entries alone. Retaining stranded ones falsified the word — on the exact
+    // line someone debugging a lost $9 reads first. Same family as a stale
+    // comment: a true statement outliving the change that falsified it.
+    const dir = `/tmp/pass-boot-${Math.random().toString(36).slice(2)}`;
+    mkdirSync(dir, { recursive: true });
+
+    const first = await boot(dir);
+    first.mintPass({ payer: '0xpayer', pending: true, nonce: '0xbootnonce' });
+
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await boot(dir);
+    const said = log.mock.calls.flat().join(' ');
+
+    expect(said).toMatch(/0 active/);
+    expect(said).toMatch(/1 STRANDED/);
+  });
+
+  it('says nothing about stranded when there are none', async () => {
+    // The alarm must rest at silence, or it stops being read.
+    const dir = `/tmp/pass-boot2-${Math.random().toString(36).slice(2)}`;
+    mkdirSync(dir, { recursive: true });
+    const first = await boot(dir);
+    const m = first.mintPass({ payer: '0xp', pending: true, nonce: '0xn' });
+    first.activatePass('0xn', '0xp');
+    expect(m.token).toBeTruthy();
+
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    await boot(dir);
+    const said = log.mock.calls.flat().join(' ');
+    expect(said).toMatch(/1 active/);
+    expect(said).not.toMatch(/STRANDED/);
+  });
+});
