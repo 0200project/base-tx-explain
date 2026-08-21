@@ -80,23 +80,47 @@ ERC-20 Transfer events with our address in the `from` position — never the
 transaction count.** (Identified by the platform session, 2026-08-21, correcting
 an earlier control of mine that would have reported all-clear on an empty wallet.)
 
-### Expected non-revenue inbound — pre-logged before arrival
+### Non-revenue inbound — landed 2026-08-21, high confidence not closed fact
 
-One $0.02 USDC arrival at the payout wallet is **expected** from an external
-address (Circadian-agent), an unprompted technical favour to exercise our
-least-tested settlement path. Founder approved accepting it.
+**$0.02 USDC arrived** at the payout wallet 2026-08-21T17:14:49Z, tx
+`0x6ce5e3948c9c6b8e0ef8413f3c29623163bb7b58155eda90a67464f3bb119110`, from
+`0x9f54460fed51892b3b065eae3ac1603dc3c6ece4` — a new address, not our test
+wallet. Payout wallet $0.02 → $0.04. This was pre-logged before it happened:
+Circadian-agent, an external x402/MCP research operation, offered twice to run
+one real payment through our least-tested settlement path as a technical
+favour; the founder approved accepting.
 
-**It is not a sale, not revenue, and not our first customer. Booked at $0.00.**
-There is no commercial exchange: they are not buying transaction analysis, they
-are testing our payment rail, and the $0.02 is the instrument of the test rather
-than its purpose. Booking it would make our first "sale" a gift from a peer and
-every conversion metric derived from it false.
+**Treatment: not revenue, not our first customer. Booked at $0.00.** No
+commercial exchange occurred — they are not buying transaction analysis, they
+are testing our payment rail, and the $0.02 is the instrument of the test, not
+its purpose. Added to `KNOWN_FAVOR_TXS` in scripts/daily-report.mjs so it does
+not trip the customer-signal line.
 
-When it lands, two numbers move and must not be misread: payout wallet $0.02 →
-$0.04, and on-chain arrivals 1 → 2 "of which 1 external". Any report phrasing
-that says "from strangers" must exclude this one. It remains valuable as
-**evidence** — the first proof an external party can pay us end to end — and
-should be reported as evidence, never as revenue.
+**Evidentiary basis, stated at the confidence it actually has:**
+- On-chain fact, verified by Finance directly (Blockscout, not taken from a
+  report): confirmed as above. This part is certain.
+- Attribution to Circadian: **very high confidence, not yet closed.** Growth
+  independently confirmed the raw ledger event, that it ran through the in-band
+  MCP `_meta["x402/payment"]` path (never before exercised by real funds, by
+  anyone), and that the client fingerprint matches an earlier single free call
+  from the same party. Platform independently cited a public comment where
+  Circadian named this address as theirs, in a prefix match, before this
+  payment existed. **Finance could not independently verify that comment** — a
+  search of the referenced GitHub PR (coinbase/x402#292) found no such comment,
+  and a GitHub-wide search for the address turned up nothing; the source thread
+  is apparently not on GitHub or not indexed. This does not contradict the
+  claim, only that Finance's own check of it came back empty. Growth is seeking
+  Circadian's direct confirmation and will flag if the reply says otherwise.
+- **This entry will be corrected if that confirmation contradicts it.** Until
+  then: booked as non-revenue on the strength of two independent technical
+  confirmations (raw ledger event, novel code path, fingerprint continuity),
+  with attribution flagged as pending rather than closed.
+
+**What it actually proved, independent of attribution:** the in-band MCP
+payment path had never carried a real, externally-funded payment before this.
+It worked. That is true regardless of whose money it was, and it is the more
+durable fact — the settlement mechanism has now been exercised by money we do
+not control.
 
 ## Growth / customer-acquisition expenses
 
