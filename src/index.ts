@@ -16,7 +16,8 @@ import { buildOpenApiDocument } from './openapi.js';
 import { registerPassRoutes, registerRestRoutes } from './rest.js';
 import { getTreasury } from './treasury.js';
 import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
-import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, passSnapshot, refundPassUse, usePass } from './passes.js';
+import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, passSnapshot, refundPassUse, activatePass, revokePendingPass, usePass } from './passes.js';
+import { HOUR, TtlCache } from './cache.js';
 import { APIFY_BILLING_ACTIVE, initApifyBilling, chargeApifyCall } from './apifyBilling.js';
 import { initUsageLedger, recordEvent, usageSnapshot } from './usage.js';
 
@@ -96,6 +97,27 @@ const BAZAAR_EXTENSIONS = declareDiscoveryExtension({
   },
   example: { tx_hash: '0x' + 'ab'.repeat(32) },
 });
+
+/**
+ * Did this settlement affirmatively succeed?
+ *
+ * The asymmetry matters. `success: false` is the facilitator stating that no
+ * funds moved — safe to act on. Anything else (field absent, response shape we
+ * do not recognise) is UNKNOWN, and the one error we can never make is taking a
+ * customer's money and withholding what they bought. So unknown reads as
+ * success: we keep the ledger honest about explicit failures without ever
+ * punishing a payer for an ambiguous response.
+ */
+function settledOk(settlement: unknown): boolean {
+  return Boolean(settlement) && (settlement as { success?: unknown }).success === true;
+}
+
+/** The EIP-3009 authorization nonce identifies one payment across the hooks. */
+function authNonceOf(paymentPayload: unknown): string | null {
+  const nonce = (paymentPayload as { payload?: { authorization?: { nonce?: unknown } } } | undefined)
+    ?.payload?.authorization?.nonce;
+  return typeof nonce === 'string' && nonce ? nonce.toLowerCase() : null;
+}
 
 async function initPayments(): Promise<void> {
   if (PAYMENT_MODE !== 'x402') return;
@@ -193,6 +215,13 @@ async function initPayments(): Promise<void> {
         console.log('[x402] payment VERIFIED, executing tool (payer payload present:', Boolean(paymentPayload), ')');
       },
       onAfterSettlement: ({ settlement }) => {
+        // The facilitator can answer HTTP 200 with success:false — settlement
+        // did not happen. Booking that as revenue corrupts the ledger and hides
+        // the loss, so only a confirmed settle is recorded.
+        if (!settledOk(settlement)) {
+          console.error('[x402] SETTLE NOT CONFIRMED, booking no revenue:', JSON.stringify(settlement).slice(0, 400));
+          return;
+        }
         console.log('[x402] SETTLED:', JSON.stringify(settlement).slice(0, 400));
         recordEvent({
           t: new Date().toISOString(),
@@ -228,7 +257,25 @@ async function initPayments(): Promise<void> {
       serviceName: 'base-tx-explain',
     },
     hooks: {
-      onAfterSettlement: ({ settlement }) => {
+      onAfterSettlement: ({ settlement, paymentPayload }) => {
+        const nonce = authNonceOf(paymentPayload);
+        if (!settledOk(settlement)) {
+          // No money moved, so the token minted by the handler must never
+          // become usable. The caller still receives the string; it buys
+          // nothing. Loud, because the rare "settled on-chain but the response
+          // was lost" case lands here too and is manually recoverable.
+          console.error(
+            `[pass] $${PASS_PRICE_USD} SETTLE NOT CONFIRMED - discarding pending pass, booking no revenue. ` +
+              `nonce=${nonce ?? 'unknown'} payer=${(settlement as { payer?: string })?.payer ?? 'unknown'} ` +
+              `tx=${(settlement as { transaction?: string })?.transaction ?? 'none'} ` +
+              `detail=${JSON.stringify(settlement).slice(0, 400)}`,
+          );
+          if (nonce) revokePendingPass(nonce, 'settlement not confirmed');
+          return;
+        }
+        if (nonce && !activatePass(nonce, settlement.payer)) {
+          console.error(`[pass] SETTLED but no pending pass matched nonce=${nonce} - manual follow-up needed`);
+        }
         console.log('[pass] $' + PASS_PRICE_USD + ' SETTLED:', JSON.stringify(settlement).slice(0, 400));
         recordEvent({
           t: new Date().toISOString(),
@@ -241,8 +288,12 @@ async function initPayments(): Promise<void> {
       },
     },
   });
-  buyPassHandler = paidPass(async () => {
-    const pass = mintPass();
+  buyPassHandler = paidPass(async (_args: Record<string, never>, extra: unknown) => {
+    // Minted PENDING: the wrapper hands this result to the caller before it
+    // settles, so the token must not work until onAfterSettlement confirms the
+    // $9 actually moved. Correlated by the payment authorization nonce.
+    const nonce = authNonceOf((extra as { _meta?: Record<string, unknown> } | undefined)?._meta?.['x402/payment']);
+    const pass = mintPass({ pending: true, nonce: nonce ?? undefined });
     const payload = {
       pass_token: pass.token,
       expires_at: pass.expires_at,
@@ -715,7 +766,11 @@ initApifyBilling()
         publicUrl: PUBLIC_URL,
         callCap: PASS_CALL_CAP,
         days: PASS_DAYS,
-        mint: mintPass,
+        // Active on mint: the x402 express middleware buffers the response and
+        // discards the body when settlement fails, so a REST caller cannot
+        // receive this token without having paid. Minting pending here would
+        // strand real payers - nothing on this rail activates them.
+        mint: () => mintPass(),
         recordSale: () => {
           // Settlement details for HTTP sales are recorded by the payment
           // middleware's receipt; the ledger row here keeps revenue whole

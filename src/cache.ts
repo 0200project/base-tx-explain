@@ -36,6 +36,11 @@ export class TtlCache<V> {
   /** Memoize an async producer under a key. Concurrent callers share one in-flight promise. */
   private inflight = new Map<string, Promise<V>>();
 
+  /** Drop a key, e.g. to release a claim that turned out not to be needed. */
+  delete(key: string): void {
+    this.map.delete(key);
+  }
+
   /**
    * Memoize `load` under `key`. `ttlMs` may be a fixed number or a function of
    * the resolved value — the latter lets callers cache a transient failure (e.g.

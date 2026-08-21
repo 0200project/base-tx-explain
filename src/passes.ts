@@ -28,6 +28,19 @@ interface PassEntry {
   calls_used: number;
   /** payer address from settlement, for support/forensics only */
   payer?: string;
+  /**
+   * A pass is usable only once its $9 payment is CONFIRMED settled.
+   *
+   * On the MCP rail the payment wrapper runs the handler before it settles and
+   * hands the caller the handler's result either way, so a token string reaches
+   * the client even when no money moved. Minting inactive closes that: the
+   * client may hold the string, but it buys nothing until settlement confirms.
+   * The REST rail does not need this — its middleware buffers the response and
+   * discards the body when settlement fails, so the token never leaves the
+   * server — and minting pending there would strand real payers with no hook to
+   * activate them. Hence per-mint, not global.
+   */
+  active: boolean;
 }
 
 const dataDir = process.env.DATA_DIR ?? './data';
@@ -48,7 +61,10 @@ export function initPasses(): void {
       const raw = JSON.parse(readFileSync(statePath, 'utf8')) as Record<string, PassEntry>;
       const now = Date.now();
       for (const [k, e] of Object.entries(raw)) {
-        if (e && typeof e.expires === 'number' && e.expires > now) passes.set(k, e);
+        // Pending passes never survive a restart: settlement for them cannot
+        // complete across the boundary, so keeping them would leave unusable
+        // entries that look real. Only confirmed passes are restored.
+        if (e && typeof e.expires === 'number' && e.expires > now && e.active === true) passes.set(k, e);
       }
     }
     persistent = true;
@@ -77,20 +93,86 @@ function flush(): void {
   }
 }
 
-/** Mint a new pass after a verified $9 payment. Returns the bearer token. */
-export function mintPass(payer?: string): { token: string; expires_at: string; call_cap: number } {
+/**
+ * Nonce of the payment authorization -> hashed token, for the brief window
+ * between minting a pending pass and its settlement callback. In memory only:
+ * a restart inside that window fails settle anyway, and pending passes are
+ * dropped on load, so it fails safe.
+ */
+const pendingByNonce = new Map<string, { key: string; at: number }>();
+const PENDING_TTL_MS = 10 * 60_000;
+
+function reapPending(now: number): void {
+  for (const [n, p] of pendingByNonce) {
+    if (now - p.at > PENDING_TTL_MS) pendingByNonce.delete(n);
+  }
+}
+
+/**
+ * Mint a pass. `pending` withholds usability until `activatePass` confirms the
+ * payment settled (MCP rail); omit it only where the caller cannot receive the
+ * token unless settlement already succeeded (REST rail).
+ */
+export function mintPass(
+  opts: { payer?: string; pending?: boolean; nonce?: string } = {},
+): { token: string; expires_at: string; call_cap: number } {
+  const { payer, pending = false, nonce } = opts;
   const token = `btxp_${randomBytes(24).toString('hex')}`;
   const now = Date.now();
-  const entry: PassEntry = { issued: now, expires: now + PASS_DAYS * 86_400_000, calls_used: 0, payer };
-  passes.set(hashToken(token), entry);
+  const key = hashToken(token);
+  const entry: PassEntry = {
+    issued: now,
+    expires: now + PASS_DAYS * 86_400_000,
+    calls_used: 0,
+    payer,
+    active: !pending,
+  };
+  passes.set(key, entry);
+  if (pending && nonce) {
+    reapPending(now);
+    pendingByNonce.set(nonce, { key, at: now });
+  }
   flush();
-  console.log(`[pass] MINTED ${hashToken(token).slice(0, 12)} payer=${payer ?? 'unknown'} expires=${new Date(entry.expires).toISOString()}`);
+  console.log(
+    `[pass] MINTED ${key.slice(0, 12)} ${pending ? 'PENDING (awaiting settlement)' : 'active'} ` +
+      `payer=${payer ?? 'unknown'} expires=${new Date(entry.expires).toISOString()}`,
+  );
   return { token, expires_at: new Date(entry.expires).toISOString(), call_cap: PASS_CALL_CAP };
+}
+
+/**
+ * Confirm a pending pass after its payment settled. Returns false when there is
+ * nothing to activate (unknown nonce, already reaped) — the caller should log
+ * loudly rather than mint a replacement.
+ */
+export function activatePass(nonce: string, payer?: string): boolean {
+  const pending = pendingByNonce.get(nonce);
+  if (!pending) return false;
+  pendingByNonce.delete(nonce);
+  const entry = passes.get(pending.key);
+  if (!entry) return false;
+  entry.active = true;
+  if (payer) entry.payer = payer;
+  flush();
+  console.log(`[pass] ACTIVATED ${pending.key.slice(0, 12)} payer=${payer ?? 'unknown'}`);
+  return true;
+}
+
+/** Drop a pending pass whose payment affirmatively did not settle. */
+export function revokePendingPass(nonce: string, reason: string): boolean {
+  const pending = pendingByNonce.get(nonce);
+  if (!pending) return false;
+  pendingByNonce.delete(nonce);
+  const existed = passes.delete(pending.key);
+  rateWindows.delete(pending.key);
+  if (existed) flush();
+  console.error(`[pass] DISCARDED pending ${pending.key.slice(0, 12)} - ${reason}`);
+  return existed;
 }
 
 export type PassCheck =
   | { ok: true; remaining: number }
-  | { ok: false; reason: 'invalid' | 'expired' | 'cap_exhausted' | 'rate_limited' };
+  | { ok: false; reason: 'invalid' | 'not_activated' | 'expired' | 'cap_exhausted' | 'rate_limited' };
 
 /**
  * Validate a presented pass and, when valid, consume one call against it.
@@ -99,6 +181,8 @@ export function usePass(token: string): PassCheck {
   const key = hashToken(token);
   const entry = passes.get(key);
   if (!entry) return { ok: false, reason: 'invalid' };
+  // Minted but its payment never confirmed: the token exists, buys nothing.
+  if (!entry.active) return { ok: false, reason: 'not_activated' };
   const now = Date.now();
   if (now > entry.expires) {
     passes.delete(key);
@@ -119,6 +203,21 @@ export function usePass(token: string): PassCheck {
   return { ok: true, remaining: PASS_CALL_CAP - entry.calls_used };
 }
 
+/**
+ * Void a pass. Used when a mint was released but the payment affirmatively did
+ * NOT settle — the pass was never paid for, so it must not stay valid. Only
+ * call this on an affirmative "no funds moved"; an ambiguous or unknown
+ * settlement result must leave the pass alone (never strand a paying customer).
+ */
+export function revokePass(token: string): boolean {
+  const key = hashToken(token);
+  if (!passes.delete(key)) return false;
+  rateWindows.delete(key);
+  flush();
+  console.error(`[pass] REVOKED ${key.slice(0, 12)} - payment did not settle`);
+  return true;
+}
+
 /** Give back a consumed pass call when the failure was on our side. */
 export function refundPassUse(token: string): void {
   const entry = passes.get(hashToken(token));
@@ -133,7 +232,7 @@ export function passSnapshot(): { active_passes: number; pass_calls_used: number
   let calls = 0;
   let active = 0;
   for (const e of passes.values()) {
-    if (e.expires > now) {
+    if (e.expires > now && e.active) {
       active++;
       calls += e.calls_used;
     }
