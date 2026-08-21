@@ -55,11 +55,14 @@ describe('first-touch channel attribution', () => {
     // The case that makes first-touch necessary: an MCP client pastes the
     // listing URL once and subsequent calls may carry nothing. Re-attributing
     // would move a real arrival into `direct` and make every listing look dead.
+    // Follow-ups carry `channel: 'direct'`, not an absent field: after this
+    // shipped, every external call records a channel, and "no ref supplied" is
+    // an explicit answer rather than a missing one.
     const m = await load();
     feed(m, [
       { client: 'a', channel: 'glama' },
-      { client: 'a' },
-      { client: 'a' },
+      { client: 'a', channel: 'direct' },
+      { client: 'a', channel: 'direct' },
     ]);
     const b = buckets(m);
     expect(b.glama.arrivals).toBe(1);
@@ -98,10 +101,38 @@ describe('first-touch channel attribution', () => {
 
   it('gives an unattributed arrival its own bucket rather than a real channel', async () => {
     const m = await load();
-    feed(m, [{ client: 'a' }, { client: 'b', channel: 'other' }]);
+    feed(m, [{ client: 'a', channel: 'direct' }, { client: 'b', channel: 'other' }]);
     const b = buckets(m);
     expect(b.direct.arrivals).toBe(1);
     expect(b.other.arrivals).toBe(1);
+  });
+
+  /**
+   * Found by deploying it and reading the output: every external client on
+   * record predates this instrument, so folding them into `direct` printed
+   * "direct: 7 arrivals" — which reads as *direct is our best channel* and
+   * means *we could not measure*. The same defect this module exists to
+   * prevent, committed inside the module, pointing the flattering way.
+   */
+  it('does NOT let the pre-measurement period masquerade as a channel', async () => {
+    const m = await load();
+    feed(m, [
+      { client: 'old' },                        // no channel key: predates attribution
+      { client: 'new', channel: 'direct' },     // explicit: a caller who sent no ref
+    ]);
+    const b = buckets(m);
+    expect(b.pre_attribution.arrivals).toBe(1);
+    expect(b.direct.arrivals).toBe(1);
+  });
+
+  it('keeps a pre-attribution client there even after they return with a ref', async () => {
+    // First touch still wins. We genuinely do not know where they came from,
+    // and a later ref does not retroactively reveal it.
+    const m = await load();
+    feed(m, [{ client: 'a' }, { client: 'a', channel: 'glama' }]);
+    const b = buckets(m);
+    expect(b.pre_attribution.arrivals).toBe(1);
+    expect(b.glama.arrivals).toBe(0);
   });
 
   it('emits every allowlisted channel even at zero', async () => {

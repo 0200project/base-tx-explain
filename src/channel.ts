@@ -45,6 +45,21 @@
 export const DIRECT = 'direct';
 /** A `ref` we do not recognise. Kept separate rather than discarded. */
 export const OTHER = 'other';
+/**
+ * A client whose first call predates attribution existing at all.
+ *
+ * Distinct from `direct`, and the distinction is not pedantic. Every external
+ * client on record arrived before this instrument shipped, so folding them into
+ * `direct` would show "direct: 7 arrivals" — which reads as *direct is our
+ * strongest channel* when it means *we could not measure*. That is the same
+ * defect this module was written to avoid, committed inside the module itself,
+ * and it points the flattering way like all the others.
+ *
+ * Ledger events written before the deploy carry no `channel` key at all, so the
+ * two are separable exactly: an absent field is pre-attribution, an explicit
+ * `direct` is a real caller who supplied no ref.
+ */
+export const PRE_ATTRIBUTION = 'pre_attribution';
 
 /**
  * Shape a channel tag must have to be considered at all. Short, lowercase,

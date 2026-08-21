@@ -2,7 +2,7 @@ import { bookedNonRevenueTotal, revenueNote } from './knownNonRevenue.js';
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { absorbCheckHealthEvent, takeCheckHealthEvents, type CheckHealthEvent } from './checkHealth.js';
-import { CHANNEL_CAVEAT, DIRECT, OTHER, knownChannels } from './channel.js';
+import { CHANNEL_CAVEAT, DIRECT, OTHER, PRE_ATTRIBUTION, knownChannels } from './channel.js';
 
 /**
  * Append-only usage ledger. One JSONL file on disk (a Fly volume in
@@ -157,7 +157,10 @@ function absorb(ev: LedgerEvent): void {
       // Distinct clients matter more than calls here: one curious caller making
       // forty calls is one arrival, and ranking channels by call count would
       // promote whichever listing sent the most talkative visitor.
-      const ch = ev.channel ?? DIRECT;
+      // An ABSENT channel field means the event predates attribution; an
+      // explicit 'direct' means a real caller supplied no ref. Collapsing them
+      // would make our blind period look like a successful channel.
+      const ch = ev.channel ?? PRE_ATTRIBUTION;
       agg.channelCalls.set(ch, (agg.channelCalls.get(ch) ?? 0) + 1);
       lifetimeChannelCalls.set(ch, (lifetimeChannelCalls.get(ch) ?? 0) + 1);
       // First touch wins and is never overwritten: a client who arrives via a
@@ -193,7 +196,7 @@ function channelSnapshot(): Record<string, unknown> {
   for (const ch of clientFirstChannel.values()) arrivals.set(ch, (arrivals.get(ch) ?? 0) + 1);
 
   const buckets: Record<string, { arrivals: number; calls: number }> = {};
-  for (const ch of [...knownChannels(), DIRECT, OTHER]) {
+  for (const ch of [...knownChannels(), DIRECT, OTHER, PRE_ATTRIBUTION]) {
     buckets[ch] = { arrivals: arrivals.get(ch) ?? 0, calls: lifetimeChannelCalls.get(ch) ?? 0 };
   }
   return {
