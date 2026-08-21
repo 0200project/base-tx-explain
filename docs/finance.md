@@ -190,6 +190,23 @@ can act on whenever, same as the wallet funding was.** Nothing spent, nothing
 booked. First real test of the approval chain, and it held — no execution
 happened without a checked, available mechanism.
 
+**Platform's two-key check, completed:** relevance — plausibly yes, the
+research concluded distribution is the actual constraint and a registry other
+agents query is discovery infrastructure, not one-prospect outreach; cost is
+noise at $0.05. Duplication — **yes, this would be the seventh listing**
+(MCP registry, Apify, Glama, x402scan, plus two open PRs). Not a reason to
+refuse five cents, but paired with a real finding: **there is currently no
+way to tell whether any of the first six produced a single client.** Of 6
+lifetime unique clients, at least 2 are provably us and 1 is Circadian from
+direct outreach — zero channel attribution exists for the rest. A client
+arriving from a registry looks identical to one arriving from anywhere else.
+Platform's verdict: **approve the $0.05 once the Founder executes it, and
+build per-channel attribution (a distinguishable URL path per listing —
+cheap, the MCP URL already supports it) before buying an eighth.** Finance
+agrees with the sequencing: if distribution is the stated constraint, being
+unable to measure which distribution channel works is the more valuable
+thing to fix than adding another unmeasurable one.
+
 **Spent against the $20: $0.00. Remaining allocation: $20.00, fully funded and
 verified on chain** (see Open Item 1, resolved).
 
@@ -278,16 +295,34 @@ which I trust as far as the webhook is trustworthy — see Open Item 6. Until I
 have a second source I will book Stripe revenue from the ledger and treat it as
 unreconciled. *Needs either Stripe read access or a reliable relay.*
 
-**6. Card-rail books-integrity item — tracked privately.** A credential-handling
-issue affecting the integrity of Stripe-side revenue booking was identified
-2026-08-21 and is being handled with the security session and the Founder.
-Details are deliberately **not** recorded in this file: this repository is
-public, and a written description of an unresolved control weakness is an
-advertisement. Recorded here only so the ledger shows the item exists and is
-owned. Remove this note once resolved.
+**6. Card-rail credential exposure — RESOLVED 2026-08-21.** Rotation confirmed
+on two independent sources, the same bar held all day: the Founder told
+platform directly and first-hand ("stripe secret is rolled, i did it
+earlier"), and Finance independently observed the deployed secret's digest
+change (`0d6dd258…` → `55dd085d46efd45f`) and the stray exposed-name secret
+disappear from `fly secrets list`. Neither alone would have closed this;
+together they do. **Rotated, not rewritten** — per security's reasoning
+adopted earlier today, the public write-up describing this was left in git
+history deliberately, since rotation makes it a description of a closed
+problem rather than a live one, and force-pushing over public history with an
+open external PR against it would have cost more than it protected.
 
-Finance's position while it is open: Stripe-side `settled` rows are booked but
-treated as **unreconciled** until verified against Stripe itself.
+**This closes the credential exposure. It does not prove the card rail
+works.** Those are different questions, and conflating them was flagged as a
+mistake worth not repeating. `/healthz`/`/stats` still read
+`webhook.status: never_exercised`, 0 verified deliveries — the correct secret
+being deployed has never yet been exercised by a real Stripe delivery.
+Finance's position is unchanged: Stripe-side `settled` rows are booked but
+treated as **unreconciled** until a real delivery verifies against it.
+
+**Pre-logged, before it happens, same discipline as the Circadian entry
+above:** platform has told the Founder the cleanest proof of the card rail is
+to buy his own $9 pass. If that happens, **it will book $9 of real,
+live-mode revenue that is not a customer sale** — Finance's own money,
+verifying its own system. Treatment: not revenue, not a customer, booked
+$0.00, same as every other known non-revenue inbound in this ledger. Flagged
+now specifically so it cannot be mistaken for the first sale toward tonight's
+10-customer target when it lands.
 
 ## Flagged discrepancies — open
 
@@ -640,15 +675,13 @@ Current count: to be read at each daily close. Lifetime `pass_calls`: 1.
 
 ## Reconciliation notes
 
-- **Client identity is being redefined — a future regime boundary, not yet in
-  effect.** Committed 2026-08-21 as `9ca2cbb`. **Confirmed by Finance directly
-  against the deployed server (as of release v67, ~19:05Z): the old IP-exact
-  keying is still live.** The boundary is the *deploy*, not the commit — until
-  platform ships it, production behavior and today's client counts are
-  unaffected, and no regime shift has happened yet. This entry documents what
-  changes *when it does*, so the date to record is deploy day, not today,
-  unless they land on the same day. Security
-  found the free tier and rate limiter keyed on the full IP, which is exact on
+- **Client identity was redefined — LIVE as of release v68, 2026-08-21
+  ~19:34:18Z.** Committed as `9ca2cbb`, and Finance confirmed the deploy
+  independently rather than take the release log's word for it: SSH'd into
+  the running machine and found the normalization code (`clientKey.js`)
+  actually present in the deployed `dist/`, not just committed. **This is the
+  regime boundary — client counts from before 19:34:18Z and after are not
+  the same measurement.** Security found the free tier and rate limiter keyed on the full IP, which is exact on
   IPv4 but nearly meaningless on IPv6 — a caller controlling one /64 could
   present up to 2^64 distinct "clients," each getting its own free tier and
   rate-limit window, without forging anything. Fixed by normalizing IPv6 to its
