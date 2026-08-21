@@ -62,13 +62,108 @@
     return e;
   }
 
+  /**
+   * Wallet discovery.
+   *
+   * `window.ethereum` is a single slot that several extensions race to claim,
+   * and the winner is whoever injected last. With MetaMask and Coinbase Wallet
+   * both installed, a page that reaches for window.ethereum silently talks to
+   * one of them and gives the person no way to choose the other.
+   *
+   * EIP-6963 exists for exactly this: wallets announce themselves on an event
+   * and the page lists what actually answered. window.ethereum stays as the
+   * fallback for wallets that have not adopted it.
+   */
+  var discovered = []; // { uuid, name, icon, provider }
+  var selectedUuid = null;
+
+  function recordProvider(detail) {
+    if (!detail || !detail.info || !detail.provider) return;
+    for (var i = 0; i < discovered.length; i++) {
+      if (discovered[i].uuid === detail.info.uuid) return;
+    }
+    discovered.push({
+      uuid: detail.info.uuid,
+      name: detail.info.name || 'Wallet',
+      icon: detail.info.icon || null,
+      provider: detail.provider,
+    });
+  }
+
+  if (typeof window !== 'undefined' && window.addEventListener) {
+    window.addEventListener('eip6963:announceProvider', function (event) {
+      recordProvider(event.detail);
+    });
+    // Wallets answer this synchronously, so anything installed is registered by
+    // the time the page's own script runs.
+    try {
+      window.dispatchEvent(new Event('eip6963:requestProvider'));
+    } catch (e) {
+      /* older browser: fall back to window.ethereum */
+    }
+  }
+
+  /**
+   * Every wallet the page could pay with.
+   *
+   * Includes a synthetic entry for a legacy window.ethereum that never
+   * announced itself, so a lone old wallet is still usable. Some builds also
+   * expose window.ethereum.providers when several coexist; read that too.
+   */
+  function wallets() {
+    var out = discovered.slice();
+    var eth = typeof window !== 'undefined' ? window.ethereum : null;
+    if (!eth) return out;
+
+    var extras = Array.isArray(eth.providers) ? eth.providers : [eth];
+    for (var i = 0; i < extras.length; i++) {
+      var p = extras[i];
+      var already = false;
+      for (var j = 0; j < out.length; j++) {
+        if (out[j].provider === p) { already = true; break; }
+      }
+      if (already) continue;
+      // Name it from the flags these wallets have long set on themselves. This
+      // is only a label; the provider object is what actually gets used.
+      var name = p.isCoinbaseWallet ? 'Coinbase Wallet'
+        : p.isRabby ? 'Rabby'
+        : p.isBraveWallet ? 'Brave Wallet'
+        : p.isTrust ? 'Trust Wallet'
+        : p.isMetaMask ? 'MetaMask'
+        : 'Injected wallet';
+      out.push({ uuid: 'legacy:' + name, name: name, icon: null, provider: p });
+    }
+    return out;
+  }
+
+  /**
+   * Choose which wallet to pay from. Returns false for an unknown id rather
+   * than silently paying from a different wallet than the person picked.
+   */
+  function select(uuid) {
+    var list = wallets();
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].uuid === uuid) {
+        selectedUuid = uuid;
+        return true;
+      }
+    }
+    return false;
+  }
+
   function provider() {
-    return typeof window !== 'undefined' && window.ethereum ? window.ethereum : null;
+    var list = wallets();
+    if (selectedUuid) {
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].uuid === selectedUuid) return list[i].provider;
+      }
+    }
+    return list.length ? list[0].provider : null;
   }
 
   /** Is there any injected wallet at all? The page should ask before offering to pay. */
   function available() {
-    return provider() !== null;
+    return wallets().length > 0;
   }
 
   function request(method, params) {
@@ -383,6 +478,8 @@
 
   window.x402Pay = {
     available: available,
+    wallets: wallets,
+    select: select,
     challengeFrom: challengeFrom,
     inspect: inspect,
     payChallenge: payChallenge,

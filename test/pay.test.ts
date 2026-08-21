@@ -306,3 +306,85 @@ describe('pay.js — amount formatting', () => {
     expect(pay.formatUnits('1', 6)).toBe('0.000001');
   });
 });
+
+describe('pay.js — choosing between installed wallets', () => {
+  /**
+   * `window.ethereum` is one slot several extensions race to claim, so a person
+   * with MetaMask and Coinbase Wallet both installed gets silently routed to
+   * whichever injected last. EIP-6963 lets each announce itself so the page can
+   * offer a real choice.
+   */
+  function loadWithAnnouncements(announced: Array<{ uuid: string; name: string }>, legacy?: unknown) {
+    const listeners: Array<(e: { detail: unknown }) => void> = [];
+    const win: Record<string, unknown> = {
+      ethereum: legacy,
+      addEventListener: (type: string, fn: (e: { detail: unknown }) => void) => {
+        if (type === 'eip6963:announceProvider') listeners.push(fn);
+      },
+      dispatchEvent: () => {
+        for (const info of announced) {
+          for (const fn of listeners) {
+            fn({ detail: { info: { uuid: info.uuid, name: info.name }, provider: { id: info.uuid } } });
+          }
+        }
+        return true;
+      },
+    };
+    (win as { Event?: unknown }).Event = class { constructor(public type: string) {} };
+    new Function('window', 'crypto', 'Event', PAY_JS)(win, globalThis.crypto, (win as { Event: unknown }).Event);
+    return win.x402Pay as X402Pay & {
+      wallets(): Array<{ uuid: string; name: string }>;
+      select(uuid: string): boolean;
+    };
+  }
+
+  it('lists every wallet that announced itself, not just the one holding window.ethereum', () => {
+    const p = loadWithAnnouncements([
+      { uuid: 'mm', name: 'MetaMask' },
+      { uuid: 'cb', name: 'Coinbase Wallet' },
+    ]);
+    const names = p.wallets().map((w) => w.name);
+    expect(names).toContain('MetaMask');
+    expect(names).toContain('Coinbase Wallet');
+  });
+
+  it('still finds a legacy wallet that never announced itself', () => {
+    const p = loadWithAnnouncements([], { isMetaMask: true });
+    expect(p.wallets().map((w) => w.name)).toEqual(['MetaMask']);
+    expect(p.available()).toBe(true);
+  });
+
+  it('names a legacy Coinbase Wallet from its own flag', () => {
+    const p = loadWithAnnouncements([], { isCoinbaseWallet: true });
+    expect(p.wallets()[0].name).toBe('Coinbase Wallet');
+  });
+
+  it('does not list the same provider twice when it both announces and holds window.ethereum', () => {
+    const shared = { isMetaMask: true };
+    const listeners: Array<(e: { detail: unknown }) => void> = [];
+    const win: Record<string, unknown> = {
+      ethereum: shared,
+      addEventListener: (t: string, fn: (e: { detail: unknown }) => void) => {
+        if (t === 'eip6963:announceProvider') listeners.push(fn);
+      },
+      dispatchEvent: () => {
+        for (const fn of listeners) fn({ detail: { info: { uuid: 'mm', name: 'MetaMask' }, provider: shared } });
+        return true;
+      },
+    };
+    new Function('window', 'crypto', 'Event', PAY_JS)(win, globalThis.crypto, class { constructor(public type: string) {} });
+    expect((win.x402Pay as { wallets(): unknown[] }).wallets()).toHaveLength(1);
+  });
+
+  it('refuses an unknown wallet id rather than paying from a different wallet', () => {
+    const p = loadWithAnnouncements([{ uuid: 'mm', name: 'MetaMask' }]);
+    expect(p.select('nope')).toBe(false);
+    expect(p.select('mm')).toBe(true);
+  });
+
+  it('reports no wallet when nothing announced and window.ethereum is absent', () => {
+    const p = loadWithAnnouncements([]);
+    expect(p.available()).toBe(false);
+    expect(p.wallets()).toHaveLength(0);
+  });
+});
