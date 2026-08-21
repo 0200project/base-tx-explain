@@ -575,6 +575,25 @@ Current count: to be read at each daily close. Lifetime `pass_calls`: 1.
 
 ## Reconciliation notes
 
+- **Client identity was redefined 2026-08-21 (commit `9ca2cbb`, not yet
+  deployed) — client counts are not comparable across this change.** Security
+  found the free tier and rate limiter keyed on the full IP, which is exact on
+  IPv4 but nearly meaningless on IPv6 — a caller controlling one /64 could
+  present up to 2^64 distinct "clients," each getting its own free tier and
+  rate-limit window, without forging anything. Fixed by normalizing IPv6 to its
+  /64 (IPv4 unaffected). Because the ledger's `client` tag is hashed from the
+  same key, `unique_clients` and `external_clients` now count an IPv6 /64 as
+  ONE client, not one per address. **Consequence for this ledger: any client
+  count after this deploys is the more trustworthy number** — it's harder to
+  inflate, which matters directly for "has anyone actually used this," the
+  number this ledger leans on for customer-acquisition honesty. But **no
+  IPv6 client's tag is comparable before vs. after** — the same visitor hashes
+  differently on each side of the change. If a client count shifts after
+  deploy, that is this correction, not churn or a data-loss event, and should
+  not be read as attrition. Whether any of today's 6 identified clients
+  (`3f4d2c03`, `53d7ceaf`, `8f92f999`, `56cb6309`, `c63f048f`, `1b624776`) were
+  IPv4 or IPv6 is not something Finance can determine from a hashed tag —
+  unverified either way, not asserted.
 - **x402 and Stripe will never reconcile against each other.** x402 settles
   USDC to a wallet on Base; Stripe settles fiat to a bank. Any check comparing
   the payout wallet against total revenue will look broken while being correct.
