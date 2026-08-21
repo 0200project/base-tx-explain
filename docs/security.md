@@ -276,8 +276,23 @@ data. Keep that list honest as fields change.
    `not_activated` — the token is GONE), `listUnconfirmed()` is empty, and
    `active_passes` is 0. Nothing logs it.
    The window is between mint (in the handler, post-verify) and `activatePass`
-   (in `onAfterSettlement`) — seconds wide, but THIS PROJECT DEPLOYS MANY TIMES
-   AN EVENING and a rolling deploy stops the machine. If the process dies after
+   (in `onAfterSettlement`).
+   **CORRECTION, verified 2026-08-21 after platform checked the shutdown path:
+   this is not a narrow race, it is a certainty for anything in flight.** There
+   is NO graceful shutdown anywhere in the service — no `SIGINT` or `SIGTERM`
+   handler exists (the only `server.close()` is per-request MCP transport
+   cleanup inside `res.on('close')`), and `fly.toml` sets neither `kill_signal`
+   nor `kill_timeout`. Fly sends SIGINT; Node with no listener exits
+   immediately. So a deploy does not merely RISK interrupting an in-flight
+   purchase — it kills every in-flight request instantly, with no drain. Every
+   deploy tonight, and there were many, would have destroyed any request sitting
+   between mint and settle.
+   **And it is wider than the pass rail.** The same mechanism hits the $0.02
+   per-call path, where settle also runs after the handler: a process death
+   between broadcast and response means the payer's money moved and they
+   received no decode. Smaller per event, but that is the rail our first
+   interested customer has said they want, so it is the one most likely to be
+   exercised first. If the process dies after
    the facilitator broadcast but before the hook, the transfer still completes
    on chain: the payout wallet receives $9 that our ledger never recorded and no
    pass exists for. That is worse than money-taken-no-service, because it is
@@ -291,8 +306,16 @@ data. Keep that list honest as fields change.
    named below as the correct close for ambiguous activation, so these converge
    rather than compete. Visibility is the part worth doing before the first real
    $9 sale; the rest can follow.
-   Operational note until fixed: do not deploy while a $9 purchase could be in
-   flight.
+   Operational note until fixed: do not deploy while a purchase could be in
+   flight — but treat that as scaffolding, not a control. Verify-then-deploy is
+   itself a race (a purchase can begin between the check and the machine
+   stopping), and right now our only protection against losing a paid request is
+   two agents remembering to look. Tonight established what happens to rules
+   that live in memory. Fix order is in `docs/NEXT-STEPS.md`:
+   `authorizationState(payer, nonce)` reconciliation FIRST, because it makes the
+   loss recoverable and therefore makes deploy timing stop mattering; graceful
+   shutdown second; retiring the verify-then-deploy ritual third, once the first
+   two have engineered away its purpose rather than leaving a habit behind.
 3. **Ambiguous pass activation (residual of the $9-pass fix in §4).** A pass activated
    because settlement was ambiguous rather than confirmed could, in principle,
    turn out to be unpaid — bounded at $9 of calls. Deliberately NOT capped: this
