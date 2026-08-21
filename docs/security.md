@@ -379,15 +379,47 @@ Settled decisions:
   loss should be visible in minutes. Nobody should sign their name to "completely
   secure."
 
-Open, blocked on one product answer: **what is autonomous spend FOR?** If it pays
-only our own endpoint, pin `to` in a scoped signer and a compromised agent can do
-nothing but pay us. If it pays arbitrary third-party x402 services, `to` cannot be
-pinned and the design leans on amount limits plus balance. Materially different
-builds — do not guess. Note x402's EVM implementation supports ERC-1271 and
-ERC-6492 (`erc6492InnerSig`, `isValidSignature` in `@x402/evm`), so a smart
-account with a scoped session key is genuinely available on this rail: the limit
-is then enforced on-chain rather than in an LLM's judgement, which is the only
-version that survives a fully manipulated agent.
+**RESOLVED 2026-08-21: spend is for third-party endpoints** — "anything endpoint"
+and "spend that gets us clients." So the destination CANNOT be pinned, and this is
+the harder of the two designs.
+
+**The risk that is specific to this answer, and it is the crux.** The payee is
+chosen by the agent, and the agent's inputs are attacker-reachable. A manipulated
+agent paying an ATTACKER'S x402 endpoint is indistinguishable from normal
+operation at every protocol level: well-formed transaction, valid signature,
+legitimate-looking service, correct amount. There is no anomaly to detect. So
+prevention cannot rest on spotting a "bad" payment, and detection cannot either —
+it must be RECONCILIATION: every outflow matched to a pre-justified, logged
+expense, alerting on anything unmatched rather than anything suspicious.
+
+**CONTROLS BEFORE CAPABILITY — the sequencing rule, and the most important line
+here.** As of today the $20 is NOT at risk: no key that can move it exists on the
+server or within any agent's reach (Fly holds only STATS_TOKEN, the CDP keys,
+STRIPE_WEBHOOK_SECRET, INTERNAL_MARKER; `X402_TEST_PRIVATE_KEY` appears only in
+`scripts/paid-call.ts` and is unset). The balance becomes the blast radius at the
+moment a signer is wired, not before. So: do not put a spending key anywhere an
+agent can reach until the caps below are enforced. If a signer must be wired
+first, draw the wallet down first instead.
+
+Mechanism, given an unconstrained destination:
+
+- **Caps are now the control, because `to` cannot be.** Scoped signer (smart
+  account + session key; viable here via ERC-1271/6492) enforcing USDC-only, a
+  per-transaction cap, and a per-period cap — on-chain, so they hold when the
+  agent does not. Sizing: typical x402 calls run $0.02–$9, so a ~$1 per-tx and
+  ~$5 per-day ceiling keeps a fully-owned agent's daily damage small against a
+  $20 balance.
+- **Balance stays the primary control** and is now 4x what it was ($4.98 → $20.00,
+  funded in one transfer on 2026-08-21). Whatever limit gets built must hold
+  against the WHOLE balance being at risk from day one, not a token amount.
+- **A destination allowlist is worth proposing even though "anything" is in
+  scope.** "Anything endpoint" as a PRODUCT goal does not require "anything
+  endpoint" as a SIGNING permission. The set of x402 services actually worth
+  paying is small; let the agent discover and propose, have a human approve a new
+  payee once, then automate. That converts the strongest attack — pay the
+  attacker — from an undetectable success into a blocked transaction, and it is
+  dramatically stronger than caps alone. Worth putting to the founder as a
+  product question, not deciding unilaterally on security grounds.
 
 ## 8. Notes for whoever deploys
 
