@@ -30,6 +30,10 @@ export async function buildAssetsMoved(
   tx: TxContext,
 ): Promise<{ movements: AssetMovement[]; truncated: boolean; flaggedSymbols: Array<{ address: string; status: 'nonstandard' | 'impersonation' }> }> {
   const movements: AssetMovement[] = [];
+  // One flag rather than a `truncated: true` early return, because the cap can
+  // also be reached INSIDE a single event (an ERC-1155 batch), where there is no
+  // next iteration to notice it.
+  let truncated = false;
 
   // Not `tx.value > 0n` alone: on a reverted transaction the value was returned
   // to the sender, so there is nothing to report.
@@ -73,7 +77,8 @@ export async function buildAssetsMoved(
 
   for (const e of events) {
     if (movements.length >= MAX_MOVEMENTS) {
-      return { movements, truncated: true, flaggedSymbols };
+      truncated = true;
+      break;
     }
     const a = e.args;
     switch (e.kind) {
@@ -118,7 +123,12 @@ export async function buildAssetsMoved(
       case 'erc1155_batch': {
         const ids = a.ids as bigint[];
         const values = a.values as bigint[];
-        for (let i = 0; i < ids.length && movements.length < MAX_MOVEMENTS; i++) {
+        // `i` is declared outside the loop so we can tell "consumed every id"
+        // from "stopped at the cap". Without that distinction a batch that
+        // overflowed reported truncated:false and the response claimed to list
+        // every asset that moved while silently dropping the rest.
+        let i = 0;
+        for (; i < ids.length && movements.length < MAX_MOVEMENTS; i++) {
           movements.push({
             token: nameByAddress.get(e.emitter) ?? shortAddress(e.emitter),
             amount: (values[i] ?? 0n).toString(),
@@ -129,6 +139,7 @@ export async function buildAssetsMoved(
             standard: 'erc1155',
           });
         }
+        if (i < ids.length) truncated = true; // ids remained when the cap hit
         break;
       }
       case 'weth_deposit': {
@@ -168,7 +179,7 @@ export async function buildAssetsMoved(
     }
   }
 
-  return { movements, truncated: false, flaggedSymbols };
+  return { movements, truncated, flaggedSymbols };
 }
 
 /**

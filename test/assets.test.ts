@@ -88,3 +88,52 @@ describe('buildAssetsMoved — a reverted transaction moves nothing', () => {
     expect(truncated).toBe(false);
   });
 });
+
+/**
+ * The 60-movement cap is a display limit, and `truncated` is the only signal a
+ * consumer has that the list is incomplete. The outer cap check runs at the top
+ * of each event, so it catches overflow BETWEEN events — but an ERC-1155 batch
+ * can exhaust the cap INSIDE one event, where there is no next iteration to
+ * notice. That path returned truncated:false while dropping ids, so the response
+ * claimed to list every asset that moved.
+ */
+describe('buildAssetsMoved — truncation must be reported, not silent', () => {
+  const batch = (count: number): DecodedEvent => ({
+    kind: 'erc1155_batch',
+    emitter: SCAM,
+    args: {
+      from: SENDER,
+      to: OTHER,
+      ids: Array.from({ length: count }, (_, i) => BigInt(i)),
+      values: Array.from({ length: count }, () => 1n),
+    },
+    logIndex: 0,
+  });
+
+  it('flags truncation when a single batch overflows the cap', async () => {
+    const { movements, truncated } = await buildAssetsMoved([batch(100)], tx);
+    expect(movements).toHaveLength(60); // capped
+    expect(truncated).toBe(true); // and says so
+  });
+
+  it('does NOT flag truncation when the batch fits exactly to the cap', async () => {
+    // Boundary: every id consumed, list is complete at exactly the limit.
+    const { movements, truncated } = await buildAssetsMoved([batch(60)], tx);
+    expect(movements).toHaveLength(60);
+    expect(truncated).toBe(false);
+  });
+
+  it('does not flag truncation for an ordinary batch under the cap', async () => {
+    const { movements, truncated } = await buildAssetsMoved([batch(3)], tx);
+    expect(movements).toHaveLength(3);
+    expect(truncated).toBe(false);
+  });
+
+  it('flags truncation when the overflowing batch is the LAST event', async () => {
+    // The original bug needed no following event to mask it: with the batch last,
+    // the loop simply ended and the function returned truncated:false.
+    const { movements, truncated } = await buildAssetsMoved([transfer(SCAM), batch(100)], tx);
+    expect(movements.length).toBeGreaterThanOrEqual(60);
+    expect(truncated).toBe(true);
+  });
+});
