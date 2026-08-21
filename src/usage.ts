@@ -2,6 +2,7 @@ import { bookedNonRevenueTotal, revenueNote } from './knownNonRevenue.js';
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { absorbCheckHealthEvent, takeCheckHealthEvents, type CheckHealthEvent } from './checkHealth.js';
+import { CHANNEL_CAVEAT, DIRECT, OTHER, knownChannels } from './channel.js';
 
 /**
  * Append-only usage ledger. One JSONL file on disk (a Fly volume in
@@ -13,7 +14,7 @@ import { absorbCheckHealthEvent, takeCheckHealthEvents, type CheckHealthEvent } 
  */
 
 export type UsageEvent =
-  | { t: string; e: 'call'; charge: boolean; paid?: boolean; pass?: boolean; client: string; ok?: boolean; internal?: boolean; degraded?: boolean }
+  | { t: string; e: 'call'; charge: boolean; paid?: boolean; pass?: boolean; client: string; ok?: boolean; internal?: boolean; degraded?: boolean; channel?: string }
   | { t: string; e: 'settled'; client: string; amount_usd: number; payer?: string; tx?: string };
 
 /**
@@ -54,6 +55,8 @@ interface DayAgg {
   internal_calls: number;
   /** Distinct clients excluding ones that identified themselves as us. */
   externalClients: Set<string>;
+  /** External calls per self-reported channel. Internal traffic never enters. */
+  channelCalls: Map<string, number>;
   /**
    * Calls that ARRIVED carrying an x402 payment payload. This is payment
    * attempted, not payment succeeded: the flag is set from the presence of the
@@ -75,6 +78,20 @@ const days = new Map<string, DayAgg>();
 const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0 };
 const lifetimeExternalClients = new Set<string>();
 const lifetimeClients = new Set<string>();
+/** External calls per channel, lifetime. */
+const lifetimeChannelCalls = new Map<string, number>();
+/**
+ * The channel each external client was FIRST seen with, never overwritten.
+ *
+ * First-touch, not per-call, and the distinction decides what the number means.
+ * Per-call attribution ranks channels by whichever listing sent the most
+ * talkative visitor: one curious caller making forty calls would outweigh forty
+ * separate arrivals. The question being asked is "which listing brought a
+ * STRANGER", so a stranger counts once, against wherever they came in.
+ *
+ * Replay is chronological, so "first" here really is first even after a restart.
+ */
+const clientFirstChannel = new Map<string, string>();
 let firstEventAt: string | null = null;
 let ledgerReady = false;
 
@@ -85,7 +102,7 @@ function dayOf(iso: string): string {
 function aggFor(day: string): DayAgg {
   let agg = days.get(day);
   if (!agg) {
-    agg = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0, clients: new Set(), externalClients: new Set() };
+    agg = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0, clients: new Set(), externalClients: new Set(), channelCalls: new Map() };
     days.set(day, agg);
   }
   return agg;
@@ -132,6 +149,20 @@ function absorb(ev: LedgerEvent): void {
     } else {
       agg.externalClients.add(ev.client);
       lifetimeExternalClients.add(ev.client);
+      // EXTERNAL ONLY. The question this answers is "which listing brought a
+      // STRANGER", so counting our own marked traffic would make our testing
+      // look like acquisition — the seventh time in one day that our own
+      // activity would have worn a customer's shape.
+      //
+      // Distinct clients matter more than calls here: one curious caller making
+      // forty calls is one arrival, and ranking channels by call count would
+      // promote whichever listing sent the most talkative visitor.
+      const ch = ev.channel ?? DIRECT;
+      agg.channelCalls.set(ch, (agg.channelCalls.get(ch) ?? 0) + 1);
+      lifetimeChannelCalls.set(ch, (lifetimeChannelCalls.get(ch) ?? 0) + 1);
+      // First touch wins and is never overwritten: a client who arrives via a
+      // listing and later calls without the ref still belongs to that listing.
+      if (!clientFirstChannel.has(ev.client)) clientFirstChannel.set(ev.client, ch);
     }
   } else if (ev.e === 'settled') {
     agg.settlements++;
@@ -139,6 +170,38 @@ function absorb(ev: LedgerEvent): void {
     agg.revenue_usd += ev.amount_usd;
     lifetime.revenue_usd += ev.amount_usd;
   }
+}
+
+/**
+ * Which listing brought each external client, first-touch.
+ *
+ * `arrivals` is the headline: DISTINCT external clients whose first sighting
+ * carried that channel. `calls` is context only — a channel with one visitor
+ * making forty calls has one arrival and forty calls, and ranking by calls
+ * would promote the most talkative visitor over the most productive listing.
+ *
+ * Every allowlisted channel is emitted even at zero, so a listing that has
+ * produced nothing is visibly nothing rather than absent. A missing row and a
+ * zero row read very differently at 2am.
+ *
+ * The caveat rides IN the object rather than in documentation, because whoever
+ * reads this at 2am reads the numbers, not the prose explaining them — the same
+ * reason `risk_flags` needed `checks` beside it.
+ */
+function channelSnapshot(): Record<string, unknown> {
+  const arrivals = new Map<string, number>();
+  for (const ch of clientFirstChannel.values()) arrivals.set(ch, (arrivals.get(ch) ?? 0) + 1);
+
+  const buckets: Record<string, { arrivals: number; calls: number }> = {};
+  for (const ch of [...knownChannels(), DIRECT, OTHER]) {
+    buckets[ch] = { arrivals: arrivals.get(ch) ?? 0, calls: lifetimeChannelCalls.get(ch) ?? 0 };
+  }
+  return {
+    self_reported: true,
+    caveat: CHANNEL_CAVEAT,
+    external_clients_attributed: clientFirstChannel.size,
+    buckets,
+  };
 }
 
 /** How often to look for check-health buckets due to be persisted. */
@@ -222,6 +285,7 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
   return {
     persisted: ledgerReady,
     first_event_at: firstEventAt,
+    channels: channelSnapshot(),
     lifetime: {
       ...lifetime,
       // `paid_calls` counts calls that ARRIVED carrying a payment payload, not

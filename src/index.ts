@@ -20,6 +20,7 @@ import { getTreasury } from './treasury.js';
 import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
 import { passFromHeaders, passFromPath, passUrl } from './passUrl.js';
 import { isInternalRequest } from './internal.js';
+import { channelOf, logChannelConfig } from './channel.js';
 import { clientKey } from './clientKey.js';
 import { normalizeMcpPayments } from './mcpPayment.js';
 import { checkWallets, initWalletMonitor } from './walletMonitor.js';
@@ -969,8 +970,24 @@ app.post('/dashboard/logout', (_req, res) => {
  * feeds is an internal control, not a trust signal.
  */
 app.get('/wallets', async (req, res) => {
-  const token = typeof req.query.token === 'string' ? req.query.token : '';
-  if (!STATS_TOKEN || token !== STATS_TOKEN) {
+  // Accepts the same three credentials as /stats. It previously took ONLY
+  // `?token=`, which is not how anyone here reaches a protected endpoint —
+  // finance sent the header they use everywhere else and got "bad token",
+  // then had to ask whether the endpoint was broken or their credential was.
+  // Two surfaces behind one secret disagreeing about how to present it is a
+  // trap for whoever is next, and the query form is also the one that ends up
+  // in logs and shell history.
+  const presented =
+    (req.headers['x-stats-token'] as string | undefined) ??
+    String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '') ??
+    '';
+  const fromQuery = typeof req.query.token === 'string' ? req.query.token : '';
+  if (!STATS_TOKEN) {
+    res.status(404).json({ error: 'stats not enabled' });
+    return;
+  }
+  const authed = presented ? tokenMatches(presented) : fromQuery ? tokenMatches(fromQuery) : hasDashCookie(req);
+  if (!authed) {
     res.status(401).json({ error: 'bad token' });
     return;
   }
@@ -1204,7 +1221,13 @@ app.post(['/mcp', '/mcp/:token'], async (req, res) => {
         : charge
           ? (hasPayment ? 'paid-retry' : isBuyPass ? 'buy-pass' : 'paywalled')
           : 'free';
-    console.log(`[call] ${new Date().toISOString()} ${kind} client=${ipTag}`);
+    const isOurs = isInternalRequest(req.headers as Record<string, unknown>);
+    // Resolved only for external traffic. Short-circuiting here rather than
+    // filtering downstream is deliberate: if a marked call were attributed
+    // first and excluded second, any later reader of the pre-filter value would
+    // resurrect our own testing as acquisition.
+    const channel = isOurs ? undefined : channelOf(req.query, req.headers as Record<string, unknown>);
+    console.log(`[call] ${new Date().toISOString()} ${kind} client=${ipTag}${channel ? ` via=${channel}` : ''}`);
     recordEvent({
       t: new Date().toISOString(),
       e: 'call',
@@ -1212,8 +1235,9 @@ app.post(['/mcp', '/mcp/:token'], async (req, res) => {
       paid: hasPayment,
       pass: Boolean(passToken),
       client: ipTag,
-      internal: isInternalRequest(req.headers as Record<string, unknown>),
+      internal: isOurs,
       ...(degradedByOutage ? { degraded: true } : {}),
+      ...(channel ? { channel } : {}),
     });
   }
 
@@ -1264,6 +1288,9 @@ initWalletMonitor();
 // Persisted, so a deploy does not erase the memory of a rejected delivery —
 // deploys are frequent here, which makes that the common case, not an edge one.
 initWebhookHealth();
+// Say which listings are measurable, so a config slip cannot masquerade as
+// "no listing produced anything" — the very conclusion this instrument tests.
+logChannelConfig();
 
 /**
  * Bind FIRST, then bring payments up in the background.
@@ -1366,7 +1393,12 @@ function registerPaidRoutes(): void {
           else metrics.free++;
           const tag = createHash('sha256').update(`btx:${clientIpOf(req)}`).digest('hex').slice(0, 8);
           console.log(`[rest] ${new Date().toISOString()} ${viaPass ? 'pass' : charged ? 'paid' : 'free'} ok=${ok} client=${tag}`);
-          recordEvent({ t: new Date().toISOString(), e: 'call', charge: charged, paid: charged, pass: viaPass, client: tag, ok, internal: isInternalRequest(req.headers as Record<string, unknown>) });
+          const restIsOurs = isInternalRequest(req.headers as Record<string, unknown>);
+          recordEvent({
+            t: new Date().toISOString(), e: 'call', charge: charged, paid: charged, pass: viaPass,
+            client: tag, ok, internal: restIsOurs,
+            ...(restIsOurs ? {} : { channel: channelOf(req.query, req.headers as Record<string, unknown>) }),
+          });
         },
       });
       registerPassRoutes(app, {
