@@ -69,6 +69,19 @@
       <article class="log-entry">
         <div class="log-date"><time datetime="2026-08-20">August 20, 2026</time></div>
         <div class="log-body">
+          <h2>REST rail and the $9 pass</h2>
+          <p>Two new ways to call and pay for the same deterministic decode, plus a metering fix.</p>
+          <ul>
+            <li><strong>REST endpoint</strong> &mdash; <code class="inline">POST /explain</code> with a transaction hash returns the explanation as plain JSON. Same decode as MCP, standard x402 flow, shared free tier.</li>
+            <li><strong>The $9 pass</strong> &mdash; 30 days, up to 10,000 calls, 60 calls/minute: one x402 payment via <code class="inline">POST /pass</code> or the <code class="inline">buy_pass</code> tool returns a bearer token. No account; not a subscription &mdash; nothing can auto-renew, and expiry returns calls to the standard pay-per-call flow.</li>
+            <li><strong>Free-tier persistence</strong> &mdash; free-call counts now survive server restarts, so the free tier meters correctly across deploys.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="log-entry">
+        <div class="log-date"><time datetime="2026-08-20">August 20, 2026</time></div>
+        <div class="log-body">
           <h2>v0.1.1: live playground, usage ledger, agent discovery</h2>
           <ul>
             <li>Persistent usage ledger with lifetime counters, published on <code class="inline">/healthz</code> and a token-protected <code class="inline">/stats</code>.</li>

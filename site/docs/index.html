@@ -5,10 +5,10 @@
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>base-tx-explain Documentation — Decode Base Transactions over MCP</title>
-<meta name="description" content="How to decode Base transactions over MCP: request format, strict JSON schema with 30 action types and 6 risk flags, x402 pay-per-call, and self-hosting.">
+<meta name="description" content="How to decode Base transactions over MCP: request format, strict JSON schema with 30 action types and 8 risk flags, x402 pay-per-call, and self-hosting.">
 <meta name="theme-color" content="#050505">
 <meta property="og:title" content="base-tx-explain Documentation — Decode Base Transactions over MCP">
-<meta property="og:description" content="Request format, strict JSON schema, 30 action types, 6 risk flags, x402 pay-per-call, self-hosting.">
+<meta property="og:description" content="Request format, strict JSON schema, 30 action types, 8 risk flags, x402 pay-per-call, self-hosting.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="0200project">
 <meta property="og:image" content="https://0200project.com/assets/og.png">
@@ -112,6 +112,7 @@
       <h4>Payments</h4>
       <ul>
         <li><a href="#x402-payments">x402 payments</a></li>
+        <li><a href="#pass">The $9 pass</a></li>
         <li><a href="#usage">Usage</a></li>
         <li><a href="#pricing">Pricing</a></li>
       </ul>
@@ -127,16 +128,17 @@
       <p class="docs-lead">Everything needed to connect an MCP client, call <code class="inline">explain_transaction</code>, parse the response, and pay per call — by hand or autonomously.</p>
 
       <h2 id="introduction">Introduction</h2>
-      <p>0200project builds machine-native tools for autonomous AI agents: narrowly scoped services with strict JSON contracts, designed to be called and parsed by software without a human in the loop. The first and currently only shipped tool is <strong>base-tx-explain</strong> v0.1.0, launched August 20, 2026. More tools are in development.</p>
+      <p>0200project builds machine-native tools for autonomous AI agents: narrowly scoped services with strict JSON contracts, designed to be called and parsed by software without a human in the loop. The first and currently only shipped tool is <strong>base-tx-explain</strong>, launched August 20, 2026. More tools are in development.</p>
       <p><strong>Deterministic by design.</strong> There is no LLM in the response path. Every response is produced by deterministic onchain decoding: the same input always produces the same output. Nothing is generated, so nothing can hallucinate or drift between calls.</p>
       <p><strong>MCP is the interface.</strong> Each tool is served over the <a href="https://registry.modelcontextprotocol.io">Model Context Protocol</a> as a streamable HTTP endpoint. Any MCP client can connect; any HTTP client can call it directly with a JSON-RPC request. The registry entry is <code class="inline">io.github.0200project/base-tx-explain</code>.</p>
-      <p><strong>For agents / machine-readable.</strong> The HTTP contract is published as OpenAPI at <a href="https://base-tx-explain.fly.dev/openapi.json">base-tx-explain.fly.dev/openapi.json</a>, and a plain-text guide for agents lives at <a href="https://base-tx-explain.fly.dev/llms.txt">base-tx-explain.fly.dev/llms.txt</a>.</p>
+      <p><strong>For agents / machine-readable.</strong> The HTTP contract is published as OpenAPI at <a href="https://base-tx-explain.fly.dev/openapi.json">base-tx-explain.fly.dev/openapi.json</a>, and a plain-text guide for agents lives at <a href="https://base-tx-explain.fly.dev/llms.txt">base-tx-explain.fly.dev/llms.txt</a>. The same decode is also available as plain REST &mdash; <code class="inline">POST /explain</code> with <code class="inline">{"tx_hash": "0x&hellip;"}</code> &mdash; identical output, standard x402 flow.</p>
 
       <h2 id="quickstart">Quickstart</h2>
       <p>The server is one streamable-HTTP endpoint: <code class="inline">https://base-tx-explain.fly.dev/mcp</code>. Pick a client — every path calls the same tool.</p>
 
       <div class="qs-tabs" role="tablist" aria-label="Quickstart by client">
-        <button class="qs-tab" role="tab" type="button" id="tab-qs-claude-code" data-panel="qs-claude-code" aria-controls="qs-claude-code" aria-selected="true" tabindex="0">Claude Code</button>
+        <button class="qs-tab" role="tab" type="button" id="tab-qs-rest" data-panel="qs-rest" aria-controls="qs-rest" aria-selected="true" tabindex="0">REST</button>
+        <button class="qs-tab" role="tab" type="button" id="tab-qs-claude-code" data-panel="qs-claude-code" aria-controls="qs-claude-code" aria-selected="false" tabindex="-1">Claude Code</button>
         <button class="qs-tab" role="tab" type="button" id="tab-qs-claude-desktop" data-panel="qs-claude-desktop" aria-controls="qs-claude-desktop" aria-selected="false" tabindex="-1">Claude Desktop</button>
         <button class="qs-tab" role="tab" type="button" id="tab-qs-cursor" data-panel="qs-cursor" aria-controls="qs-cursor" aria-selected="false" tabindex="-1">Cursor</button>
         <button class="qs-tab" role="tab" type="button" id="tab-qs-typescript" data-panel="qs-typescript" aria-controls="qs-typescript" aria-selected="false" tabindex="-1">TypeScript</button>
@@ -145,7 +147,19 @@
         <button class="qs-tab" role="tab" type="button" id="tab-qs-x402" data-panel="qs-x402" aria-controls="qs-x402" aria-selected="false" tabindex="-1">x402 paid client</button>
       </div>
 
-      <div class="qs-panel qs-active" role="tabpanel" id="qs-claude-code" aria-labelledby="tab-qs-claude-code">
+      <div class="qs-panel qs-active" role="tabpanel" id="qs-rest" aria-labelledby="tab-qs-rest">
+        <h3>REST</h3>
+        <p>The simplest path &mdash; no MCP client, no SDK. POST a transaction hash, get the explanation back as plain JSON:</p>
+        <div class="codeblock">
+          <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#qs-rest-cmd">Copy</button></div>
+          <pre><code id="qs-rest-cmd">curl -X POST https://base-tx-explain.fly.dev/explain \
+  -H 'Content-Type: application/json' \
+  -d '{"tx_hash":"0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c"}'</code></pre>
+        </div>
+        <p>The first calls are free. Past the free tier the endpoint answers with a standard HTTP 402 x402 challenge &mdash; pay $0.02 in USDC on Base and retry, or use an x402-capable HTTP client that handles it automatically. For heavy use, the <a href="#pass">$9 pass</a> covers 10,000 calls over 30 days via the <code class="inline">X-BTX-Pass</code> header.</p>
+      </div>
+
+      <div class="qs-panel" role="tabpanel" id="qs-claude-code" aria-labelledby="tab-qs-claude-code">
         <h3>Claude Code</h3>
         <p>One command adds the server over streamable HTTP:</p>
         <div class="codeblock">
@@ -436,6 +450,8 @@ npm run dev</code></pre>
             <tr><td><code class="inline">approval_for_all</code></td><td>The transaction granted an operator approval over an entire collection.</td></tr>
             <tr><td><code class="inline">unlimited_approval</code></td><td>The transaction granted an effectively unlimited token approval.</td></tr>
             <tr><td><code class="inline">known_drainer</code></td><td>An involved address appears on the ScamSniffer or MyEtherWallet public blocklists.</td></tr>
+            <tr><td><code class="inline">impersonated_token</code></td><td>A token reports the symbol of a known token but is not that token&rsquo;s canonical contract; its address is shown instead.</td></tr>
+            <tr><td><code class="inline">nonstandard_token_symbol</code></td><td>A token&rsquo;s self-reported symbol failed a standard-ticker check; its contract address is shown in place of the name.</td></tr>
             <tr><td><code class="inline">transaction_reverted</code></td><td>The transaction reverted onchain.</td></tr>
           </tbody>
         </table>
@@ -519,6 +535,14 @@ npm run dev</code></pre>
       <p>Reading the challenge: <code class="inline">"amount": "20000"</code> is denominated in 6-decimal USDC units, so 20000 = $0.02. <code class="inline">asset</code> is the canonical USDC contract on Base, <code class="inline">payTo</code> is the receiving address, and <code class="inline">network</code> is <code class="inline">eip155:8453</code> — Base mainnet.</p>
       <p><strong>Non-custodial.</strong> The x402 facilitator (PayAI) verifies and settles payments but cannot move or redirect funds. The server never holds user assets and never asks for private keys.</p>
 
+      <h3 id="pass">The $9 pass</h3>
+      <p>For heavy use, a pass replaces per-call payments: <strong>$9 buys 30 days and up to 10,000 calls</strong>, rate-limited to 60 calls per minute. It is bought with a single x402 payment &mdash; <code class="inline">POST /pass</code> over HTTP, or the <code class="inline">buy_pass</code> tool over MCP. The response is a bearer token: present it as the <code class="inline">X-BTX-Pass</code> header on <code class="inline">POST /explain</code>, or at <code class="inline">_meta["btx/pass"]</code> on MCP calls.</p>
+      <ul>
+        <li><strong>No account.</strong> The token is the only proof of purchase. It is transferable &mdash; anyone holding it can spend its calls &mdash; and a lost token is a lost pass, so store it like a key.</li>
+        <li><strong>Not a subscription.</strong> x402 payments are one-shot, caller-signed authorizations, so nothing here can auto-renew or silently charge you. When a pass expires or runs out, calls fall back to the standard flow &mdash; any free calls you have left, then the per-call 402 &mdash; and an agent renews by buying a new pass in the same loop.</li>
+        <li><strong>Our failures cost nothing.</strong> When a call fails on the server&rsquo;s side &mdash; an upstream or internal error &mdash; the pass call is refunded automatically. Answered calls count, including lookups that come back not-found or still-pending.</li>
+      </ul>
+
       <h2 id="usage">Usage</h2>
       <ul>
         <li><strong>Free tier</strong> — the first 10 calls are free, with no signup. Metering is per client IP: machines behind the same NAT or a shared CI egress draw from one counter, so shared networks can hit the paywall early. After that, each call is paid via x402.</li>
@@ -535,6 +559,7 @@ npm run dev</code></pre>
           <tbody>
             <tr><td>Free tier</td><td>$0</td><td>First 10 calls, metered per client IP. No signup.</td></tr>
             <tr><td>Per call</td><td>$0.02</td><td>USDC on Base via x402, paid per call.</td></tr>
+            <tr><td>Pass</td><td>$9</td><td>30 days, up to 10,000 calls, 60/min. Bearer token via <a href="#pass">one x402 payment</a> &mdash; no account, not a subscription.</td></tr>
             <tr><td>Marketplace-hosted</td><td>&mdash;</td><td>Via the <a href="https://apify.com/0200project/base-tx-explain" rel="noopener">Apify Store listing</a>: runs on your own Apify plan's compute, no per-call charge from us.</td></tr>
           </tbody>
         </table>

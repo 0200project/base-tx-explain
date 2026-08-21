@@ -79,11 +79,14 @@
       <h2 id="x402">What is x402 and how does pay-per-call work?</h2>
       <p>x402 is an open protocol that puts the HTTP <code class="inline">402 Payment Required</code> status to work: when a call needs payment, the response carries the exact price, asset, and recipient. The caller pays in USDC on Base from its own wallet, attaches proof of payment, and retries — the whole loop is machine-to-machine. Settlement is verified by a non-custodial facilitator that cannot move or redirect funds, and the server never holds assets or asks for keys. Details in the <a href="/docs/#x402-payments">payment docs</a>.</p>
 
+      <h2 id="subscription">Is there a subscription?</h2>
+      <p>No &mdash; and by construction it can&rsquo;t silently charge you: x402 payments are one-shot authorizations signed by the caller, so nothing here can auto-renew or pull funds later. For volume there is a pass instead: $9 buys 30 days and up to 10,000 calls, purchased with a single x402 payment via <code class="inline">POST /pass</code> or the <code class="inline">buy_pass</code> tool. It returns a bearer token &mdash; no account, transferable, and a lost token is a lost pass. When it expires or runs out, calls fall back to the standard pay-per-call flow, and an agent renews by buying a new pass in the same loop. Details in the <a href="/docs/#pass">pass docs</a>.</p>
+
       <h2 id="what-it-detects">What kinds of transactions can it decode?</h2>
       <p>The decoder classifies 30 action types from ~40 builtin event formats: swaps on Uniswap V2, V3, and V4 and Aerodrome; ERC-20, ERC-721, and ERC-1155 transfers; NFT mints, transfers, and Seaport sales; OP-stack bridge deposits and withdrawals; Aave V3 and Compound V3 lending; staking, wrapping, and claims; ERC-4337 account-abstraction bundles; EAS attestations; Basename registrations; and contract deployments. When a transaction can&rsquo;t be fully decoded, the output says so honestly instead of guessing. The full enum is in the <a href="/docs/#response-schema">response schema</a>.</p>
 
       <h2 id="risk-flags">What are the risk flags — and are they a safety guarantee?</h2>
-      <p>Six flags, each raised only when evidence was found: <code class="inline">unverified_contract</code>, <code class="inline">unlimited_approval</code>, <code class="inline">approval_for_all</code>, <code class="inline">known_drainer</code> (matched against the ScamSniffer and MyEtherWallet public blocklists), <code class="inline">first_time_counterparty</code>, and <code class="inline">transaction_reverted</code>. A failed lookup never produces a flag — and the absence of a flag is not a safety guarantee. The tool reports what a transaction did, not whether it was a good idea; it is not financial advice.</p>
+      <p>Eight flags, each raised only when evidence was found: <code class="inline">unverified_contract</code>, <code class="inline">unlimited_approval</code>, <code class="inline">approval_for_all</code>, <code class="inline">known_drainer</code> (matched against the ScamSniffer and MyEtherWallet public blocklists), <code class="inline">first_time_counterparty</code>, <code class="inline">impersonated_token</code> (a known token’s symbol reported from the wrong contract address), <code class="inline">nonstandard_token_symbol</code>, and <code class="inline">transaction_reverted</code>. A failed lookup never produces a flag — and the absence of a flag is not a safety guarantee. The tool reports what a transaction did, not whether it was a good idea; it is not financial advice.</p>
 
       <h2 id="deterministic">Why is the decode deterministic — where&rsquo;s the LLM?</h2>
       <p>There is no LLM anywhere in the response path, by design. Every response is produced by deterministic onchain decoding: the same transaction decoded against the same chain state yields the same JSON. Nothing can hallucinate, the schema never drifts, and your agent doesn&rsquo;t burn tokens reasoning over raw event logs when the decode is mechanical.</p>
@@ -166,6 +169,14 @@
     },
     {
       "@type": "Question",
+      "name": "Is there a subscription?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No — and by construction it can’t silently charge you: x402 payments are one-shot authorizations signed by the caller, so nothing here can auto-renew or pull funds later. For volume there is a pass instead: $9 buys 30 days and up to 10,000 calls, purchased with a single x402 payment via POST /pass or the buy_pass tool. It returns a bearer token — no account, transferable, and a lost token is a lost pass. When it expires or runs out, calls fall back to the standard pay-per-call flow, and an agent renews by buying a new pass in the same loop. Details in the pass docs."
+      }
+    },
+    {
+      "@type": "Question",
       "name": "What kinds of transactions can it decode?",
       "acceptedAnswer": {
         "@type": "Answer",
@@ -177,7 +188,7 @@
       "name": "What are the risk flags — and are they a safety guarantee?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Six flags, each raised only when evidence was found: unverified_contract, unlimited_approval, approval_for_all, known_drainer (matched against the ScamSniffer and MyEtherWallet public blocklists), first_time_counterparty, and transaction_reverted. A failed lookup never produces a flag — and the absence of a flag is not a safety guarantee. The tool reports what a transaction did, not whether it was a good idea; it is not financial advice."
+        "text": "Eight flags, each raised only when evidence was found: unverified_contract, unlimited_approval, approval_for_all, known_drainer (matched against the ScamSniffer and MyEtherWallet public blocklists), first_time_counterparty, impersonated_token (a known token’s symbol reported from the wrong contract address), nonstandard_token_symbol, and transaction_reverted. A failed lookup never produces a flag — and the absence of a flag is not a safety guarantee. The tool reports what a transaction did, not whether it was a good idea; it is not financial advice."
       }
     },
     {
