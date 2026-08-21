@@ -464,6 +464,35 @@ names and error strings are all statements about behaviour, and an edit that
 moves the behaviour leaves them behind silently — no test fails, because none of
 them are executed as claims.
 
+### Summaries decay three ways, and only one of them makes a diff
+
+A comment describes the line beneath it, so it decays only when that line
+changes — and that change is visible in a diff, next to the comment. A SUMMARY
+describes a moving area, and it decays three different ways:
+
+1. **The code changed.** Someone edits the area the summary covers. Visible in a
+   diff, but not in one that touches the summary's file — so no reviewer sees
+   both halves.
+2. **The measurement changed.** A figure written into prose — a call count, a
+   client total — is a stale statement with a timer on it. Nothing changed in
+   any file; the number simply moved on.
+3. **The evidence changed.** The world supplied a new fact and a still-accurate
+   sentence stopped being the right conclusion. Our fix ordering was correct for
+   a pass-led product and wrong the moment two parties said they wanted per-call.
+   No code changed. No measurement was misquoted.
+
+**Only the first produces a diff at all**, and even that one lands somewhere
+nobody is looking. For the other two there is nothing to see — not "nothing that
+happened to be looked at". So the practice cannot be *review documents more
+carefully*: care has no surface to act on. It has to be re-verification against
+source, on its own schedule, and the trigger is not *time has passed* but **has
+anything underneath this moved — code, measurement, or evidence?**
+
+Five instances in one night across both lists. The two strongest were each of us
+auditing our own work after the theory said where to look: a prediction, acted on
+independently twice, correct both times. That is the difference between a theory
+and a story about a bad night.
+
 The boot-line case is the sharpest because of where it landed: it printed
 `1 active` to the one person who most needed to read `1 stranded`, in the exact
 scenario the whole retention mechanism exists to serve.
