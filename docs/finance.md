@@ -279,11 +279,27 @@ the same exclusion, or label the field so it can't be read as vetted
 commercial revenue. Not urgent (traffic is negligible today), but it should
 not sit indefinitely on a field anyone can curl.
 
-**7. Autonomous agent spend — CONFIRMED 2026-08-21, directly by the Founder.**
-First relayed secondhand via the platform session, then confirmed directly to
-Finance the same day: autonomous/automatic spend is approved, at the team's
-judgment on whether it makes sense. No longer recorded as reported-not-verified
-— this is now policy.
+**7. Autonomous agent spend — CONFIRMED 2026-08-21, directly by the Founder,
+scope now explicit.** First relayed secondhand via the platform session, then
+confirmed directly to Finance twice: autonomous/automatic spend is approved.
+The second confirmation named the scope explicitly, which the first did not:
+**full autonomous spend on the SPEND wallet only** — the budget wallet
+`0x2E31f337…5e3D06FC7`. The **RECEIVE wallet** — payout, `0xd4ec730a…948a6bc9`
+— is not in scope and stays receive-only, as it already is by design (the
+server holds no key that can move funds from it; see the reconciliation notes
+above). No spend authorization of any kind applies to the RECEIVE wallet.
+
+The Founder also asked, in the same message, that Finance coordinate with
+security to prevent compromise of either wallet "completely." Finance's
+position, stated plainly rather than promised: **no system is completely
+unhackable, and Finance will not represent it as such.** What is achievable
+and has been asked of security: the RECEIVE wallet is already about as close
+to that as engineering gets, by construction — no automated path exists to
+move funds out of it. The SPEND wallet is a different problem the moment
+autonomous spend is live: authorizing an agent to spend is authorizing a
+signing mechanism, and any signing mechanism is a target. The realistic goal
+there is bounding the blast radius, not eliminating risk — see the mitigations
+below, now handed to security to own.
 
 What is independently verified, and is the reason this item is not urgent: no
 private key exists anywhere in this system today (platform's audit of `src/`),
