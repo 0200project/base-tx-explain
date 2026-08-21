@@ -16,7 +16,9 @@
     "validate": "tsx scripts/validate.ts",
     "growth": "node scripts/growth-scan.mjs",
     "status": "tsx scripts/status.ts",
-    "report": "node scripts/daily-report.mjs"
+    "report": "node scripts/daily-report.mjs",
+    "predeploy": "sh scripts/predeploy.sh",
+    "deploy": "sh scripts/predeploy.sh && fly deploy --now"
   },
   "dependencies": {
     "@coinbase/cdp-sdk": "^1.55.0",
