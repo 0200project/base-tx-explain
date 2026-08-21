@@ -148,7 +148,7 @@ projection, not money that has left an account.
 | Growth expenses | $0.00 |
 | Infrastructure expenses (verified cash out) | $0.00 |
 | **Net cash flow** | **$0.00** |
-| Verified company funds on hand | $4.98 USDC (budget wallet) + $0.02 USDC (payout wallet) = **$5.00** |
+| Verified company funds on hand | $4.98 USDC (budget wallet) + $0.04 USDC (payout wallet) = **$5.02** |
 
 Note the $5.00 on hand vs the $20.00 allocated. That gap is the single most
 important open question in this document.
@@ -256,6 +256,38 @@ free-tier flush). Under concurrency that blocks the event loop and looks exactly
 like connection failures with no crash and no restart — in which case a constant
 `booted_at` is the confirming signal, not a reassuring one.
 
+**7. Autonomous agent spend — capability does not exist; policy not yet set.**
+Relayed via the platform session, 2026-08-21: the Founder is reported to have
+said "autonomous / automatic spend is approved from the founder, up to you
+guys if it makes sense to spend." **This reached Finance secondhand, through a
+peer's paraphrase, not directly from the Founder in this session.** Recorded
+here as reported, not as a confirmed instruction — the same standard applied to
+every other founder-sourced fact in this ledger.
+
+What is independently verified, and is the reason this item is not urgent: no
+private key exists anywhere in this system today (platform's audit of `src/`),
+so no agent — including Growth — currently has the technical means to spend
+anything. This is a forward-looking policy question, not a live capability.
+
+Finance's position if and when it becomes live: the hard rules and the $20
+ceiling in this ledger apply regardless of who or what initiates a spend.
+"Autonomous" should mean bounded by wallet balance, not by a written limit
+that software can be wrong about — fund only what is acceptable to lose
+outright, in a wallet separate from the payout wallet, scoped so a signer can
+only pay x402 challenges to our own endpoint. This product reads
+attacker-controlled strings off a public blockchain (a live token named "BUY
+FLASH USDT" with instruction-like text prompted the provenance-marking work);
+an agent that can both read attacker-authored text and spend money is a
+prompt-injection target with a payout attached. Every such spend, autonomous or
+not, gets logged the same way as any other expense in this ledger — no
+exception for "automatic."
+
+**8. Funding form of the $20 — still open.** Where the $20 should be loaded
+depends on its purpose and has not been decided: USDC into the budget wallet
+for x402-denominated spend, or a card for ads/SaaS. Not interchangeable.
+Needs the Founder's decision, ideally with Finance and platform both present
+since it determines which wallet's balance becomes the approvable ceiling.
+
 ## Known corrections to the record
 
 - **Phantom $9 Stripe settlement, removed 2026-08-21** (by the platform
@@ -334,7 +366,7 @@ failed read). Not inherited from any report that could not complete.
 | Growth spend | $0.00 |
 | Infrastructure cash out | $0.00 |
 | **Net cash flow** | **$0.00** |
-| Funds on hand | **$5.00** ($4.98 budget + $0.02 payout) |
+| Funds on hand | **$5.02** ($4.98 budget + $0.04 payout) |
 | Growth budget | $20.00 allocated · $0.00 spent · **$4.98 verified available** |
 
 Usage context, not revenue: 102 lifetime calls · 33 paywall hits · 4 payment
