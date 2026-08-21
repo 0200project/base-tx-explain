@@ -11,7 +11,7 @@ import { ethUsdAtBlock } from './price.js';
 import { buildRiskFlags } from './risk/flags.js';
 import { client } from './rpc.js';
 import { buildSummary } from './summary.js';
-import type { Counterparty, ExplainResult } from './types.js';
+import type { CheckStatus, Counterparty, ExplainResult } from './types.js';
 
 export class ExplainError extends Error {
   constructor(
@@ -255,16 +255,29 @@ export async function explainTransaction(txHashRaw: string): Promise<ExplainResu
   // prose, and an LLM acts on the prose. Without this, a caller reading only
   // `summary` gets the fully reassuring version of a transaction whose risk
   // checks never ran.
-  if (
-    checks.contract_verification !== 'ok' ||
-    checks.first_interaction !== 'ok' ||
-    checks.drainer_blacklist !== 'ok'
-  ) {
-    const unranAll =
-      checks.contract_verification === 'not_applicable' &&
-      checks.first_interaction === 'not_applicable' &&
-      checks.drainer_blacklist === 'not_applicable';
-    if (!unranAll) {
+  // Only a check that COULD have answered and did not is worth warning about.
+  //
+  // The first version keyed on "not every status is ok", excusing only the case
+  // where all three were not_applicable. That fired on a plain transfer in
+  // perfectly healthy conditions: with no contract and no counterparty to
+  // examine, contract_verification and first_interaction are both
+  // not_applicable while drainer_blacklist is ok, which is the normal steady
+  // state and not a degradation at all. Measured on the five stored samples,
+  // four carried the warning with nothing wrong.
+  //
+  // A caution that fires on most traffic is background noise, not signal — the
+  // same failure as a risk flag that fires on four in ten transactions. So
+  // not_applicable is treated like ok here: nothing was skipped, there was
+  // simply nothing to look at.
+  const degradedStatuses: CheckStatus[] = ['partial', 'unavailable', 'inconclusive'];
+  const somethingCouldNotAnswer = [
+    checks.contract_verification,
+    checks.first_interaction,
+    checks.drainer_blacklist,
+  ].some((s) => degradedStatuses.includes(s));
+
+  if (somethingCouldNotAnswer) {
+    {
       // "completed" was accurate when every non-ok status meant a failure. It
       // stopped being accurate when `inconclusive` arrived: that check ran fine
       // and simply cannot answer for this input, so reporting it as incomplete
