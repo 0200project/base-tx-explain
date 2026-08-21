@@ -411,6 +411,38 @@ outside this file, and does any test use that order?* Setup-then-act is the
 author's order. Production has its own, and it is usually the reverse — the event
 arrives before the human reacts to it, not after.
 
+### The fifth instance recurred inside the fix for the fourth
+
+Recorded at platform's request, and in their words rather than a kinder
+paraphrase. Roughly forty minutes after we agreed this was the most transferable
+thing either of us had produced that day, they wrote the test demonstrating the
+fix for author-order — **in author-order**, asserting only on the buckets
+afterwards and never on what the function returned. It passed while the function
+reported success for work it had not done. Their summary: *"I applied the lesson
+to the code and not to the test I wrote about the lesson."*
+
+That kills the comfortable reading. Five parallel instances invite "we were tired,
+we were rushing". A recursion does not: the pattern survived inside the correction
+for itself, held by someone who had just articulated it better than anyone.
+Knowing the principle does not appear to help at the moment of writing. The only
+thing that reliably caught it today was **a second person executing the thing
+rather than reading it** — every one of the five was found by running code, never
+by reviewing a diff.
+
+### Visibility is not severity
+
+The same fix carried three defects: a false `promoted: true`, a false log line
+claiming a human had attributed a settlement, and a persisted-but-suppressed
+attribution that would fire by itself the day anyone edited the list suppressing
+it. Platform expected to rank the false `promoted: true` worst, because it is the
+one you can see.
+
+The dormant entry was far worse. It fires from an unrelated edit, months after
+the click that caused it, and the person who eventually sees revenue move is
+looking at a diff that is innocent. A visible wrong answer gets challenged the
+first time somebody reads it. A latent one waits, and arrives disguised as
+something else — so rank by how the failure ARRIVES, not by how loud it is now.
+
 And when a test passes, check that it would have failed. The cap test, the
 ordering tests, and the ERC-1155 truncation test were all written to fail first;
 each one did, and each one found something. The tests that were never seen red
