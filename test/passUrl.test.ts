@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { passFromPath, passUrl, redactPassPath } from '../src/passUrl.js';
+import { passFromHeaders, passFromPath, passUrl, redactPassPath } from '../src/passUrl.js';
 
 /**
  * The URL-path pass form exists so setup is one paste of one URL, for the many
@@ -94,5 +94,50 @@ describe('passUrl', () => {
     const url = passUrl('https://base-tx-explain.fly.dev', TOKEN);
     const path = new URL(url).pathname;
     expect(passFromPath(path)).toBe(TOKEN);
+  });
+});
+
+describe('passFromHeaders', () => {
+  /**
+   * claude.ai custom connectors accept only an allowlist of standard auth
+   * header names — authorization, x-api-key, x-auth-token. Our original
+   * X-BTX-Pass is not on it and cannot be sent there at all, so accepting the
+   * standard forms is the difference between working and not working on that
+   * surface.
+   */
+  it('accepts the original custom header', () => {
+    expect(passFromHeaders({ 'x-btx-pass': TOKEN })).toBe(TOKEN);
+  });
+
+  it('accepts Authorization: Bearer, which is what allowlisted clients can send', () => {
+    expect(passFromHeaders({ authorization: `Bearer ${TOKEN}` })).toBe(TOKEN);
+    expect(passFromHeaders({ authorization: `bearer ${TOKEN}` })).toBe(TOKEN);
+  });
+
+  it('accepts a bare Authorization value without the Bearer prefix', () => {
+    expect(passFromHeaders({ authorization: TOKEN })).toBe(TOKEN);
+  });
+
+  it('accepts x-api-key and x-auth-token', () => {
+    expect(passFromHeaders({ 'x-api-key': TOKEN })).toBe(TOKEN);
+    expect(passFromHeaders({ 'x-auth-token': TOKEN })).toBe(TOKEN);
+  });
+
+  it('ignores an unrelated Authorization header rather than reading it as a failed pass', () => {
+    // A proxy's own credential must not be mistaken for a bad pass, which would
+    // turn someone else's infrastructure into an authentication error for us.
+    expect(passFromHeaders({ authorization: 'Bearer sk_live_abc123' })).toBeNull();
+    expect(passFromHeaders({ authorization: 'Basic dXNlcjpwYXNz' })).toBeNull();
+    expect(passFromHeaders({ 'x-api-key': 'some-other-service-key' })).toBeNull();
+  });
+
+  it('returns null when no header carries a pass', () => {
+    expect(passFromHeaders({})).toBeNull();
+    expect(passFromHeaders({ 'content-type': 'application/json' })).toBeNull();
+  });
+
+  it('ignores non-string header values', () => {
+    expect(passFromHeaders({ authorization: ['a', 'b'] })).toBeNull();
+    expect(passFromHeaders({ 'x-btx-pass': undefined })).toBeNull();
   });
 });

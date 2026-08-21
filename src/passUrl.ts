@@ -72,6 +72,40 @@ export function redactPassPath(path: string): string {
 }
 
 /**
+ * A pass presented in any header form we accept.
+ *
+ * `X-BTX-Pass` was the original and is the least portable. claude.ai custom
+ * connectors accept only an allowlist of standard auth header names —
+ * `authorization`, `x-api-key`, `x-auth-token` — and a custom name is not on
+ * it, so on that surface the original header simply cannot be sent. Accepting
+ * `Authorization: Bearer` costs almost nothing and is the difference between
+ * working and not working there.
+ *
+ * Every form is checked against the minted token shape rather than taken at
+ * face value, so an unrelated Authorization header belonging to some proxy is
+ * ignored rather than mistaken for a failed pass.
+ */
+export function passFromHeaders(headers: Record<string, unknown>): string | null {
+  const read = (name: string): string | null => {
+    const v = headers[name];
+    return typeof v === 'string' && v.length > 0 ? v : null;
+  };
+
+  const bearer = read('authorization');
+  const candidates = [
+    read('x-btx-pass'),
+    bearer && /^Bearer\s+/i.test(bearer) ? bearer.replace(/^Bearer\s+/i, '').trim() : bearer,
+    read('x-api-key'),
+    read('x-auth-token'),
+  ];
+
+  for (const c of candidates) {
+    if (c && TOKEN_PATTERN.test(c)) return c;
+  }
+  return null;
+}
+
+/**
  * The URL a buyer pastes into their client.
  *
  * Built here rather than by string-concatenation at each call site so the

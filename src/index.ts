@@ -17,6 +17,7 @@ import { registerPassRoutes, registerRestRoutes } from './rest.js';
 import { declaredWithdrawn, reconcile } from './reconcile.js';
 import { getTreasury } from './treasury.js';
 import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
+import { passFromHeaders, passFromPath } from './passUrl.js';
 import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, passSnapshot, refundPassUse, activatePass, revokePass, revokePendingPass, usePass } from './passes.js';
 import { HOUR, TtlCache } from './cache.js';
 import { APIFY_BILLING_ACTIVE, initApifyBilling, chargeApifyCall } from './apifyBilling.js';
@@ -753,7 +754,7 @@ app.options('/mcp', (_req, res) => {
     .end();
 });
 
-app.post('/mcp', async (req, res) => {
+app.post(['/mcp', '/mcp/:token'], async (req, res) => {
   res.set(MCP_CORS);
   const ip = clientIpOf(req);
   // On Apify every standby run serves exactly one metered, billed customer,
@@ -799,8 +800,12 @@ app.post('/mcp', async (req, res) => {
   if (PAYMENT_MODE === 'x402' && isToolCall && !isBuyPass) {
     // A valid pass wins first - the holder paid to skip both the free tier
     // and per-call payments. Then a payment-carrying retry, then free tier.
+    // Order is documented rather than accidental: the URL is the most explicit
+    // thing a buyer can configure, then any accepted auth header, then the
+    // in-band _meta form agents use.
     const presented =
-      (req.headers['x-btx-pass'] as string | undefined) ??
+      passFromPath(req.path) ??
+      passFromHeaders(req.headers as Record<string, unknown>) ??
       (messages.find((m) => typeof m?.params?._meta?.['btx/pass'] === 'string')?.params?._meta?.['btx/pass'] as
         | string
         | undefined);
@@ -847,7 +852,7 @@ app.post('/mcp', async (req, res) => {
 const methodNotAllowed = (_req: express.Request, res: express.Response) => {
   res.status(405).json({ jsonrpc: '2.0', error: { code: -32000, message: 'Method not allowed.' }, id: null });
 };
-app.get('/mcp', (req, res) => {
+app.get(['/mcp', '/mcp/:token'], (req, res) => {
   res.set(MCP_CORS);
   if (httpPaymentRequired && !isMcpClient(req)) {
     send402(res);
