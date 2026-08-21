@@ -34,6 +34,27 @@ growth's or the founder's.
 | Progress | **0 / 10 · $0 / $90** |
 | Paying customers, verified | 0 |
 
+**Two distinct $9 products exist — checked directly against site copy and
+`src/stripe.ts`, not assumed from either product's name alone.** A sale is one
+or the other; the treatment differs and must not default to either without
+checking which one closed:
+
+| | 0200 Pass | 0200 Developer |
+|---|---|---|
+| Billing | **One-time.** Buyer manually purchases again to continue. Growth confirmed by dogfooding the live 402 challenge directly: "renew by buying a new pass when it expires," no stored payment method, no auto-charge. | **Recurring subscription** via Stripe (`sessionKind()` returns `'subscription'` when `session.mode === 'subscription'`; site copy: "renewing automatically... cancel anytime through a Stripe-hosted portal"). |
+| Revenue treatment | Single cash event on sale. | Recurring — initial sale books on `checkout.session.completed`, each renewal books separately on `invoice.paid` with `billing_reason: 'subscription_cycle'` (code already live, see Revenue section above). |
+| **Counts toward "$90 MRR"?** | Debatable — it's $9 realized once, not recurring revenue in the strict sense, even though the founder's target language says "MRR." | Yes, unambiguously — this is what "MRR" technically means. |
+
+**Consequence for the target and the booking rule:** the Founder's language —
+"$9/mo," "$90 MRR" — technically describes the Developer subscription, not the
+Pass, even though both are priced at $9 and serve the same usage. **Do not
+assume one-time by default.** When Growth flags a sale, Finance will check
+`sessionKind()`/the webhook's `mode` field directly rather than infer it from
+which rail closed, and will book it correctly whichever it is — but the two
+should not be added into one undifferentiated "$90 MRR" number without noting
+which is which, since a Pass sale is not recurring revenue in the sense the
+target is stated in.
+
 
 **Basis of accounting: cash, on verified settlement only.** A payment is booked
 when money has actually arrived and can be seen at its source — a USDC transfer
