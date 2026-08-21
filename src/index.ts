@@ -615,7 +615,15 @@ app.get('/favicon.ico', (_req, res) => {
 });
 // Since-boot demand counters: enough to see whether strangers are calling,
 // deliberately nothing that identifies them.
-const metrics = { tool_calls: 0, free: 0, paywalled: 0, booted_at: new Date().toISOString() };
+/**
+ * `degraded` is separate from `paywalled` for the same reason `degraded_calls`
+ * is separate from `wall_hits` in the ledger: an outage giveaway carries
+ * charge=true with no payment, so counting it as paywalled makes an outage read
+ * as people hitting the paywall — our own failure wearing the shape of demand.
+ * The ledger was fixed; this counter is the same number one layer up, and it is
+ * published on the PUBLIC /healthz, where a stranger reads it too.
+ */
+const metrics = { tool_calls: 0, free: 0, paywalled: 0, degraded: 0, booted_at: new Date().toISOString() };
 
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? '';
 
@@ -1141,7 +1149,10 @@ app.post(['/mcp', '/mcp/:token'], async (req, res) => {
 
   if (isToolCall) {
     metrics.tool_calls++;
-    if (charge) metrics.paywalled++;
+    // Checked before `charge`, because a degraded call has charge=true and
+    // would otherwise be counted as a paywall hit it never reached.
+    if (degradedByOutage) metrics.degraded++;
+    else if (charge) metrics.paywalled++;
     else metrics.free++;
     const ipTag = createHash('sha256').update(`btx:${ip}`).digest('hex').slice(0, 8);
     const kind = passToken
@@ -1231,6 +1242,48 @@ app.listen(port, () => {
 
 /** Retries must never stack a second copy of the paid routes onto the router. */
 let paidRoutesRegistered = false;
+
+/**
+ * Answer the REST rail's paths while payments are still coming up.
+ *
+ * Binding first fixed the crash-loop, but left the two rails disagreeing about
+ * what an outage looks like. Verified locally against a dead facilitator: MCP
+ * `tools/call` served a real decode, while `POST /explain` and `POST /pass`
+ * returned **404** — because those routes are only registered once payments
+ * succeed. Meanwhile `/openapi.json` kept advertising both paths, so we were
+ * publishing a contract for endpoints that did not exist, and the sample curl
+ * in `docs/try-it.md` would have told a prospect the endpoint was gone.
+ *
+ * 404 is the wrong word for "temporarily degraded": it means never existed or
+ * removed, so an integrator stops rather than retries. 503 with Retry-After
+ * says come back, which is true.
+ *
+ * These shims are registered BEFORE the real routes and simply `next()` once
+ * those exist, so ordinary operation is untouched — Express matches layers in
+ * registration order, which is exactly why a shim that did not defer would
+ * shadow the real handler permanently.
+ *
+ * KNOWN ASYMMETRY, deliberately not closed here: MCP still fails OPEN during an
+ * outage (free tier plus the degraded giveaway) while REST fails CLOSED with a
+ * 503, because the REST free tier lives inside `registerRestRoutes` and cannot
+ * be reached without the resource server. Serving REST free during an outage
+ * means restructuring that registration, which is a larger change to a startup
+ * path that was just verified end to end. 503 is a large improvement on 404 and
+ * is honest; the remaining gap is recorded rather than quietly left.
+ */
+for (const path of ['/explain', '/pass'] as const) {
+  app.post(path, (_req, res, next) => {
+    if (paidRoutesRegistered) {
+      next();
+      return;
+    }
+    res.status(503).set('Retry-After', '60').json({
+      error:
+        'Payments are initialising or the facilitator is unreachable; this endpoint is temporarily unavailable. Retry shortly — the MCP endpoint at /mcp still serves its free tier.',
+      code: 'payments_unavailable',
+    });
+  });
+}
 
 function registerPaidRoutes(): void {
   if (paidRoutesRegistered) return;
