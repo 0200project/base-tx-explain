@@ -71,13 +71,6 @@
   .pr-buy-wallet p + p { margin-top: 0.5rem; }
   .pr-buy-wallet .btn { margin-top: 0.625rem; }
 
-  .btn-disabled, .btn-disabled:hover {
-    background: var(--bg-inset);
-    color: var(--fg-faint);
-    border: 1px solid var(--border);
-    cursor: not-allowed;
-  }
-
   .pr-callout {
     display: flex;
     flex-wrap: wrap;
@@ -166,23 +159,24 @@
           <p class="pr-url-label">Setup is one URL, pasted into any MCP client:</p>
           <div class="pr-url">https://base-tx-explain.fly.dev/mcp/btxp_&lt;your token&gt;</div>
 
-          <div class="pr-buy-wallet" id="pass-wallet">
-            <p>Pay with a Base wallet:</p>
-            <button class="btn btn-primary btn-sm" type="button" id="pass-buy-btn">Buy the pass — $9</button>
-            <div id="pass-wallet-panel"></div>
+          <div class="pr-actions">
+            <a class="btn btn-primary btn-sm" href="https://buy.stripe.com/eVq8wP0VS22N2cHglI3wQ00" rel="noopener">Pay with card — $9</a>
           </div>
 
-          <div class="pr-actions">
-            <button class="btn btn-ghost btn-sm btn-disabled" type="button" disabled title="Card checkout is in test mode and not live yet">Pay with card — coming soon</button>
+          <div class="pr-buy-wallet" id="pass-wallet">
+            <p>Or pay with a Base wallet:</p>
+            <button class="btn btn-ghost btn-sm" type="button" id="pass-buy-btn">Buy the pass — $9</button>
+            <div id="pass-wallet-panel"></div>
           </div>
         </div>
 
         <div class="card pr-card">
           <span class="pr-tag">0200 Developer</span>
           <div class="pr-price">$9<span> / month</span></div>
-          <p class="pr-desc">The same 10,000 calls as the Pass, renewing automatically instead of being bought again by hand. Comes with a managed URL, and — once card checkout is live — a rotatable key. Cancel anytime through a Stripe-hosted portal; there is no account on our side to close.</p>
+          <p class="pr-desc">The same 10,000 calls as the Pass, renewing automatically instead of being bought again by hand. Comes with a managed URL, and a rotatable key once that's built. Cancel anytime through a Stripe-hosted portal; there is no account on our side to close.</p>
           <div class="pr-actions">
-            <button class="btn btn-ghost btn-sm btn-disabled" type="button" disabled title="Card checkout is in test mode and not live yet">Pay with card — coming soon</button>
+            <a class="btn btn-primary btn-sm" href="https://buy.stripe.com/5kQ4gzfQMbDn2cHd9w3wQ01" rel="noopener">Pay with card — $9/month</a>
+            <a class="btn btn-ghost btn-sm" href="https://billing.stripe.com/p/login/eVq8wP0VS22N2cHglI3wQ00" rel="noopener">Manage or cancel</a>
           </div>
         </div>
 
@@ -445,9 +439,8 @@
   buyBtn.addEventListener('click', startBuy);
 
   /* ---- Stripe redirect-back: /pricing/?session_id=... after a card payment.
-     Not live yet (Stripe is in test mode), but this is the whole reason the
-     server exposes GET /paid, so it is built now against the documented
-     response shape rather than guessed later. ---- */
+     Live: both Payment Links redirect here on success, and GET /paid carries
+     CORS, so this can actually be fetched from the browser now. ---- */
   (function () {
     var params = new URLSearchParams(window.location.search);
     var sessionId = params.get('session_id');
