@@ -14,10 +14,17 @@ _Last reviewed: 2026-08-21, live at `be8a858` (pass settlement integrity)._
 
 ## 1. What we are actually defending
 
-We hold no user accounts, no secrets with spend authority, and the payout wallet
-is **receive-only** (an EIP-3009 authorization pins `to` = `X402_PAY_TO`, so a
-replayer can only push the payer's own $0.02 to us). Classic breach damage is
-therefore bounded.
+We hold no user accounts. The payout (RECEIVE) wallet is **receive-only** — an
+EIP-3009 authorization pins `to` = `X402_PAY_TO`, so a replayer can only push the
+payer's own $0.02 toward us, and no private key for it exists in this codebase or
+environment.
+
+**This changed on 2026-08-21: autonomous spend is now authorized on the SPEND
+wallet** (`0x2E31f337…`). Until then this section said we held no secret with
+spend authority, and every judgement below inherited that. We do now. Breach
+damage is no longer bounded by "there is nothing to take" — it is bounded by the
+SPEND wallet's balance, which is a number someone chooses and must keep choosing
+deliberately. See §9.
 
 The asymmetric risk is **reputational and second-order**: our JSON is fed to
 _other agents' LLMs_, which act on it. A wrong or manipulated answer can cost a
@@ -32,7 +39,10 @@ Priority order for security effort:
    and must not carry attacker-authored instructions into a consuming model.
 2. **Revenue/paywall** — the free-tier and payment gates.
 3. **Availability** — one 256 MB Fly machine serving real users.
-4. **Confidentiality** — least important; we hold little worth stealing.
+4. **Confidentiality** — was "least important; we hold little worth stealing."
+   That is now only true of user data. A credential with spend authority is worth
+   stealing, so confidentiality of the SPEND signer specifically ranks with the
+   items above it, while everything else here still holds.
 
 ## 2. Trust boundaries
 
@@ -316,6 +326,56 @@ a change touches any of:
 Three sessions ship to this repo daily and nobody else reviews for security: a
 trust-boundary change can arrive inside a commit whose message is about copy.
 Watch the diffs, not just the commit subjects.
+
+## 9. Wallet security model (spend authorized 2026-08-21)
+
+**RECEIVE wallet `0xd4ec730a…` — confirmed hardened, nothing to build.** EOA,
+nonce 0. No private key for it exists in the codebase or environment; the exact
+scheme pins the destination so payments can only push toward it; there is no
+automated outbound path. The residual is founder key custody, which is not an
+engineering problem. The only deliverable is detection (below).
+
+**SPEND wallet `0x2E31f337…` — the real exposure.** EOA, nonce 0, and the
+balance IS the blast radius.
+
+Settled decisions:
+
+- **Balance is the PRIMARY control, not a supplement.** Every software limit can
+  be wrong about itself; none can spend money that is not there. Fund to roughly
+  one period's expected spend, top up deliberately. The balance is now a security
+  boundary, not just working capital.
+- **Zero ETH is NOT a control.** It looks like one — no gas, so the wallet cannot
+  move. But EIP-3009 lets any third party submit a signed authorization and pay
+  the gas themselves, which is exactly why both our wallets show nonce 0 while
+  holding funds. Zero ETH shapes a theft; it does not prevent one. Do not record
+  it as a protection.
+- **HARD RULE — no closed loop.** A spending agent must NEVER consume this
+  product's own `explain_transaction` output as decision input. We ingest
+  attacker-controlled strings off a public chain (forged events, hostile token
+  names — "BUY FLASH USDT" is the live example), so that wiring runs
+  attacker-controlled data straight into our own spend decision, in one hop, with
+  no key theft required. This outranks every mechanism below it.
+- **Separate the signer from the parser.** Whatever holds signing capability must
+  not be the process that ingests untrusted chain data.
+- **Detection: balance and ERC-20 Transfer events, NEVER transaction count.**
+  Transaction-based monitoring is blind on this rail by construction — a drain via
+  a signed authorization leaves the wallet's nonce at 0 and puts no transaction
+  "from" it. Alert on any SPEND outflow without a matching logged expense, and on
+  ANY RECEIVE outflow at all.
+- **The honest framing, for anyone asked to promise more:** compromise cannot be
+  made impossible. The maximum loss is a number we choose — the balance — and any
+  loss should be visible in minutes. Nobody should sign their name to "completely
+  secure."
+
+Open, blocked on one product answer: **what is autonomous spend FOR?** If it pays
+only our own endpoint, pin `to` in a scoped signer and a compromised agent can do
+nothing but pay us. If it pays arbitrary third-party x402 services, `to` cannot be
+pinned and the design leans on amount limits plus balance. Materially different
+builds — do not guess. Note x402's EVM implementation supports ERC-1271 and
+ERC-6492 (`erc6492InnerSig`, `isValidSignature` in `@x402/evm`), so a smart
+account with a scoped session key is genuinely available on this rail: the limit
+is then enforced on-chain rather than in an LLM's judgement, which is the only
+version that survives a fully manipulated agent.
 
 ## 8. Notes for whoever deploys
 
