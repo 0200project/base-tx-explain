@@ -211,11 +211,33 @@ explanation. They are unrelated — those 4 attempts moved no money, and the $0.
 predates them. Notional, not owed, not received.
 
 **D-2. A failed read was recorded as a clean $0.** The 2026-08-21 daily report
-ran during a production restart window, could not reach `/stats`, and published
-usage as unreadable while the revenue section still rendered. Production
-recovered (machine booted 16:50:15Z, `/healthz` 200). No money impact — revenue
+ran during a window when `/stats` was unreachable and published usage as
+unreadable while the revenue section still rendered. No money impact — revenue
 was and is $0.00 — but the principle stands: **unknown must never render as
-zero.** Numbers read after recovery are recorded below.
+zero.** A zero you verified and a zero you could not read are different facts,
+and only one of them is evidence. Numbers were re-read after recovery and are
+recorded above.
+
+*Cause, corrected:* Finance first attributed this to a production restart
+window. That was wrong. `booted_at` reads 2026-08-21T16:50:15.584Z and was
+identical before and after the incident, so the process never restarted — there
+was no restart window to blame. The failures clustered on Fly-hosted
+destinations (our app *and* Fly's own `api.machines.dev`) while non-Fly hosts
+answered normally, which points at the network path or Fly's edge, not our
+application. (Corrected by the security session.)
+
+*Method note worth keeping:* the controls Finance used to rule out a local
+network fault — `api.github.com` and `0200project.com` — are GitHub and GitHub
+Pages. Neither is on Fly. So they established "not our laptop" but could not
+distinguish "our server" from "the path to Fly", and the conclusion drawn from
+them overreached. **A control host has to differ from the suspect host in
+exactly the dimension being tested.**
+
+*Watch item if it recurs:* the request path does synchronous disk I/O per call
+on one shared vCPU (ledger `appendFileSync`, whole-file pass-store rewrite,
+free-tier flush). Under concurrency that blocks the event loop and looks exactly
+like connection failures with no crash and no restart — in which case a constant
+`booted_at` is the confirming signal, not a reassuring one.
 
 ## Known corrections to the record
 
