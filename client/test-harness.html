@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pay.js test harness</title>
+<!--
+  LOCAL TEST HARNESS. Never ships.
+
+  This is not the playground UI and is not a design. It exists to drive
+  client/pay.js against the real production endpoint with a real wallet,
+  because every automated test signs with a throwaway key against a mock
+  provider. The cryptography is proven; a real end-to-end payment is not.
+
+  It spends REAL money: $0.02 USDC on Base per call. That is the point.
+-->
+<style>
+  :root {
+    --bg: #0a0a0b; --panel: #131316; --line: #26262b; --line-soft: #1c1c20;
+    --fg: #ececf1; --dim: #8b8b94; --faint: #5b5b63;
+    --accent: #4e9eff; --ok: #3fb950; --warn: #d29922; --bad: #f85149;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  /* A display rule on a class beats the UA sheet's [hidden] rule, so .kv would
+     stay visible when hidden. Restore the intent explicitly. */
+  [hidden] { display: none !important; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    padding: 2.5rem 1.25rem 5rem;
+  }
+  .wrap { max-width: 46rem; margin: 0 auto; }
+  h1 { font-size: 1.4rem; margin: 0 0 .35rem; letter-spacing: -.01em; }
+  .sub { color: var(--dim); margin: 0 0 1.5rem; font-size: .93rem; }
+  .warn {
+    background: rgba(210,153,34,.09); border: 1px solid rgba(210,153,34,.3);
+    border-radius: 6px; padding: .85rem 1rem; margin: 0 0 1.75rem;
+    font-size: .9rem; color: #e8c877;
+  }
+  .warn strong { color: #ffd97a; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; padding: 1.15rem 1.25rem; margin-bottom: 1rem;
+  }
+  .panel h2 {
+    font: 500 .7rem/1 var(--mono); letter-spacing: .12em; text-transform: uppercase;
+    color: var(--faint); margin: 0 0 .9rem;
+  }
+  label { display: block; font-size: .82rem; color: var(--dim); margin-bottom: .35rem; }
+  input[type=text] {
+    width: 100%; background: #08080a; border: 1px solid var(--line);
+    color: var(--fg); font: 13px var(--mono); padding: .6rem .7rem;
+    border-radius: 5px;
+  }
+  input[type=text]:focus { outline: none; border-color: var(--accent); }
+  .row { display: flex; gap: .6rem; flex-wrap: wrap; margin-top: .9rem; }
+  button {
+    background: var(--accent); color: #04121f; border: 0; border-radius: 5px;
+    font: 600 .88rem/1 inherit; padding: .65rem 1.05rem; cursor: pointer;
+  }
+  button.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .steps { list-style: none; padding: 0; margin: .9rem 0 0; font: 13px var(--mono); }
+  .steps li { padding: .3rem 0; color: var(--faint); display: flex; gap: .6rem; }
+  .steps li .mark { width: 1.1rem; flex: none; }
+  .steps li.active { color: var(--accent); }
+  .steps li.done { color: var(--ok); }
+  .steps li.failed { color: var(--bad); }
+  pre {
+    background: #08080a; border: 1px solid var(--line-soft); border-radius: 5px;
+    padding: .8rem; overflow-x: auto; font: 12px/1.6 var(--mono);
+    color: var(--dim); margin: .8rem 0 0; max-height: 22rem;
+  }
+  .status { font: 13px var(--mono); padding: .7rem .8rem; border-radius: 5px; margin-top: .9rem; }
+  .status.ok { background: rgba(63,185,80,.1); color: var(--ok); border: 1px solid rgba(63,185,80,.25); }
+  .status.bad { background: rgba(248,81,73,.1); color: var(--bad); border: 1px solid rgba(248,81,73,.25); }
+  .status.info { background: rgba(78,158,255,.08); color: var(--accent); border: 1px solid rgba(78,158,255,.22); }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: .3rem 1rem; font: 12px var(--mono); margin-top: .8rem; }
+  .kv dt { color: var(--faint); }
+  .kv dd { margin: 0; color: var(--fg); word-break: break-all; }
+  code { font: 12px var(--mono); color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>pay.js test harness</h1>
+  <p class="sub">Drives <code>client/pay.js</code> against the live production endpoint with your own wallet.</p>
+
+  <div class="warn">
+    <strong>This spends real money.</strong> Each paid call transfers $0.02 USDC on Base from your
+    wallet to the payout wallet <code>0xd4ec…6bc9</code>. If that payout wallet is yours, the money
+    goes from one of your pockets to another and the round trip costs you nothing — the facilitator
+    pays the gas, not you. Nothing here ever sees a private key: your wallet signs, this page relays.
+  </div>
+
+  <div class="panel">
+    <h2>1 · Wallet</h2>
+    <div id="wallet-state" class="status info">Checking for an injected wallet…</div>
+    <div class="row">
+      <button id="btn-connect">Connect wallet</button>
+    </div>
+    <dl class="kv" id="wallet-kv" hidden>
+      <dt>account</dt><dd id="kv-account">—</dd>
+      <dt>USDC on Base</dt><dd id="kv-balance">—</dd>
+    </dl>
+  </div>
+
+  <div class="panel">
+    <h2>2 · The call to pay for</h2>
+    <label for="tx">Base transaction hash</label>
+    <input type="text" id="tx" value="0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c" spellcheck="false">
+    <div class="row">
+      <button id="btn-call" class="ghost">Call it free / get the challenge</button>
+    </div>
+    <div id="call-status"></div>
+    <pre id="challenge-out" hidden></pre>
+  </div>
+
+  <div class="panel">
+    <h2>3 · Pay and retry</h2>
+    <p class="sub" style="margin:0 0 .5rem;font-size:.87rem;">
+      Enabled once a payment challenge has been received above.
+    </p>
+    <div class="row">
+      <button id="btn-pay" disabled>Pay $0.02 and retry</button>
+    </div>
+    <ul class="steps" id="steps" hidden>
+      <li data-step="connecting"><span class="mark">·</span> connecting wallet</li>
+      <li data-step="network"><span class="mark">·</span> confirming Base network</li>
+      <li data-step="balance"><span class="mark">·</span> reading USDC balance</li>
+      <li data-step="signing"><span class="mark">·</span> awaiting your signature</li>
+      <li data-step="signed"><span class="mark">·</span> signed, retrying the call</li>
+    </ul>
+    <div id="pay-status"></div>
+    <pre id="result-out" hidden></pre>
+  </div>
+
+</div>
+
+<script src="./pay.js"></script>
+<script>
+(function () {
+  'use strict';
+  var ENDPOINT = 'https://base-tx-explain.fly.dev/mcp';
+  var $ = function (id) { return document.getElementById(id); };
+  var challenge = null;
+
+  function say(el, text, kind) {
+    el.className = 'status ' + (kind || 'info');
+    el.textContent = text;
+  }
+
+  function mark(step, state) {
+    var li = document.querySelector('[data-step="' + step + '"]');
+    if (!li) return;
+    li.className = state;
+    li.querySelector('.mark').textContent = state === 'done' ? '✓' : state === 'failed' ? '✕' : '→';
+  }
+
+  function resetSteps() {
+    $('steps').hidden = false;
+    Array.prototype.forEach.call($('steps').children, function (li) {
+      li.className = '';
+      li.querySelector('.mark').textContent = '·';
+    });
+  }
+
+  /** One MCP tools/call. `payment` goes at _meta["x402/payment"] when retrying. */
+  function callTool(txHash, payment) {
+    var params = { name: 'explain_transaction', arguments: { tx_hash: txHash } };
+    if (payment) params._meta = { 'x402/payment': payment };
+    return fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method: 'tools/call', params: params }),
+    }).then(function (res) {
+      return res.text();
+    }).then(function (text) {
+      // The endpoint may answer as SSE; take the last data: line either way.
+      var body = text.trim();
+      var lines = body.split('\n').filter(function (l) { return l.indexOf('data:') === 0; });
+      if (lines.length) body = lines[lines.length - 1].slice(5).trim();
+      return JSON.parse(body);
+    });
+  }
+
+  // --- 1. Wallet -----------------------------------------------------------
+  if (!window.x402Pay.available()) {
+    say($('wallet-state'),
+      'No injected wallet found. Open this page in a browser with MetaMask or Coinbase Wallet installed.',
+      'bad');
+    $('btn-connect').disabled = true;
+  } else {
+    say($('wallet-state'), 'Wallet detected. Connect to read your Base USDC balance.', 'info');
+  }
+
+  $('btn-connect').addEventListener('click', function () {
+    if (!challenge) {
+      say($('wallet-state'),
+        'Get a payment challenge first (step 2) — the balance check needs to know the asset and amount.',
+        'info');
+      return;
+    }
+    say($('wallet-state'), 'Waiting for the wallet…', 'info');
+    window.x402Pay.inspect(challenge).then(function (s) {
+      $('wallet-kv').hidden = false;
+      $('kv-account').textContent = s.account;
+      $('kv-balance').textContent = s.heldDisplay + ' USDC  (this call needs ' + s.requiredDisplay + ')';
+      if (s.canPay) {
+        say($('wallet-state'), 'Connected and funded. Payment can proceed.', 'ok');
+        $('btn-pay').disabled = false;
+      } else {
+        say($('wallet-state'),
+          'This wallet holds ' + s.heldDisplay + ' USDC on Base; this call needs ' + s.requiredDisplay + '.',
+          'bad');
+        $('btn-pay').disabled = true;
+      }
+    }).catch(function (e) {
+      say($('wallet-state'), e.code + ': ' + e.message, 'bad');
+    });
+  });
+
+  // --- 2. Get a challenge --------------------------------------------------
+  $('btn-call').addEventListener('click', function () {
+    var tx = $('tx').value.trim();
+    say($('call-status'), 'Calling the production endpoint…', 'info');
+    $('challenge-out').hidden = true;
+    callTool(tx, null).then(function (res) {
+      var ch = window.x402Pay.challengeFrom(res);
+      if (ch) {
+        challenge = ch;
+        say($('call-status'),
+          'Payment required. This is the paywall working, not an error — free calls for this client are used up.',
+          'info');
+        $('challenge-out').hidden = false;
+        $('challenge-out').textContent = JSON.stringify(ch.accepts, null, 2);
+        say($('wallet-state'), 'Challenge received. Connect the wallet to check funding.', 'info');
+      } else {
+        challenge = null;
+        say($('call-status'),
+          'That call was answered free — this client still has free calls left, so there is nothing to pay for. '
+          + 'Use up the free tier first, or try from a different network.',
+          'ok');
+        $('challenge-out').hidden = false;
+        $('challenge-out').textContent = JSON.stringify(res.result, null, 2).slice(0, 4000);
+      }
+    }).catch(function (e) {
+      say($('call-status'), 'Request failed: ' + e.message, 'bad');
+    });
+  });
+
+  // --- 3. Pay and retry ----------------------------------------------------
+  $('btn-pay').addEventListener('click', function () {
+    if (!challenge) return;
+    $('btn-pay').disabled = true;
+    resetSteps();
+    $('result-out').hidden = true;
+    var last = null;
+
+    window.x402Pay.payChallenge(challenge, {
+      onState: function (s) {
+        if (last) mark(last, 'done');
+        mark(s, 'active');
+        last = s;
+      },
+    }).then(function (signed) {
+      mark('signed', 'done');
+      say($('pay-status'), 'Signed. Retrying the call with the payment attached…', 'info');
+      return callTool($('tx').value.trim(), signed.payment);
+    }).then(function (res) {
+      var stillChallenge = window.x402Pay.challengeFrom(res);
+      $('result-out').hidden = false;
+      $('result-out').textContent = JSON.stringify(res.result, null, 2).slice(0, 6000);
+      if (stillChallenge) {
+        say($('pay-status'),
+          'The payment was not accepted — the endpoint returned another challenge. The signature was made but '
+          + 'the facilitator rejected or could not settle it.',
+          'bad');
+        $('btn-pay').disabled = false;
+      } else {
+        say($('pay-status'),
+          'Paid and answered. A human just completed the x402 loop end to end in a browser.',
+          'ok');
+      }
+    }).catch(function (e) {
+      if (last) mark(last, 'failed');
+      var msg = e.code === 'REJECTED'
+        ? 'Signature declined. Nothing was charged.'
+        : (e.code || 'ERROR') + ': ' + e.message;
+      say($('pay-status'), msg, e.code === 'REJECTED' ? 'info' : 'bad');
+      $('btn-pay').disabled = false;
+    });
+  });
+})();
+</script>
+</body>
+</html>
