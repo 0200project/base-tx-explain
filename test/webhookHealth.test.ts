@@ -69,8 +69,8 @@ describe('webhookHealth', () => {
     expect(h.status).toBe('REJECTING_SIGNED_DELIVERIES');
     expect(h.bad_signature_count).toBe(1);
     expect(h.needs_attention).toBe(true);
-    expect(h.note).toMatch(/charged/i);
     expect(h.note).toMatch(/retries/i);
+    expect(h.note).toMatch(/delivery log/i);
   });
 
   it('names the remedy, because the alert is useless without it', async () => {
@@ -100,15 +100,54 @@ describe('webhookHealth', () => {
     expect(h.bad_signature_count).toBe(1);
   });
 
-  it('counts every rejection reason except a missing header as a bad signature', async () => {
-    const m = await load();
-    for (const r of ['missing_timestamp', 'missing_v1_signature', 'timestamp_outside_tolerance', 'no_matching_signature']) {
+  /**
+   * /stripe/webhook is public by necessity, so any stranger with curl can cause
+   * a rejection. The classifier must therefore ask "is this a shape ONLY a real
+   * Stripe delivery could produce" rather than merely "was this rejected" —
+   * otherwise the alarm is raisable from outside, faster than it can be
+   * acknowledged, and the operator learns to ignore it before the day it is
+   * real. Found by Security reading the classifier rather than firing it.
+   */
+  it('treats malformed signature headers as probes: Stripe never sends those', async () => {
+    for (const r of ['missing_signature_header', 'missing_timestamp', 'missing_v1_signature']) {
       const fresh = await load();
       fresh.recordWebhookRejected(r);
-      expect(fresh.webhookHealth().bad_signature_count, r).toBe(1);
+      const h = fresh.webhookHealth();
+      expect(h.probe_count, r).toBe(1);
+      expect(h.bad_signature_count, r).toBe(0);
+      expect(h.needs_attention, r).toBe(false);
     }
-    m.recordWebhookRejected('missing_signature_header');
-    expect(m.webhookHealth().bad_signature_count).toBe(0);
+  });
+
+  it('records a stale timestamp without alarming: it is genuinely ambiguous', async () => {
+    // Clock drift, a replayed capture, or a stranger with an old timestamp.
+    // Real information, but not evidence of anything on its own.
+    const m = await load();
+    m.recordWebhookRejected('timestamp_outside_tolerance');
+    const h = m.webhookHealth();
+    expect(h.stale_timestamp_count).toBe(1);
+    expect(h.bad_signature_count).toBe(0);
+    expect(h.needs_attention).toBe(false);
+  });
+
+  it('alarms only on a well-formed in-window signature that did not match', async () => {
+    const m = await load();
+    m.recordWebhookRejected('no_matching_signature');
+    const h = m.webhookHealth();
+    expect(h.bad_signature_count).toBe(1);
+    expect(h.needs_attention).toBe(true);
+  });
+
+  it('does not claim a customer was charged, because it cannot know that', async () => {
+    // A forged rejection and a real one are indistinguishable without the
+    // secret. Overstating trains the reader to discount the alert just as
+    // surely as understating does.
+    const m = await load();
+    m.recordWebhookRejected('no_matching_signature');
+    const note = m.webhookHealth().note;
+    expect(note).toMatch(/STRIPE DELIVERY LOG/i);
+    expect(note).toMatch(/forge/i);
+    expect(note).not.toMatch(/certainly our secret/i);
   });
 
   it('survives an unwritable data dir without throwing', async () => {

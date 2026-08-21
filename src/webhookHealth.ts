@@ -15,16 +15,30 @@ import { join } from 'node:path';
  *
  * Until now the only trace was one `console.error` in a log nobody watches.
  *
- * THE DISTINCTION THAT CARRIES THE SIGNAL. Not all rejections mean the same
- * thing, and treating them alike would bury the one that matters:
+ * THE DISTINCTION THAT CARRIES THE SIGNAL. `/stripe/webhook` is public by
+ * necessity, so ANY stranger with curl can produce a rejection. The
+ * classification therefore has to ask not "was this rejected" but "is this a
+ * shape only a real Stripe delivery could have produced":
  *
- *  - `missing_signature_header` — no Stripe-Signature at all. A scanner, a
- *    curl, or one of us probing the endpoint. Benign. Real Stripe deliveries
- *    ALWAYS carry the header.
- *  - anything else — the header was present and we could not match it. That is
- *    a genuinely signed delivery we are turning away, and the overwhelmingly
- *    likely cause is that our secret does not match the one Stripe is signing
- *    with. Someone is probably out of pocket right now.
+ *  - `missing_signature_header`, `missing_timestamp`, `missing_v1_signature` —
+ *    the header was absent or not shaped like Stripe's. A real Stripe delivery
+ *    NEVER produces these; they are scanners, our own probes, or someone
+ *    poking. Noise, and counted as such.
+ *  - `timestamp_outside_tolerance` — well-formed but old. Genuinely ambiguous:
+ *    clock drift, a replayed capture, or a stranger with an old timestamp. Its
+ *    own counter, deliberately NOT an alert.
+ *  - `no_matching_signature` — well-formed header, timestamp inside the window,
+ *    signature does not match. The only shape consistent with "Stripe sent it
+ *    and our secret is wrong". This is the signal.
+ *
+ * WHAT THE ALERT CAN AND CANNOT CLAIM. Even `no_matching_signature` is forgeable
+ * by anyone willing to send a plausible timestamp — distinguishing a forged
+ * rejection from a real one is impossible without the secret, by construction.
+ * So the alert says "something claiming to be Stripe was turned away, go read
+ * the Stripe delivery log", NOT "a customer was charged and got nothing". The
+ * first version asserted the second, which is a claim it cannot support; an
+ * alert that overstates trains its reader to discount it just as surely as one
+ * that understates, only more slowly.
  *
  * NEVER_EXERCISED IS NOT HEALTHY. The third state is the one this codebase has
  * repeatedly failed to name: a rotated secret that no delivery has ever tested
@@ -43,10 +57,17 @@ export interface WebhookHealth {
   last_rejected_at: string | null;
   last_reject_reason: string | null;
   verified_count: number;
-  /** Signed deliveries we turned away. Each one is a probable lost sale. */
+  /**
+   * Well-formed, in-window signatures that did not match ours. The shape of a
+   * real delivery being refused — and equally the shape a stranger can forge,
+   * so this prompts a look at Stripe's delivery log rather than asserting a
+   * lost sale on its own.
+   */
   bad_signature_count: number;
-  /** Unsigned hits: scanners and our own probes. Carries no signal. */
+  /** Malformed or absent signatures: scanners and probes. Carries no signal. */
   probe_count: number;
+  /** Well-formed but stale timestamps. Ambiguous, so recorded not alarmed. */
+  stale_timestamp_count: number;
   /** When a human last cleared an incident, so a live alarm can be dismissed. */
   last_acknowledged_at: string | null;
   /** Rejections cleared by acknowledgement over all time. Never reset. */
@@ -63,6 +84,7 @@ interface Stored {
   verified_count: number;
   bad_signature_count: number;
   probe_count: number;
+  stale_timestamp_count: number;
   /** When a human last confirmed they had dealt with an incident. */
   last_acknowledged_at: string | null;
   /** Running total of rejections cleared by acknowledgement, never reset. */
@@ -76,6 +98,7 @@ const EMPTY: Stored = {
   verified_count: 0,
   bad_signature_count: 0,
   probe_count: 0,
+  stale_timestamp_count: 0,
   last_acknowledged_at: null,
   acknowledged_total: 0,
 };
@@ -119,6 +142,13 @@ export function recordWebhookVerified(now = new Date()): void {
   persist();
 }
 
+/** Shapes a real Stripe delivery can never produce. Anyone can send these. */
+const PROBE_REASONS = new Set([
+  'missing_signature_header',
+  'missing_timestamp',
+  'missing_v1_signature',
+]);
+
 /**
  * A delivery we turned away.
  *
@@ -129,15 +159,21 @@ export function recordWebhookVerified(now = new Date()): void {
 export function recordWebhookRejected(reason: string, now = new Date()): void {
   state.last_rejected_at = now.toISOString();
   state.last_reject_reason = reason;
-  if (reason === 'missing_signature_header') {
+
+  if (PROBE_REASONS.has(reason)) {
     state.probe_count += 1;
+  } else if (reason === 'timestamp_outside_tolerance') {
+    // Well-formed but stale. Clock drift, a replay, or a stranger reusing an
+    // old capture — no way to tell, so it is recorded and not alarmed on.
+    state.stale_timestamp_count += 1;
   } else {
     state.bad_signature_count += 1;
     console.error(
-      `[stripe] SIGNED DELIVERY REJECTED (${reason}). A customer may have been charged ` +
-        'with no pass minted. Check STRIPE_WEBHOOK_SECRET against the signing secret in ' +
-        'the Stripe dashboard; Stripe retries for ~3 days, so fixing the secret should ' +
-        'still deliver the pass.',
+      `[stripe] webhook rejected with ${reason}: a well-formed, in-window signature that ` +
+        'did not match. Consistent with our secret disagreeing with Stripe, and also ' +
+        'forgeable by anyone. CHECK THE STRIPE DELIVERY LOG: if Stripe shows failed ' +
+        'deliveries, fix STRIPE_WEBHOOK_SECRET — retries run for ~3 days, so the passes ' +
+        'should still land. If Stripe shows none, this was a stranger and can be acked.',
     );
   }
   persist();
@@ -180,6 +216,7 @@ export function webhookHealth(): WebhookHealth {
     verified_count: state.verified_count,
     bad_signature_count: state.bad_signature_count,
     probe_count: state.probe_count,
+    stale_timestamp_count: state.stale_timestamp_count,
     last_acknowledged_at: state.last_acknowledged_at,
     acknowledged_total: state.acknowledged_total,
   };
@@ -190,11 +227,12 @@ export function webhookHealth(): WebhookHealth {
       status: 'REJECTING_SIGNED_DELIVERIES',
       needs_attention: true,
       note:
-        `${state.bad_signature_count} signed Stripe deliver${state.bad_signature_count === 1 ? 'y was' : 'ies were'} ` +
-        `rejected (last: ${state.last_reject_reason}). Real deliveries are always signed, so this is almost ` +
-        'certainly our secret disagreeing with Stripe. Anyone who paid by card in that window was charged ' +
-        'and got no pass. Stripe retries for about three days: fix STRIPE_WEBHOOK_SECRET and the passes ' +
-        'should still land.',
+        `${state.bad_signature_count} request${state.bad_signature_count === 1 ? '' : 's'} presented a well-formed, ` +
+        'in-window Stripe signature that did not match our secret. That is the shape of a real delivery we are ' +
+        'turning away — and also the shape a stranger can forge, which cannot be told apart without the secret. ' +
+        'GO READ THE STRIPE DELIVERY LOG. Failed deliveries there mean STRIPE_WEBHOOK_SECRET is wrong and buyers ' +
+        'were charged without receiving a pass; retries run about three days, so fixing it should still deliver ' +
+        'them. No failed deliveries there means this was noise, and it can be acknowledged.',
     };
   }
 
