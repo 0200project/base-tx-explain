@@ -47,6 +47,26 @@ interface PassEntry {
    * activate them. Hence per-mint, not global.
    */
   active: boolean;
+  /**
+   * The EIP-3009 nonce this pass is waiting on, persisted so a pending pass can
+   * still be identified after a restart.
+   *
+   * `pendingByNonce` is in-memory, so without this field the store structurally
+   * could not express which nonce a restored pass belonged to — which is why
+   * pending entries used to be dropped at boot.
+   */
+  nonce?: string;
+  /**
+   * Set at boot on a pending pass that could not survive the restart.
+   *
+   * The settlement hook that would have activated it lives in the process that
+   * died, so it can never be activated by the normal path. It is retained
+   * anyway: the payment may well have completed on chain after the process
+   * went, leaving $9 in the payout wallet with no pass and no ledger entry, and
+   * a customer holding a token. Deleting the entry left NEITHER END able to
+   * find the other. Kept and listed, the loss is at least discoverable.
+   */
+  stranded?: string;
 }
 
 const dataDir = process.env.DATA_DIR ?? './data';
@@ -66,11 +86,37 @@ export function initPasses(): void {
     if (existsSync(statePath)) {
       const raw = JSON.parse(readFileSync(statePath, 'utf8')) as Record<string, PassEntry>;
       const now = Date.now();
+      let stranded = 0;
       for (const [k, e] of Object.entries(raw)) {
-        // Pending passes never survive a restart: settlement for them cannot
-        // complete across the boundary, so keeping them would leave unusable
-        // entries that look real. Only confirmed passes are restored.
-        if (e && typeof e.expires === 'number' && e.expires > now && e.active === true) passes.set(k, e);
+        if (!e || typeof e.expires !== 'number' || e.expires <= now) continue;
+        if (e.active === true) {
+          passes.set(k, e);
+          continue;
+        }
+        // A PENDING PASS CANNOT BE ACTIVATED ACROSS A RESTART — the settlement
+        // hook that would have done it died with the old process. That much was
+        // always true, and used to justify dropping the entry so nothing
+        // unusable looked real.
+        //
+        // Dropping it silently is the part that was wrong. The payment may have
+        // completed on chain AFTER the process went: the facilitator had already
+        // broadcast, so $9 can land in the payout wallet with no pass, no ledger
+        // entry, and a customer holding a token that answers "invalid". Deleting
+        // the record left neither end able to find the other — the reconciler
+        // sees an unattributable receipt, and support has nothing to search.
+        //
+        // Retained and marked instead. An entry that is visibly stranded is far
+        // better than one nobody can discover.
+        e.stranded = e.stranded ?? 'process restarted before settlement could activate this pass';
+        passes.set(k, e);
+        stranded++;
+      }
+      if (stranded > 0) {
+        console.error(
+          `[passes] ${stranded} PENDING PASS(ES) STRANDED BY A RESTART. Each may correspond to a ` +
+            'payment that completed on chain with no pass issued and nothing in the ledger. ' +
+            'Check the payout wallet against /passes/unconfirmed and settle with the buyer by hand.',
+        );
       }
     }
     persistent = true;
@@ -135,6 +181,7 @@ export function mintPass(
   };
   passes.set(key, entry);
   if (pending && nonce) {
+    entry.nonce = nonce;
     reapPending(now);
     pendingByNonce.set(nonce, { key, at: now });
   }
@@ -272,10 +319,17 @@ export function refundPassUse(token: string): void {
  * worklist: check each against the payout wallet / authorizationState on-chain.
  * Returns hashed keys, never tokens.
  */
-export function listUnconfirmed(): Array<{ key: string; reason: string; payer?: string; issued: number }> {
-  const out: Array<{ key: string; reason: string; payer?: string; issued: number }> = [];
+export function listUnconfirmed(): Array<{ key: string; reason: string; payer?: string; issued: number; nonce?: string }> {
+  const out: Array<{ key: string; reason: string; payer?: string; issued: number; nonce?: string }> = [];
   for (const [key, e] of passes) {
-    if (e.unconfirmed) out.push({ key: key.slice(0, 12), reason: e.unconfirmed, payer: e.payer, issued: e.issued });
+    // Both failure shapes belong here: activated-without-confirmation, and
+    // stranded-by-restart. They are opposites — one gave service that may not
+    // have been paid for, the other took payment that may have given no
+    // service — but the operator's question is the same, "which passes need a
+    // human to look at them", and splitting that across two places is how one
+    // of them stops being checked.
+    const reason = e.unconfirmed ?? e.stranded;
+    if (reason) out.push({ key: key.slice(0, 12), reason, payer: e.payer, issued: e.issued, nonce: e.nonce });
   }
   return out;
 }
