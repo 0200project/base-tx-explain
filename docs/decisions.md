@@ -162,7 +162,7 @@ shape must make that impossible to misread.
 ## D-003 — Safety output must distinguish "not checked" from "checked and clean"
 
 **Date:** 2026-08-20
-**Status:** Accepted, implementation follows.
+**Status:** Implemented and live (`20855bf`, corrected by `d3b0243`).
 
 When an upstream check cannot run — Sourcify unreachable, blocklist fetch failed
 — we emit no flag. In the output that is indistinguishable from having checked
@@ -171,3 +171,33 @@ and found nothing. We fail open on a safety signal and do not say so.
 This is a prerequisite for any safety-adjacent claim: until the response can
 express the difference, the claim is unstateable. Adopted as a standing gate
 rather than a nice-to-have.
+
+### What it turned out to be, in practice
+
+Not hypothetical. While auditing, `base.blockscout.com` was returning HTTP 500
+(measured 22:04, recovered by 22:20). It is the only source for counterparty
+history unless an Etherscan key is configured, so `first_time_counterparty`
+could not fire at all during that window, and nothing in the output said so.
+
+The response now carries `checks`, reporting each check as `ok` / `partial` /
+`unavailable` / `inconclusive` / `not_applicable`, plus `unchecked_addresses`
+and a plain-language note. `summary` gains a sentence when any check is
+degraded, because the prose is what an LLM acts on and structured honesty the
+consumer never reads changes no decisions.
+
+Two corrections came out of review and are worth keeping visible, because both
+were failures of the same kind — reporting better coverage than we had:
+
+- Roll-up inverted: four addresses warranting a check, three checked and all
+  three inconclusive, reported `partial`, a *better* status than the identical
+  outcome with three addresses. Adding an unchecked address improved the
+  reported coverage.
+- The scarce lookup slots were allocated in event order, which is chosen by
+  whoever wrote the transaction, and `erc20_approval` cannot be emitter-gated.
+  Three counterfeit approval events could therefore push a real drain-enabling
+  spender out of the checked set. The queue is now ordered by damage potential.
+
+Related: transient upstream failures were cached with the same TTL as real
+answers, so a sixteen-minute outage suppressed a check for twenty-four hours
+across every caller. Fixed in `2d446d2`. Making the degradation *visible* does
+not stop it happening.
