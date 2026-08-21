@@ -67,6 +67,17 @@ if [ "$((KT * 1000))" -ne "$KTMS" ]; then
   than what Fly actually waits, a paid request gets SIGKILLed mid-settle -- the
   payer's money moves and they get nothing. Set KILL_TIMEOUT_MS to $((KT * 1000))."
 fi
+# Matching is not the same invariant as SUFFICIENT. The two values can agree
+# perfectly at a nonsense setting -- and a sub-second kill_timeout SIGKILLs a
+# settle no matter what we drain, so refuse it rather than making it survivable.
+if [ "$KT" -lt 10 ]; then
+  fail "kill_timeout=${KT}s is too short to be safe.
+
+  An x402 settle involves an on-chain broadcast and routinely exceeds a few
+  seconds. At ${KT}s Fly SIGKILLs the process mid-settle regardless of how we
+  drain: the payer's money moves and they receive nothing. Set kill_timeout to
+  at least 10s (30s is what production uses) and mirror it in KILL_TIMEOUT_MS."
+fi
 echo "predeploy: shutdown window agrees (kill_timeout ${KT}s = ${KTMS}ms)"
 
 npx tsc --noEmit || fail "typecheck failed"

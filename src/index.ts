@@ -1400,7 +1400,18 @@ const httpServer = app.listen(port, () => {
   console.log(`base-tx-explain v${VERSION} listening on :${port} (payment mode: ${PAYMENT_MODE})`);
   // Stated at boot so the live values are observable rather than inferred from
   // two files: this is the window a paid request has to finish before we leave.
-  console.log(`[shutdown] drain grace ${SHUTDOWN_GRACE_MS}ms, inside kill_timeout ${KILL_TIMEOUT_MS}ms`);
+  // Never ASSERT the relationship — state it, and say so when it does not hold.
+  // The floor below can exceed a very small timeout, and a line reading "inside"
+  // above two numbers that contradict it is the failure this whole change exists
+  // to remove. predeploy.sh refuses such a config; this is what a machine that
+  // somehow got one should say about itself.
+  console.log(
+    SHUTDOWN_GRACE_MS < KILL_TIMEOUT_MS
+      ? `[shutdown] drain grace ${SHUTDOWN_GRACE_MS}ms, inside kill_timeout ${KILL_TIMEOUT_MS}ms`
+      : `[shutdown] MISCONFIGURED: drain grace ${SHUTDOWN_GRACE_MS}ms EXCEEDS kill_timeout ` +
+          `${KILL_TIMEOUT_MS}ms. A paid request will be SIGKILLed mid-settle — money moved, ` +
+          `nothing returned. Raise KILL_TIMEOUT_MS.`,
+  );
 });
 
 /**
