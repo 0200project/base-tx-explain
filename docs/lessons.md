@@ -429,6 +429,33 @@ thing that reliably caught it today was **a second person executing the thing
 rather than reading it** — every one of the five was found by running code, never
 by reviewing a diff.
 
+## We made several surfaces under-report on purpose, and that looks exactly like breakage
+
+Platform's sentence, and it is the cost side of everything built tonight:
+**under-reporting is indistinguishable from a bug to whoever was not there.**
+
+Nearly every design decision of the night chose the same direction. Revenue is
+counted UP from human promotion, so a real sale reads `$0` until someone acts. A
+stranded pass is retained and marked rather than deleted, so a paid token answers
+`not_activated` instead of working. `never_exercised` is not folded into healthy.
+Settlement books no revenue unless confirmed. An outage giveaway gets its own
+bucket rather than inflating paywall demand. Every one of those is right, and
+every one of them presents, to a stranger at 3am, as the system being broken.
+
+That is a real cost and it was worth paying — a number that under-reports gets
+investigated, a number that over-reports becomes a story. But recording only the
+benefit would be its own flattering drift. **The mitigation is documentation, and
+it is the only mitigation there is**: `docs/try-it.md` now names the failure modes
+that are deliberate, in the order someone will hit them, with the handle to fix
+each. Without that page the design is indistinguishable from a defect.
+
+### The corollary: a safe default creates a debt somewhere else
+
+Choosing the safe direction does not remove work, it moves it — out of the failure
+path and into the explanation. If you fail safe five times and write nothing down,
+you have built something that behaves correctly and reads as broken, and the
+person who meets it first will be the one with the least context.
+
 ### A stated plan is testable, and worth testing
 
 The accountant said "I'll be the one promoting a real sale." That is not a
