@@ -45,7 +45,7 @@ returns (as both `structuredContent` and stringified JSON in `content[0].text`):
 ### Field contract
 
 - `action_type` — one of: `eth_transfer`, `erc20_transfer`, `erc20_approval`, `approval_revoked`, `approval_for_all`, `swap`, `add_liquidity`, `remove_liquidity`, `wrap`, `unwrap`, `nft_mint`, `nft_transfer`, `nft_sale`, `token_mint`, `bridge_in`, `bridge_out`, `lending_supply`, `lending_withdraw`, `lending_borrow`, `lending_repay`, `stake`, `unstake`, `claim`, `batch_transfer`, `account_abstraction_bundle`, `attestation`, `name_registration`, `contract_deployment`, `contract_interaction`, `unknown`.
-- `risk_flags[].flag` — one of: `unverified_contract`, `first_time_counterparty`, `approval_for_all`, `unlimited_approval`, `known_drainer`, `transaction_reverted`. A flag always means evidence was found; a failed lookup never produces a flag.
+- `risk_flags[].flag` — one of: `unverified_contract`, `first_time_counterparty`, `approval_for_all`, `unlimited_approval`, `known_drainer`, `nonstandard_token_symbol`, `impersonated_token`, `transaction_reverted`. A flag always means evidence was found; a failed lookup never produces a flag.
 - `status` — `success` or `reverted`. Reverted transactions are classified by intent (what was attempted) and carry a `transaction_reverted` risk flag.
 - `partial: true` — the transaction's full meaning could not be established; `summary` states exactly what is and is not known. On errors the tool returns `isError: true` with `{ "error": "...", "code": "invalid_hash" | "not_found" | "pending" | "upstream_error" }`.
 - Amounts are decimal strings (not floats). Addresses are as emitted onchain; compare case-insensitively.

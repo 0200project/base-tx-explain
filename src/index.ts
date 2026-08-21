@@ -33,7 +33,8 @@ const TOOL_DESCRIPTION =
   'nft_mint, bridge_out, approval_for_all, ...), assets_moved[] (token, amount, from, to), ' +
   'counterparties[] (labeled where known: routers, bridges, marketplaces), risk_flags[] ' +
   '(unverified_contract, unlimited_approval, approval_for_all, known_drainer, ' +
-  'first_time_counterparty, transaction_reverted), gas_paid_usd, timestamp, basescan_url. ' +
+  'first_time_counterparty, nonstandard_token_symbol, impersonated_token, ' +
+  'transaction_reverted), gas_paid_usd, timestamp, basescan_url. ' +
   'Deterministic onchain decode - no LLM in the response path. Base mainnet (chain id 8453) only.';
 
 const INPUT_SHAPE = {
@@ -294,8 +295,10 @@ function getServer(charge: boolean, ip: string, passToken: string | null = null)
     if (PAYMENT_MODE === 'x402' && result.isError) {
       try {
         const code = JSON.parse((result.content[0] as { text: string }).text).code as string;
-        if (code === 'upstream_error' || code === 'internal_error') {
-          // Our failure: give back whichever credit paid for this call.
+        // Our failures refund; so does invalid_hash, which we reject before
+        // doing any work - the REST rail already treats a typo that way, and
+        // the two rails must not differ on what costs a credit.
+        if (code === 'upstream_error' || code === 'internal_error' || code === 'invalid_hash') {
           if (passToken) refundPassUse(passToken);
           else refundFreeCall(ip);
         }
