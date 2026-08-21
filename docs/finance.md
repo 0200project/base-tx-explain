@@ -375,14 +375,40 @@ Caps, sized to the current $20 balance: **roughly $1/transaction, $5/day** —
 keeps a fully-compromised agent's daily damage small without blocking real
 use. Same spec handed to platform.
 
+**Two requirements on that format, tightened 2026-08-21, before it's asked to
+carry security weight it wasn't built for:**
+
+1. **The proposal must exist before the spend, enforced by ordering, not
+   convention.** Reconciliation only works one direction — an outflow matched
+   to a *prior* justification. A proposal written after the money moved makes
+   an attacker's payment indistinguishable from a legitimate one documented
+   late, and the control quietly becomes a formality. Timestamps in this
+   ledger must be checked, not assumed.
+2. **It must name amount, payee, and purpose — payee specified before the
+   money moves, not "Growth spend, $5."** A vague proposal matches any
+   outflow of that size; a named payee is the one field an attacker cannot
+   satisfy after the fact, because they can induce a payment but cannot make
+   it match a payee written down in advance.
+
+**Requirement 2, followed to its conclusion, is the allowlist — arrived at
+from the accounting side rather than as a signer constraint.** If every spend
+must name its payee in advance to reconcile, that is a per-transaction human
+approval already, just expressed as bookkeeping. The two options in Open
+Item 9 below are therefore closer than they look: **the allowlist blocks a bad
+payment before it happens; this ledger's reconciliation catches it within a
+day of it happening.** Same information, earlier or later. The difference is
+whether $20 is prevented or discovered gone.
+
 **Open product question, explicitly not decided by security or Finance —
 needs the Founder.** "Anything endpoint" as a product goal does not require
 "anything endpoint" as a signing permission. An alternative: the agent
 discovers and *proposes* a payee, a human approves it once, and payment to
 that payee is automatic thereafter. This converts the worst-case attack — pay
 the attacker — from an undetectable success into a blocked transaction,
-materially stronger than amount caps alone. If declined, caps and balance
-still work, they just become the whole defense rather than a backstop.
+materially stronger than amount caps alone. If declined, caps, balance, and
+this ledger's reconciliation still work — they just carry the whole defense,
+with same-day rather than pre-transaction detection, instead of backstopping
+a signer-level block.
 
 **8. Funding form of the $20 — still open.** Where the $20 should be loaded
 depends on its purpose and has not been decided: USDC into the budget wallet
