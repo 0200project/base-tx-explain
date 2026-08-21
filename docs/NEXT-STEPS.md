@@ -158,10 +158,26 @@ wall hits, and Apify listing runs.
 
 ---
 
-## FIRST THING ON THE PASS RAIL — losing a $9 sale to a deploy
+## FIRST THING TOMORROW — losing a PAID REQUEST to a deploy
 
 _Written 2026-08-21 by Platform and Security jointly, at the end of a long night,
 deliberately NOT built while tired. This is the top open item on the pass rail._
+
+**Scope correction, 2026-08-21, and the heading above used to say "pass rail".**
+Security widened it and it is right: **both paid rails have this shape**, not
+just the $9 pass. Verified — the $0.02 per-call settle is recorded in
+`onAfterSettlement` (`index.ts:291`), which runs AFTER the handler, so a process
+death between the facilitator broadcast and that hook means the payer's money
+moved and they received no decode and we recorded nothing.
+
+Smaller per event than $9, and **more likely to be the one exercised first**:
+the one genuinely interested party found so far has said per-call beats the
+subscription for their volume. "Small per event" is exactly how a first
+customer's only experience gets discounted.
+
+My original heading scoped this to the pass rail, which would have led whoever
+picks it up tomorrow to fix half of it. That is the same stale-statement shape
+this file records elsewhere, committed inside the writeup of it.
 
 **The problem.** A pass purchase is minted pending in the request handler and
 activated in the settlement hook. If the process dies between those two points,
@@ -178,7 +194,9 @@ memory. It is scaffolding, not a fix.
 
 ### Three things, in the order they matter
 
-**1. `authorizationState(payer, nonce)` reconciliation.** The real close. A
+**1. `authorizationState(payer, nonce)` reconciliation.** The real close, and it
+covers both rails: an authorization consumed on chain with nothing recorded on
+our side is the same question whether it bought a pass or a single decode. A
 stranded pass carries its nonce; ask the chain whether that authorization was
 consumed. If it was, the customer paid — activate the pass and book the
 settlement. If it was not, no money moved and the entry can be dropped. This
