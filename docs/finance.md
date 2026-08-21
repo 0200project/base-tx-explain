@@ -369,9 +369,25 @@ failed read). Not inherited from any report that could not complete.
 | Funds on hand | **$5.02** ($4.98 budget + $0.04 payout) |
 | Growth budget | $20.00 allocated · $0.00 spent · **$4.98 verified available** |
 
-Usage context, not revenue: 102 lifetime calls · 33 paywall hits · 4 payment
-attempts · **0 settlements** · 1 pass call. Payment attempts remain 100% from
-our own client.
+Usage context, not revenue: 126 lifetime calls · 43 paywall hits · 8 payment
+attempts · **1 settlement, $0.02** · 1 pass call, re-read from `/stats` at end
+of day. That one settlement is the Circadian favor (see above) — booked $0.00
+in these books despite the underlying ledger's own `revenue_usd` field showing
+$0.02, because the code that books a settlement cannot distinguish a
+pre-arranged favor from a sale; only Finance's out-of-band knowledge can, and
+this is exactly the D-1 divergence, now with a real number attached instead of
+a hypothetical one. **Total revenue in this ledger remains $0.00.** Zero
+payment attempts, of eight, were from a party paying for the product.
+
+The settlement path itself is verified end-to-end for the first time and
+survived a machine restart at 17:25:41Z the same evening — settled on chain,
+confirmed by the webhook, written to the ledger, persisted through a restart.
+A systems result, not a revenue one, and independently confirmed by both the
+platform and security sessions reading the chain directly rather than a
+report. Security also independently reconfirmed the balance-monitor correction
+already recorded above: the payout wallet's nonce is 0 while it holds USDC, so
+transaction-count monitoring is blind on this rail — watch balance and
+Transfer events where the wallet is `from`.
 
 **CAC: undefined.** Zero spend and zero customers is not a $0 CAC — it is no
 ratio at all.
@@ -380,7 +396,7 @@ ratio at all.
 so the financial position is unchanged from opening. The day's work was making
 the position *knowable* — opening this ledger, correcting the $0.02 from
 "revenue from a self-test" to an internal transfer with zero net effect,
-pre-logging an expected non-revenue inbound before it arrives, and flagging an
+pre-logging an expected non-revenue inbound before it arrived, and flagging an
 automated reconciler that asserts revenue we do not have.
 
 **Blocking Finance, remaining, both needing the Founder:** the funding form of
