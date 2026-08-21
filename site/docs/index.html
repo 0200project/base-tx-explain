@@ -540,7 +540,7 @@ npm run dev</code></pre>
       <ul>
         <li><strong>No account.</strong> The token is the only proof of purchase. It is transferable &mdash; anyone holding it can spend its calls &mdash; and a lost token is a lost pass, so store it like a key.</li>
         <li><strong>Not a subscription.</strong> x402 payments are one-shot, caller-signed authorizations, so nothing here can auto-renew or silently charge you. When a pass expires or runs out, calls fall back to the standard flow &mdash; any free calls you have left, then the per-call 402 &mdash; and an agent renews by buying a new pass in the same loop.</li>
-        <li><strong>Our failures cost nothing.</strong> When a call fails on the server&rsquo;s side &mdash; an upstream or internal error &mdash; the pass call is refunded automatically. Answered calls count, including lookups that come back not-found or still-pending.</li>
+        <li><strong>Rejected input and our failures cost nothing.</strong> A malformed hash is refused before any work is done, and server-side failures are refunded automatically &mdash; on both rails, for passes and free calls alike. Answered calls count, including lookups that come back not-found or still-pending.</li>
       </ul>
 
       <h2 id="usage">Usage</h2>
