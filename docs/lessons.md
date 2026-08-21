@@ -429,6 +429,24 @@ thing that reliably caught it today was **a second person executing the thing
 rather than reading it** — every one of the five was found by running code, never
 by reviewing a diff.
 
+### A stated plan is testable, and worth testing
+
+The accountant said "I'll be the one promoting a real sale." That is not a
+pleasantry, it is an operational claim with a runnable test: settle the shape the
+likelier rail actually produces, promote it by the only handle it carries, and
+see whether the number moves. It did not. Attribution matched on `id`; both x402
+paths emit `tx` and no `id`, so a real sale on the rail with a demonstrated
+end-to-end path could be written off but never promoted — and the failure would
+have arrived at the exact moment it mattered most, reading as $0 on the night a
+first sale was being watched for.
+
+Nobody had written a wrong line of code that day. The gap was between two
+correct-looking pieces, and it only appeared when someone asked whether a stated
+INTENTION would survive contact with the system. So the rule extends past tests:
+when a colleague commits to doing something by hand, run their plan before they
+need it. The same afternoon produced two of these, which suggests plans fail this
+way about as often as code does — and unlike code, nobody reviews them.
+
 ### Visibility is not severity
 
 The same fix carried three defects: a false `promoted: true`, a false log line
