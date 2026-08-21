@@ -33,6 +33,20 @@ const PRE_MARKER_CLIENTS = 6;
 const KNOWN_PAYMENT_TXS = new Set([
   '0x2a2aaa3a79c3a394081df1a642046c88349a1397b27d97d8cb2292d71e61939f', // founder's $0.02 PayAI test, 2026-08-20 17:08 (pre-ledger)
 ]);
+/**
+ * Real, externally-funded payments that are still not revenue: a known
+ * counterparty running a deliberate technical favor (e.g. Circadian-agent
+ * exercising the in-band settlement path unprompted, 2026-08-21 - see
+ * docs/finance.md, booked at $0.00 there for the same reason). These arrive
+ * from a genuine external address, so they must NOT be lumped into
+ * KNOWN_PAYMENT_TXS ("our own tests") - that would misrepresent who paid.
+ * They also must NOT count toward the stranger/first-customer signal below -
+ * that would misrepresent why they paid. Add the tx hash here the moment one
+ * settles, with the same comment discipline as above.
+ */
+const KNOWN_FAVOR_TXS = new Set([
+  // '0x...', // Circadian-agent in-band settlement probe, unprompted, not a sale
+]);
 
 const today = new Date().toISOString().slice(0, 10);
 const lines = [];
@@ -174,9 +188,16 @@ try {
 try {
   const tx = await jsonFetch(`https://base.blockscout.com/api/v2/addresses/${WALLET}/token-transfers?type=ERC-20&filter=to`);
   const usdcTx = (tx.items ?? []).filter((t) => (t.token?.address_hash ?? t.token?.address ?? '').toLowerCase() === USDC.toLowerCase());
-  const strangers = usdcTx.filter((t) => !KNOWN_PAYMENT_TXS.has((t.transaction_hash ?? '').toLowerCase()));
-  say(`On-chain USDC arrivals: ${usdcTx.length} total, of which **${strangers.length} from strangers** (${usdcTx.length - strangers.length} are our own tests).`);
-  if (strangers.length > 0) say(`FIRST CUSTOMER SIGNAL: stranger payment(s) present - check the dashboard.`);
+  const isOurs = (t) => KNOWN_PAYMENT_TXS.has((t.transaction_hash ?? '').toLowerCase());
+  const isFavor = (t) => KNOWN_FAVOR_TXS.has((t.transaction_hash ?? '').toLowerCase());
+  const favors = usdcTx.filter(isFavor);
+  const strangers = usdcTx.filter((t) => !isOurs(t) && !isFavor(t));
+  say(
+    `On-chain USDC arrivals: ${usdcTx.length} total - ${usdcTx.length - strangers.length - favors.length} our own tests` +
+      (favors.length > 0 ? `, ${favors.length} known non-revenue favor(s) (see docs/finance.md, booked $0)` : '') +
+      `, **${strangers.length} unexplained external**.`,
+  );
+  if (strangers.length > 0) say(`FIRST CUSTOMER SIGNAL: unexplained external payment(s) present, not already accounted for as ours or a known favor - check the dashboard.`);
 } catch {
   say(`Blockscout transfer list unavailable right now (their API); balance above is still authoritative.`);
 }
