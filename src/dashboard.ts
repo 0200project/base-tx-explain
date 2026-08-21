@@ -222,8 +222,20 @@ const DASH_SCRIPT = `
     if (!r) return;
     var tile = $('rc-delta-tile');
     var note = $('rc-note');
-    $('rc-booked').textContent = usd(r.booked_usd);
-    $('rc-chain').textContent = r.received_usd === null ? '\u2014' : usd(r.received_usd);
+    // FROM-CUSTOMERS on both tiles, because the delta beneath them is computed
+    // from those and three numbers on one panel have to add up. Showing raw
+    // booked ($0.02) beside raw received ($0.04) above a $0.00 delta invites
+    // exactly the "which of these is lying" reading this panel exists to end.
+    // The raw figures are not hidden \u2014 they are in the revenue note and in the
+    // reconciliation note directly below. (No backticks in this comment: the
+    // whole browser bundle is a template literal and a stray one ends it.)
+    var bookedCustomers =
+      typeof r.booked_from_customers_usd === 'number' ? r.booked_from_customers_usd : r.booked_usd;
+    $('rc-booked').textContent = usd(bookedCustomers);
+    $('rc-chain').textContent =
+      r.received_from_customers_usd === null || r.received_from_customers_usd === undefined
+        ? '\u2014'
+        : usd(r.received_from_customers_usd);
 
     if (r.delta_usd === null) {
       $('rc-delta').textContent = '\u2014';
@@ -615,8 +627,8 @@ export function dashboardPage(): string {
     '<div class="progress"><i id="rev-bar"></i></div></div>' +
     '</div></div>' +
     '<div class="tiles recon">' +
-    '<div class="tile"><div class="n" id="rc-booked">&mdash;</div><div class="l">Booked revenue</div></div>' +
-    '<div class="tile"><div class="n" id="rc-chain">&mdash;</div><div class="l">Received on chain</div></div>' +
+    '<div class="tile"><div class="n" id="rc-booked">&mdash;</div><div class="l">Booked from customers</div></div>' +
+    '<div class="tile"><div class="n" id="rc-chain">&mdash;</div><div class="l">Received from customers</div></div>' +
     '<div class="tile" id="rc-delta-tile"><div class="n" id="rc-delta">&mdash;</div><div class="l" id="rc-delta-label">Unbooked</div></div>' +
     '</div>' +
     '<p class="small faint recon-note" id="rc-note"></p>' +

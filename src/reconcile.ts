@@ -1,4 +1,4 @@
-import { KNOWN_NON_REVENUE } from './knownNonRevenue.js';
+import { bookedNonRevenueTotal, knownNonRevenueTotal } from './knownNonRevenue.js';
 import type { TreasurySnapshot } from './treasury.js';
 
 /**
@@ -53,6 +53,12 @@ export interface Reconciliation {
   known_non_revenue_usd: number;
   /** received minus known non-revenue. This is what customers actually sent. */
   received_from_customers_usd: number | null;
+  /**
+   * booked minus the non-revenue the ledger BOOKED. The counterpart to
+   * `received_from_customers_usd`, and the only figure it may be compared
+   * against — see the note beside the delta calculation.
+   */
+  booked_from_customers_usd: number;
   /**
    * received_from_customers - booked. This drives `status`.
    *
@@ -127,8 +133,9 @@ export function reconcile(input: ReconcileInput): Reconciliation {
       status: 'unknown',
       wallet_usd: null,
       received_usd: null,
-      known_non_revenue_usd: money(KNOWN_NON_REVENUE.reduce((t, k) => t + k.amount_usd, 0)),
+      known_non_revenue_usd: knownNonRevenueTotal(),
       received_from_customers_usd: null,
+      booked_from_customers_usd: money(booked - bookedNonRevenueTotal()),
       delta_usd: null,
       note:
         'Cannot reconcile: the payout wallet balance could not be read, so booked revenue of ' +
@@ -138,9 +145,20 @@ export function reconcile(input: ReconcileInput): Reconciliation {
   }
 
   const received = money(balance + withdrawn);
-  const knownNonRevenue = money(KNOWN_NON_REVENUE.reduce((t, k) => t + k.amount_usd, 0));
+  const knownNonRevenue = knownNonRevenueTotal();
   const receivedFromCustomers = money(received - knownNonRevenue);
-  const delta = money(receivedFromCustomers - booked);
+  // BOTH SIDES MUST EXCLUDE THE SAME THING. The received side has every
+  // non-revenue arrival removed; the booked side must have the ones the ledger
+  // actually booked removed too, or the comparison is asymmetric and the
+  // difference is the exclusion itself rather than anything about the money.
+  //
+  // Getting this wrong is not a cosmetic off-by-one: with $0.02 booked for a
+  // favour that was also stripped from receipts, the reconciler read
+  // `overbooked` and printed "USDC was swept out of the payout wallet" — a
+  // standing false drain alarm on the one surface that is supposed to raise a
+  // real one. A control that always cries wolf is worse than no control.
+  const bookedFromCustomers = money(booked - bookedNonRevenueTotal());
+  const delta = money(receivedFromCustomers - bookedFromCustomers);
 
   let status: ReconcileStatus;
   if (Math.abs(delta) < EPSILON_USD) status = 'reconciled';
@@ -154,8 +172,9 @@ export function reconcile(input: ReconcileInput): Reconciliation {
     received_usd: received,
     known_non_revenue_usd: knownNonRevenue,
     received_from_customers_usd: receivedFromCustomers,
+    booked_from_customers_usd: bookedFromCustomers,
     delta_usd: delta,
-    note: noteFor(status, delta, receivedFromCustomers, booked, unbookedCalls),
+    note: noteFor(status, delta, receivedFromCustomers, bookedFromCustomers, unbookedCalls),
   };
 }
 
@@ -163,6 +182,11 @@ function usd(n: number): string {
   return '$' + n.toFixed(2);
 }
 
+/**
+ * `received` and `booked` here are both the FROM-CUSTOMERS figures. Passing the
+ * raw booked total instead is the bug this function's caller used to have, and
+ * the sentence it produced accused us of losing money we still had.
+ */
 function noteFor(
   status: ReconcileStatus,
   delta: number,
@@ -176,7 +200,11 @@ function noteFor(
       : ` ${unbookedCalls} call${unbookedCalls === 1 ? '' : 's'} ${unbookedCalls === 1 ? 'was' : 'were'} served with a payment attached that never booked a settlement.`;
 
   if (status === 'reconciled') {
-    return `Booked revenue matches the chain at ${usd(booked)}.${calls}`;
+    // Says "customer revenue" rather than "revenue" because at $0.00 the two
+    // differ and the distinction is the whole point: money settled, none of it
+    // from a customer. "Booked revenue matches the chain at $0.00" would be
+    // true and would still read as though nothing had ever arrived.
+    return `Booked customer revenue matches the chain at ${usd(booked)}.${calls}`;
   }
   if (status === 'unbooked_revenue') {
     return (

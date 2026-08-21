@@ -9,6 +9,23 @@ import { KNOWN_NON_REVENUE, bookedNonRevenueTotal, knownNonRevenueTotal } from '
  * how many favours happen to exist today.
  */
 const BASE = knownNonRevenueTotal();
+
+/**
+ * What the LEDGER booked for those favours.
+ *
+ * `booked_usd` is fed `usage.lifetime.revenue_usd` in production — the RAW
+ * total, favours included. These tests originally passed a customer-only figure
+ * instead, which quietly asserted the wrong contract and is the reason the
+ * asymmetric-comparison bug shipped: the reconciler stripped every arrival from
+ * the received side and nothing from the booked side, so on the live server the
+ * $0.02 probe read as a $0.02 shortfall and /stats printed "USDC was swept out
+ * of the payout wallet" for a wallet nobody had touched.
+ *
+ * So every case here now adds NR_BOOKED to the customer figure, exactly as the
+ * real ledger does. If a test wants "customers booked $X", it passes
+ * `X + NR_BOOKED`.
+ */
+const NR_BOOKED = bookedNonRevenueTotal();
 import { declaredWithdrawn, reconcile, type ReconcileInput } from '../src/reconcile.js';
 
 const wallet = '0xd4ec730ab062f20460727710fce70664948a6bc9';
@@ -27,16 +44,19 @@ function input(over: Partial<ReconcileInput> = {}): ReconcileInput {
 
 describe('reconcile', () => {
   it('reports reconciled when booked revenue matches the chain', () => {
-    const r = reconcile(input({ treasury: { usdc_balance: BASE + 0.06, wallet, read_at: null }, booked_usd: 0.06, settlements: 3, paid_calls: 3 }));
+    const r = reconcile(input({ treasury: { usdc_balance: BASE + 0.06, wallet, read_at: null }, booked_usd: 0.06 + NR_BOOKED, settlements: 3, paid_calls: 3 }));
     expect(r.status).toBe('reconciled');
     expect(r.delta_usd).toBe(0);
     expect(r.unbooked_paid_calls).toBe(0);
+    // Raw stays raw; the customer figure is the derived one.
+    expect(r.booked_usd).toBe(0.06 + NR_BOOKED);
+    expect(r.booked_from_customers_usd).toBe(0.06);
   });
 
   // The state this check was built for, measured 2026-08-20: one $0.02 payment
   // on chain, nothing booked, three calls served against a payment.
   it('names the delta when money arrived that was never booked', () => {
-    const r = reconcile(input({ treasury: { usdc_balance: BASE + 0.02, wallet, read_at: null }, booked_usd: 0, settlements: 0, paid_calls: 3 }));
+    const r = reconcile(input({ treasury: { usdc_balance: BASE + 0.02, wallet, read_at: null }, booked_usd: NR_BOOKED, settlements: 0, paid_calls: 3 }));
     expect(r.status).toBe('unbooked_revenue');
     expect(r.delta_usd).toBe(0.02);
     expect(r.received_usd).toBe(BASE + 0.02);
@@ -50,14 +70,14 @@ describe('reconcile', () => {
   });
 
   it('flags overbooking when the ledger claims more than the chain holds', () => {
-    const r = reconcile(input({ treasury: { usdc_balance: BASE, wallet, read_at: null }, booked_usd: 9.02, settlements: 2, paid_calls: 2 }));
+    const r = reconcile(input({ treasury: { usdc_balance: BASE, wallet, read_at: null }, booked_usd: 9.02 + NR_BOOKED, settlements: 2, paid_calls: 2 }));
     expect(r.status).toBe('overbooked');
     expect(r.delta_usd).toBe(-9.02);
     expect(r.note).toContain('TREASURY_WITHDRAWN_USD');
   });
 
   it('adds declared sweeps back so a withdrawal is not read as a shortfall', () => {
-    const r = reconcile(input({ treasury: { usdc_balance: BASE, wallet, read_at: null }, booked_usd: 9, settlements: 1, paid_calls: 1, withdrawn_usd: 9 }));
+    const r = reconcile(input({ treasury: { usdc_balance: BASE, wallet, read_at: null }, booked_usd: 9 + NR_BOOKED, settlements: 1, paid_calls: 1, withdrawn_usd: 9 }));
     expect(r.status).toBe('reconciled');
     expect(r.received_usd).toBe(BASE + 9);
   });
@@ -72,7 +92,7 @@ describe('reconcile', () => {
 
   it('tolerates float drift on summed cents instead of crying divergence', () => {
     const booked = 0.02 + 0.02 + 0.02; // 0.06000000000000001
-    const r = reconcile(input({ treasury: { usdc_balance: BASE + 0.06, wallet, read_at: null }, booked_usd: booked, settlements: 3, paid_calls: 3 }));
+    const r = reconcile(input({ treasury: { usdc_balance: BASE + 0.06, wallet, read_at: null }, booked_usd: booked + NR_BOOKED, settlements: 3, paid_calls: 3 }));
     expect(r.status).toBe('reconciled');
   });
 
@@ -104,7 +124,7 @@ describe('known non-revenue must not read as unbooked revenue', () => {
   it("reads reconciled when the only arrival is our own money", () => {
     const r = reconcile({
       treasury: { usdc_balance: BASE, wallet, read_at: null },
-      booked_usd: 0, settlements: 0, paid_calls: 4, price_usd: 0.02, withdrawn_usd: 0,
+      booked_usd: NR_BOOKED, settlements: 0, paid_calls: 4, price_usd: 0.02, withdrawn_usd: 0,
     });
     expect(r.status).toBe('reconciled');
     expect(r.delta_usd).toBe(0);
@@ -117,7 +137,7 @@ describe('known non-revenue must not read as unbooked revenue', () => {
     // The property that matters: excluding our money must not blind the check.
     const r = reconcile({
       treasury: { usdc_balance: BASE + 9, wallet, read_at: null },
-      booked_usd: 0, settlements: 0, paid_calls: 0, price_usd: 0.02, withdrawn_usd: 0,
+      booked_usd: NR_BOOKED, settlements: 0, paid_calls: 0, price_usd: 0.02, withdrawn_usd: 0,
     });
     expect(r.status).toBe('unbooked_revenue');
     expect(r.delta_usd).toBe(9);
@@ -126,10 +146,53 @@ describe('known non-revenue must not read as unbooked revenue', () => {
   it('reports the known-non-revenue figure so the adjustment is auditable', () => {
     const r = reconcile({
       treasury: { usdc_balance: BASE, wallet, read_at: null },
-      booked_usd: 0, settlements: 0, paid_calls: 0, price_usd: 0.02, withdrawn_usd: 0,
+      booked_usd: NR_BOOKED, settlements: 0, paid_calls: 0, price_usd: 0.02, withdrawn_usd: 0,
     });
     // A silent adjustment is its own hazard: finance must see what was excluded.
     expect(r.known_non_revenue_usd).toBe(BASE);
+  });
+
+  /**
+   * THE LIVE STATE, read off the deployed server 2026-08-21T18:02Z, where this
+   * bug was found by curling /stats and reading the sentence rather than by any
+   * test going red.
+   *
+   * balance $0.04 · booked $0.02 (the Circadian probe) · nothing swept. Every
+   * cent is accounted for and nothing is missing, yet the reconciler reported
+   * `overbooked` with "USDC was swept out of the payout wallet without being
+   * declared" — a permanent, self-inflicted drain alarm on the surface that is
+   * supposed to raise a real one.
+   *
+   * Pinned to literal amounts rather than derived from the list on purpose: if
+   * a future favour changes the totals, this test should be re-reasoned rather
+   * than silently follow along, because it is a record of a specific state that
+   * was misreported and not a general property.
+   */
+  it('does not accuse us of losing money that was booked as a favour and stayed put', () => {
+    const r = reconcile({
+      treasury: { usdc_balance: 0.04, wallet, read_at: '2026-08-21T18:02:38.795Z' },
+      booked_usd: 0.02, settlements: 1, paid_calls: 8, price_usd: 0.02, withdrawn_usd: 0,
+    });
+    expect(r.status).toBe('reconciled');
+    expect(r.delta_usd).toBe(0);
+    expect(r.received_from_customers_usd).toBe(0);
+    expect(r.booked_from_customers_usd).toBe(0);
+    // The specific sentence that was wrong. It must not come back.
+    expect(r.note).not.toContain('swept out');
+    expect(r.note).not.toContain('shortfall');
+  });
+
+  /**
+   * The inverse, so the fix cannot be "always reconciled". A real sweep still
+   * has to trip it while the same favour sits in the books.
+   */
+  it('still reports a shortfall when funds actually leave', () => {
+    const r = reconcile({
+      treasury: { usdc_balance: 0, wallet, read_at: null },
+      booked_usd: 5 + NR_BOOKED, settlements: 3, paid_calls: 3, price_usd: 0.02, withdrawn_usd: 0,
+    });
+    expect(r.status).toBe('overbooked');
+    expect(r.note).toContain('swept out');
   });
 });
 
