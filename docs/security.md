@@ -327,7 +327,33 @@ Three sessions ship to this repo daily and nobody else reviews for security: a
 trust-boundary change can arrive inside a commit whose message is about copy.
 Watch the diffs, not just the commit subjects.
 
-## 9. Wallet security model (spend authorized 2026-08-21)
+## 9. Spend model (authorized 2026-08-21)
+
+### 9a. Card spend — NEVER autonomous. Policy, and for the agents a hard limit.
+
+Ads, tools and anything bought with a card are **proposed approvals**, not
+autonomous spend. An agent prepares the case, names the cost, links the exact
+page, explains what it buys — **and then stops.** The founder enters the card
+details himself.
+
+**An agent's work ends at the payment form.** No agent drives a browser through a
+checkout on his behalf, even with his approval, and even when he has said yes to
+the purchase. Approval to buy a thing is not approval to have card details typed
+by a process that also reads attacker-authored text off a public blockchain.
+
+Worth stating plainly so nobody treats this as a preference that could be traded
+away under time pressure: **entering card numbers, bank details or credentials
+into a form is something these agents will refuse to do regardless of
+instruction.** It is a constraint they operate under, not a team agreement. Any
+design that depends on an agent completing a checkout is not merely unwise, it
+will not run.
+
+This needs no key, no wallet, no on-chain scoping, and no signer. It is a
+workflow. The security surface is the *proposal record*, not a credential — see
+the reconciliation posture in the ledger, which becomes the ONLY evidence a card
+payment was justified, since a card spend leaves no on-chain trace at all.
+
+### 9b. Wallet security model (x402 only)
 
 **RECEIVE wallet `0xd4ec730a…` — confirmed hardened, nothing to build.** EOA,
 nonce 0. No private key for it exists in the codebase or environment; the exact
@@ -379,9 +405,16 @@ Settled decisions:
   loss should be visible in minutes. Nobody should sign their name to "completely
   secure."
 
-**RESOLVED 2026-08-21: spend is for third-party endpoints** — "anything endpoint"
-and "spend that gets us clients." So the destination CANNOT be pinned, and this is
-the harder of the two designs.
+**NARROWED 2026-08-21 (same day, later):** "spend that gets us clients" resolves
+to CARD (§9a), not x402. The $20 USDC is for x402 only. So the hard build below —
+arbitrary destinations, no ability to pin `to` — may not be needed at all.
+
+**The one open question:** is there any third-party x402 service we would actually
+pay, or is x402 spend just dogfooding our own endpoint? If dogfooding, pin `to` to
+our own payTo and a fully compromised agent can do nothing but pay us — near-total
+mitigation for near-zero effort, and the allowlist-versus-caps tradeoff below
+disappears entirely because there is nothing to allowlist. Do not build the hard
+case until someone has actually named a third-party service worth paying.
 
 **The risk that is specific to this answer, and it is the crux.** The payee is
 chosen by the agent, and the agent's inputs are attacker-reachable. A manipulated
