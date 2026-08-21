@@ -321,11 +321,27 @@ data. Keep that list honest as fields change.
    itself a race (a purchase can begin between the check and the machine
    stopping), and right now our only protection against losing a paid request is
    two agents remembering to look. Tonight established what happens to rules
-   that live in memory. Fix order is in `docs/NEXT-STEPS.md`:
-   `authorizationState(payer, nonce)` reconciliation FIRST, because it makes the
-   loss recoverable and therefore makes deploy timing stop mattering; graceful
-   shutdown second; retiring the verify-then-deploy ritual third, once the first
-   two have engineered away its purpose rather than leaving a habit behind.
+   that live in memory. Fix order, REVISED 2026-08-21 once the
+   likely product changed — the original ordering was reasoned entirely from the
+   $9 pass rail, and two independent parties (Circadian with arithmetic,
+   kindrat86 with an integration judgement) have now said per-call suits them
+   rather than the pass:
+   - **Graceful shutdown FIRST.** Reconciliation RECOVERS a loss; shutdown
+     PREVENTS it. Recovery is worth a human's time at $9 and is worth nobody's
+     at $0.02 — no one reconciles two cents by hand, so on the per-call rail an
+     unrecoverable loss is simply a loss. And the cost there is not the money:
+     an agent integrating this that intermittently pays and receives nothing
+     reads it as an unreliable rail and leaves. Fifteen lines, and it protects
+     the path a real customer has asked for.
+   - **`authorizationState(payer, nonce)` reconciliation second**, still
+     essential — it is the only thing that makes an already-stranded $9 pass
+     recoverable, and shutdown does nothing for a machine that dies unexpectedly
+     rather than being asked to stop.
+   - **Retire verify-then-deploy third**, once the first two have engineered
+     away its purpose rather than leaving a habit behind.
+   (Original ordering put reconciliation first. Recorded rather than
+   overwritten: it was correct for a pass-led product and stopped being correct
+   when the evidence moved.)
 3. **Ambiguous pass activation (residual of the $9-pass fix in §4).** A pass activated
    because settlement was ambiguous rather than confirmed could, in principle,
    turn out to be unpaid — bounded at $9 of calls. Deliberately NOT capped: this
