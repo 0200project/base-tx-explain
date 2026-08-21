@@ -157,6 +157,41 @@ describe('settlement attribution in the ledger', () => {
     expect(l.revenue_usd).toBe(27);
   });
 
+  /**
+   * PRODUCTION ORDERING. The webhook arrives first and a human promotes minutes
+   * later; the reverse cannot happen. Every earlier test in this file called
+   * attribute() BEFORE settle(), so 312 green tests confirmed a sequence that
+   * does not occur — a test can only check the story its author believed about
+   * the inputs, and here the story was the wrong way round.
+   *
+   * Found by Security writing this exact test against the live code.
+   */
+  it('promotion moves the number when the settlement arrived FIRST', async () => {
+    const { usage, attribution } = await load();
+    settle(usage, { id: 'cs_real' });
+    expect(lt(usage).unattributed_revenue_usd).toBe(9);
+
+    attribution.attribute('cs_real');
+
+    const l = lt(usage);
+    expect(l.revenue_from_customers_usd).toBe(9);
+    expect(l.attributed_revenue_usd).toBe(9);
+    expect(l.unattributed_revenue_usd).toBe(0);
+  });
+
+  it('un-promotion returns it, with the settlement already recorded', async () => {
+    const { usage, attribution } = await load();
+    settle(usage, { id: 'cs_real' });
+    attribution.attribute('cs_real');
+    expect(lt(usage).revenue_from_customers_usd).toBe(9);
+
+    attribution.unattribute('cs_real');
+
+    const l = lt(usage);
+    expect(l.revenue_from_customers_usd).toBe(0);
+    expect(l.unattributed_revenue_usd).toBe(9);
+  });
+
   it('never reports a negative customer figure', async () => {
     const { usage } = await load();
     settle(usage, { amount_usd: 0.01, self: true, id: 'x' });

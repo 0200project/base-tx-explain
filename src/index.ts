@@ -1034,10 +1034,15 @@ app.get('/wallets', async (req, res) => {
  * promotion is one nobody will risk making.
  */
 app.post('/revenue/attribute', (req, res) => {
-  const token = typeof req.query.token === 'string' ? req.query.token : '';
-  const header = (req.headers['x-stats-token'] as string | undefined) ?? '';
-  if (!STATS_TOKEN || !(tokenMatches(header) || tokenMatches(token))) {
-    res.status(401).json({ error: 'bad token' });
+  // HEADER ONLY, deliberately. A token in the query string lands in every
+  // access log, proxy log and shell history that records paths — the same
+  // objection that made us keep pass tokens out of anything we log. This
+  // endpoint is new, so there is no compatibility cost to getting it right.
+  const header =
+    (req.headers['x-stats-token'] as string | undefined) ??
+    String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+  if (!STATS_TOKEN || !tokenMatches(header)) {
+    res.status(401).json({ error: 'bad token', how: 'send the token in the x-stats-token header, not the query string' });
     return;
   }
   const id = typeof req.query.id === 'string' ? req.query.id.slice(0, 200) : '';
@@ -1051,10 +1056,19 @@ app.post('/revenue/attribute', (req, res) => {
 });
 
 app.post('/webhook-health/ack', (req, res) => {
-  const token = typeof req.query.token === 'string' ? req.query.token : '';
-  if (!STATS_TOKEN || token !== STATS_TOKEN) {
+  // Header preferred for the same reason as /revenue/attribute: a query token
+  // is written to access logs. The query form still works because it may
+  // already be in someone's notes, but it warns so it stops being used.
+  const header =
+    (req.headers['x-stats-token'] as string | undefined) ??
+    String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+  const query = typeof req.query.token === 'string' ? req.query.token : '';
+  if (!STATS_TOKEN || !(tokenMatches(header) || tokenMatches(query))) {
     res.status(401).json({ error: 'bad token' });
     return;
+  }
+  if (!header && query) {
+    console.error('[stats] token supplied in the query string; prefer the x-stats-token header (query tokens reach access logs)');
   }
   const result = acknowledgeWebhookIncident();
   console.log(`[stripe] webhook incident acknowledged, ${result.cleared} rejection(s) cleared`);

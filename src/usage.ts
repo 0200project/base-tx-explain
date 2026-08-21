@@ -92,7 +92,25 @@ const dataDir = process.env.DATA_DIR ?? './data';
 const ledgerPath = join(dataDir, 'events.jsonl');
 
 const days = new Map<string, DayAgg>();
-const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0, self_revenue_usd: 0, attributed_revenue_usd: 0, unattributed_revenue_usd: 0 };
+const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0 };
+
+/**
+ * Every settlement as it arrived, so the revenue split can be DERIVED rather
+ * than accumulated.
+ *
+ * The counters used to be chosen in `absorb()`, at ingest. That reads the
+ * attribution set at the instant the webhook lands — and in production a human
+ * promotes minutes LATER, so the promotion endpoint returned `promoted: true`,
+ * logged that a human had vouched, and moved nothing. The figure only caught up
+ * on the next restart, when replay re-ran ingest against the persisted set,
+ * making it look as though it had attributed itself.
+ *
+ * Deriving at read time makes ORDERING STOP EXISTING as a concept: promote,
+ * un-promote, replay and restart all give the same answer by construction, and
+ * there is exactly one place the split is decided so the sum invariant cannot
+ * drift. Volume is one settlement lifetime, so retaining them costs nothing.
+ */
+const settlements: Array<{ id?: string; amount_usd: number; self?: boolean }> = [];
 const lifetimeExternalClients = new Set<string>();
 const lifetimeClients = new Set<string>();
 /** External calls per channel, lifetime. */
@@ -188,23 +206,12 @@ function absorb(ev: LedgerEvent): void {
     agg.settlements++;
     lifetime.settlements++;
     // Raw revenue still counts it: the money really did settle, and hiding
-    // that would be its own dishonesty. What changes is which of three
-    // mutually exclusive buckets it lands in — they sum to revenue_usd, so the
-    // figures can always be reconciled against each other.
+    // that would be its own dishonesty. The SPLIT is not decided here — see
+    // `revenueSplit()`, which derives it at read time so a promotion arriving
+    // after the settlement still moves the number.
     agg.revenue_usd += ev.amount_usd;
     lifetime.revenue_usd += ev.amount_usd;
-    if (ev.self) {
-      // Resolved: we know whose it is. Not awaiting anything.
-      lifetime.self_revenue_usd += ev.amount_usd;
-    } else if (isAttributed(ev.id)) {
-      // A human looked at this arrival and said it came from a customer.
-      lifetime.attributed_revenue_usd += ev.amount_usd;
-    } else {
-      // BIRTH STATE. Money arrived; nobody has said whose it is. Surfaced
-      // rather than silently dropped, so a forgotten promotion reads
-      // "arrived, awaiting attribution" instead of an invisible zero.
-      lifetime.unattributed_revenue_usd += ev.amount_usd;
-    }
+    settlements.push({ id: ev.id, amount_usd: ev.amount_usd, self: ev.self });
   }
 }
 
@@ -238,6 +245,29 @@ function channelSnapshot(): Record<string, unknown> {
     external_clients_attributed: clientFirstChannel.size,
     buckets,
   };
+}
+
+/**
+ * The three mutually exclusive revenue buckets, derived from the settlements
+ * and the current attribution set.
+ *
+ * Pure, so it cannot go stale: whatever the attribution set says right now is
+ * what the numbers say right now, regardless of what order anything happened
+ * in. They sum to `revenue_usd` by construction.
+ */
+function revenueSplit(): { self: number; attributed: number; unattributed: number } {
+  let self = 0;
+  let attributed = 0;
+  let unattributed = 0;
+  for (const s of settlements) {
+    // Resolved: we know whose it is, so it is not awaiting anything.
+    if (s.self) self += s.amount_usd;
+    // A human looked at this arrival and said it came from a customer.
+    else if (isAttributed(s.id)) attributed += s.amount_usd;
+    // BIRTH STATE: money arrived, nobody has said whose it is.
+    else unattributed += s.amount_usd;
+  }
+  return { self, attributed, unattributed };
 }
 
 /** How often to look for check-health buckets due to be persisted. */
@@ -327,7 +357,8 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
   // we happen to have remembered was not a sale. Subtraction assumes every
   // arrival is revenue until proven otherwise, which is the assumption that put
   // a self-purchase on course to read as the first sale.
-  const customerRevenue = lifetime.attributed_revenue_usd;
+  const split = revenueSplit();
+  const customerRevenue = split.attributed;
 
   return {
     persisted: ledgerReady,
@@ -356,14 +387,15 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
       // identity, the other is a record made after the fact about a specific
       // arrival, and merging them would hide which of the two a number came
       // from.
-      self_revenue_usd: Number(lifetime.self_revenue_usd.toFixed(6)),
+      self_revenue_usd: Number(split.self.toFixed(6)),
       /**
        * Money that arrived and that nobody has yet said came from a customer.
        * PROMINENT ON PURPOSE: the failure mode this replaces was an invisible
        * zero, and a visible bucket cannot be forgotten because it is the thing
        * being looked at.
        */
-      unattributed_revenue_usd: Number(lifetime.unattributed_revenue_usd.toFixed(6)),
+      unattributed_revenue_usd: Number(split.unattributed.toFixed(6)),
+      attributed_revenue_usd: Number(split.attributed.toFixed(6)),
       revenue_from_customers_usd: Number(customerRevenue.toFixed(6)),
       revenue_note: revenueNote(Number(lifetime.revenue_usd.toFixed(6)), customerRevenue),
       revenue_usd: Number(lifetime.revenue_usd.toFixed(6)),
