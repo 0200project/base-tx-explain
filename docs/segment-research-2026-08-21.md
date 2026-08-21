@@ -140,6 +140,32 @@ Whole ledger, 126 calls over two days:
 | `c63f048f` | 1 | <1% | 08-20 17:55 |
 | `1b624776` | 1 | <1% | 08-21 00:00 |
 
+## Correction, same day: four of six rows now have names
+
+The table above was recomputed independently by Growth and by the Accountant,
+and between them four of the six clients are no longer anonymous. The traffic
+numbers were right; **the conclusion drawn from them was too generous.**
+
+| client | who | how established |
+|---|---|---|
+| `3f4d2c03` | us | first call at `17:45:29.616Z`, the same instant as the ledger's first-ever event |
+| `8f92f999` | **Circadian** | first call 55s before their first GitHub reply, which opens by saying they used the endpoint; last call at `17:14:49`, the same second as the settlement |
+| `53d7ceaf` | us | IP-derived tag shared with a call carrying our `internal` marker; the two paid calls at 17:26 were `scripts/paid-call.ts`, which sent no marker until `ded8d41` |
+| `56cb6309`, `c63f048f`, `1b624776` | unattributed | 3, 1 and 1 calls; never returned |
+
+**Circadian came from outreach — a GitHub issue sent to a named party — not from
+anyone finding us.** So the one relationship that ever returned and ever paid is
+the one we went and got. Of the arrivals that were plausibly organic, three
+made between one and three calls and none came back.
+
+The honest count of *strangers who found this on their own and converted* is
+**zero**, and the count who found it on their own and returned even once is also
+zero. That is sharper than "four-ish clients, nobody paid": it says the funnel
+has not been tested, and that the single success we have is evidence outreach
+works rather than evidence the funnel does.
+
+It does not change the decision below — it strengthens it.
+
 **Two clients are 93% of all traffic.** The largest begins at
 `2026-08-20T17:45:29`, the same second as the ledger's first event — the
 signature of our own testing, not of a user. `53d7ceaf` carries the internal
