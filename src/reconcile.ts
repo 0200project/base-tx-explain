@@ -22,6 +22,45 @@ import type { TreasurySnapshot } from './treasury.js';
  * TREASURY_WITHDRAWN_USD to the running total swept so the delta stays honest.
  */
 
+/**
+ * Money that arrived in the payout wallet and is NOT revenue.
+ *
+ * The reconciler compares what the wallet received against what the ledger
+ * booked, and called any positive delta unbooked revenue. That has no concept
+ * of a known non-revenue arrival, so our own test money made it permanently
+ * assert unrecorded revenue that does not exist — and the only way it could
+ * ever read `reconciled` was if someone wrongly booked $0.02 to silence it.
+ *
+ * This is the fourth appearance of one missing invariant, restated per rail:
+ * revenue is booked only from a confirmed, live, settled payment, and every
+ * surface that displays money must distinguish attempted from received. The
+ * earlier three were an unconditional settle booking, payment attempts reading
+ * as revenue on the dashboard, and Stripe test-mode purchases. This one is
+ * worse than those because it is automated: it does not need anyone to misread
+ * a field, it asserts the wrong thing in prose.
+ *
+ * Listed by transaction hash rather than as a lump sum, because a hash survives
+ * a re-read, documents its own reason, and cannot silently absorb a future
+ * arrival the way a number can.
+ */
+export interface KnownNonRevenue {
+  /** Base transaction hash, or a marker when the arrival predates our records. */
+  tx: string;
+  amount_usd: number;
+  why: string;
+}
+
+export const KNOWN_NON_REVENUE: KnownNonRevenue[] = [
+  {
+    // Verified on chain: both wallets have zero outbound transactions because
+    // the value moved by EIP-3009, where the payer signs and the facilitator
+    // submits. Budget 4.98 + payout 0.02 = the 5.00 originally funded.
+    tx: 'internal-transfer-2026-08-20-selftest',
+    amount_usd: 0.02,
+    why: 'Internal transfer, budget wallet to payout wallet, during our own first paid-call test. Same company on both sides, net cash effect zero. Never revenue.',
+  },
+];
+
 export type ReconcileStatus = 'reconciled' | 'unbooked_revenue' | 'overbooked' | 'unknown';
 
 export interface ReconcileInput {
@@ -48,11 +87,27 @@ export interface Reconciliation {
   withdrawn_usd: number;
   /** wallet + withdrawn = everything the wallet has ever received. */
   received_usd: number | null;
-  /** received - booked. Positive means money arrived that we never booked. */
+  /** Arrivals we know are not revenue: our own transfers, logged favours. */
+  known_non_revenue_usd: number;
+  /** received minus known non-revenue. This is what customers actually sent. */
+  received_from_customers_usd: number | null;
+  /**
+   * received_from_customers - booked. This drives `status`.
+   *
+   * The raw received-minus-booked is deliberately NOT the signal: it counts our
+   * own money as though a customer had sent it.
+   */
   delta_usd: number | null;
   /** Calls served against a payment that never produced a booked settlement. */
   unbooked_paid_calls: number;
-  /** What those calls would have been worth at the per-call price. */
+  /**
+   * What those calls WOULD have been worth at the per-call price.
+   *
+   * Notional only: not owed, not received, and not an explanation of any delta.
+   * All four such calls to date moved no money at all, and the one real arrival
+   * predates every one of them. Two unrelated facts sitting adjacent in one
+   * block is precisely how the original tidy-but-wrong story got told.
+   */
   unbooked_notional_usd: number;
   wallet: string;
   read_at: string | null;
@@ -110,6 +165,8 @@ export function reconcile(input: ReconcileInput): Reconciliation {
       status: 'unknown',
       wallet_usd: null,
       received_usd: null,
+      known_non_revenue_usd: money(KNOWN_NON_REVENUE.reduce((t, k) => t + k.amount_usd, 0)),
+      received_from_customers_usd: null,
       delta_usd: null,
       note:
         'Cannot reconcile: the payout wallet balance could not be read, so booked revenue of ' +
@@ -119,7 +176,9 @@ export function reconcile(input: ReconcileInput): Reconciliation {
   }
 
   const received = money(balance + withdrawn);
-  const delta = money(received - booked);
+  const knownNonRevenue = money(KNOWN_NON_REVENUE.reduce((t, k) => t + k.amount_usd, 0));
+  const receivedFromCustomers = money(received - knownNonRevenue);
+  const delta = money(receivedFromCustomers - booked);
 
   let status: ReconcileStatus;
   if (Math.abs(delta) < EPSILON_USD) status = 'reconciled';
@@ -131,8 +190,10 @@ export function reconcile(input: ReconcileInput): Reconciliation {
     status,
     wallet_usd: money(balance),
     received_usd: received,
+    known_non_revenue_usd: knownNonRevenue,
+    received_from_customers_usd: receivedFromCustomers,
     delta_usd: delta,
-    note: noteFor(status, delta, received, booked, unbookedCalls),
+    note: noteFor(status, delta, receivedFromCustomers, booked, unbookedCalls),
   };
 }
 
