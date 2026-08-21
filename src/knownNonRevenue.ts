@@ -107,3 +107,33 @@ export function revenueNote(rawRevenueUsd: number, customerRevenueUsd: number): 
     `Revenue from customers is $${customerRevenueUsd.toFixed(2)}.`
   );
 }
+
+/**
+ * Is this settlement one of the arrivals we have already written off?
+ *
+ * Membership of this list IS an attribution decision — a human looked at the
+ * arrival, reached a conclusion, and wrote down why. It simply predates the
+ * mechanism that now records such decisions.
+ *
+ * That matters because `unattributed` means AWAITING A HUMAN, and these are not
+ * awaiting anyone. Reporting them there put two of our own statements on the
+ * same public endpoint in contradiction: `known_non_revenue_usd: 0.02` naming
+ * exactly who paid it and why, beside `unattributed_revenue_usd: 0.02` saying
+ * nobody has established whose it is.
+ *
+ * It also destroys the bucket's usefulness. `unattributed` is only a signal if
+ * zero is its resting state; with a permanent floor a real $9 sale reads 9.02,
+ * which nobody can distinguish at a glance from the number already sitting
+ * there. A bucket that is always lit is one nobody looks at twice — the same
+ * reason an alarm that cannot be switched off gets ignored on the day it
+ * matters.
+ *
+ * Checked BEFORE the promotion set on purpose: a written record with a stated
+ * reason should outrank a click, so a mistaken promotion cannot turn a
+ * documented favour into revenue.
+ */
+export function isKnownNonRevenue(ref: string | undefined): boolean {
+  if (!ref) return false;
+  const needle = ref.toLowerCase();
+  return KNOWN_NON_REVENUE.some((k) => k.tx.toLowerCase() === needle);
+}

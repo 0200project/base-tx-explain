@@ -1,4 +1,4 @@
-import { bookedNonRevenueTotal, revenueNote } from './knownNonRevenue.js';
+import { bookedNonRevenueTotal, isKnownNonRevenue, revenueNote } from './knownNonRevenue.js';
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { absorbCheckHealthEvent, takeCheckHealthEvents, type CheckHealthEvent } from './checkHealth.js';
@@ -110,7 +110,7 @@ const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0
  * there is exactly one place the split is decided so the sum invariant cannot
  * drift. Volume is one settlement lifetime, so retaining them costs nothing.
  */
-const settlements: Array<{ id?: string; amount_usd: number; self?: boolean }> = [];
+const settlements: Array<{ id?: string; tx?: string; amount_usd: number; self?: boolean }> = [];
 const lifetimeExternalClients = new Set<string>();
 const lifetimeClients = new Set<string>();
 /** External calls per channel, lifetime. */
@@ -211,7 +211,7 @@ function absorb(ev: LedgerEvent): void {
     // after the settlement still moves the number.
     agg.revenue_usd += ev.amount_usd;
     lifetime.revenue_usd += ev.amount_usd;
-    settlements.push({ id: ev.id, amount_usd: ev.amount_usd, self: ev.self });
+    settlements.push({ id: ev.id, tx: ev.tx, amount_usd: ev.amount_usd, self: ev.self });
   }
 }
 
@@ -255,19 +255,32 @@ function channelSnapshot(): Record<string, unknown> {
  * what the numbers say right now, regardless of what order anything happened
  * in. They sum to `revenue_usd` by construction.
  */
-function revenueSplit(): { self: number; attributed: number; unattributed: number } {
+function revenueSplit(): {
+  self: number;
+  attributed: number;
+  knownNonRevenue: number;
+  unattributed: number;
+} {
   let self = 0;
   let attributed = 0;
+  let knownNonRevenue = 0;
   let unattributed = 0;
   for (const s of settlements) {
-    // Resolved: we know whose it is, so it is not awaiting anything.
+    // THREE RESOLVED STATES AND ONE PENDING ONE. `unattributed` means awaiting
+    // a human, so anything a human has already ruled on belongs elsewhere —
+    // otherwise the bucket never rests at zero and stops being a signal.
+    //
+    // Resolved: ours.
     if (s.self) self += s.amount_usd;
-    // A human looked at this arrival and said it came from a customer.
+    // Resolved: written off, with a stated reason. Checked before the
+    // promotion set so a written record outranks a click.
+    else if (isKnownNonRevenue(s.tx) || isKnownNonRevenue(s.id)) knownNonRevenue += s.amount_usd;
+    // Resolved: a human said it came from a customer.
     else if (isAttributed(s.id)) attributed += s.amount_usd;
-    // BIRTH STATE: money arrived, nobody has said whose it is.
+    // PENDING: money arrived, nobody has said whose it is.
     else unattributed += s.amount_usd;
   }
-  return { self, attributed, unattributed };
+  return { self, attributed, knownNonRevenue, unattributed };
 }
 
 /** How often to look for check-health buckets due to be persisted. */
@@ -380,7 +393,7 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
       // say that some of it is our own transfer and a favour from a party who
       // declined to buy. The raw number stays — money really did settle, and
       // hiding it would be its own dishonesty — but it no longer travels alone.
-      known_non_revenue_usd: bookedNonRevenueTotal(),
+      known_non_revenue_usd: Number(split.knownNonRevenue.toFixed(6)),
       // Our own proving purchases, self-labelled at settlement rather than
       // reconciled afterwards. Kept apart from `known_non_revenue_usd`, which
       // is the hand-logged list: one is a decision made in advance about an

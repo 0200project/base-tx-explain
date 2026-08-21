@@ -153,7 +153,9 @@ describe('settlement attribution in the ledger', () => {
     settle(usage, { id: 'cs_promoted' });
     settle(usage, { id: 'cs_pending' });
     const l = lt(usage);
-    expect(l.self_revenue_usd + l.attributed_revenue_usd + l.unattributed_revenue_usd).toBe(l.revenue_usd);
+    expect(
+      l.self_revenue_usd + l.attributed_revenue_usd + l.known_non_revenue_usd + l.unattributed_revenue_usd,
+    ).toBe(l.revenue_usd);
     expect(l.revenue_usd).toBe(27);
   });
 
@@ -190,6 +192,55 @@ describe('settlement attribution in the ledger', () => {
     const l = lt(usage);
     expect(l.revenue_from_customers_usd).toBe(0);
     expect(l.unattributed_revenue_usd).toBe(9);
+  });
+
+  /**
+   * `unattributed` means AWAITING A HUMAN. An arrival already written off in
+   * KNOWN_NON_REVENUE, with a paragraph naming who paid it and why it was a
+   * favour, is not awaiting anyone — it is resolved to a third answer.
+   *
+   * Reporting it as unattributed put two of our own statements in contradiction
+   * on the same public endpoint, and worse, gave the bucket a permanent floor:
+   * a real $9 sale would read 9.02, indistinguishable at a glance from the
+   * number already sitting there. A bucket that is always lit is one nobody
+   * looks at twice.
+   */
+  it('a documented non-revenue arrival is RESOLVED, not awaiting anyone', async () => {
+    const { usage } = await load();
+    // The real Circadian probe hash, as it appears in the production ledger.
+    settle(usage, {
+      amount_usd: 0.02,
+      tx: '0x6ce5e3948c9c6b8e0ef8413f3c29623163bb7b58155eda90a67464f3bb119110',
+    });
+    const l = lt(usage);
+    expect(l.known_non_revenue_usd).toBe(0.02);
+    expect(l.unattributed_revenue_usd).toBe(0);
+    expect(l.revenue_from_customers_usd).toBe(0);
+  });
+
+  it('so unattributed rests at zero, and means something when it is not', async () => {
+    const { usage } = await load();
+    settle(usage, {
+      amount_usd: 0.02,
+      tx: '0x6ce5e3948c9c6b8e0ef8413f3c29623163bb7b58155eda90a67464f3bb119110',
+    });
+    expect(lt(usage).unattributed_revenue_usd).toBe(0);
+
+    settle(usage, { id: 'cs_new_sale' });
+    // Reads 9, not 9.02: unambiguous at a glance.
+    expect(lt(usage).unattributed_revenue_usd).toBe(9);
+  });
+
+  it('a written-off arrival cannot be promoted into revenue by a click', async () => {
+    // The written record outranks the button, so a mis-click cannot turn a
+    // documented favour into our first sale.
+    const { usage, attribution } = await load();
+    const tx = '0x6ce5e3948c9c6b8e0ef8413f3c29623163bb7b58155eda90a67464f3bb119110';
+    attribution.attribute(tx);
+    settle(usage, { amount_usd: 0.02, tx, id: tx });
+    const l = lt(usage);
+    expect(l.revenue_from_customers_usd).toBe(0);
+    expect(l.known_non_revenue_usd).toBe(0.02);
   });
 
   it('never reports a negative customer figure', async () => {
