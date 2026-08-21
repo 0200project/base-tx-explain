@@ -20,6 +20,7 @@ import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from '
 import { passFromHeaders, passFromPath, passUrl } from './passUrl.js';
 import { isInternalRequest } from './internal.js';
 import { normalizeMcpPayments } from './mcpPayment.js';
+import { checkWallets, initWalletMonitor } from './walletMonitor.js';
 import {
   alreadyHandled,
   passForSession,
@@ -880,6 +881,22 @@ app.post('/dashboard/logout', (_req, res) => {
     .redirect(303, '/dashboard');
 });
 
+/**
+ * Wallet balances and movement, for finance.
+ *
+ * Behind the stats token deliberately. /healthz is public and a stranger has no
+ * business reading our wallet addresses and balances; the reconciliation this
+ * feeds is an internal control, not a trust signal.
+ */
+app.get('/wallets', async (req, res) => {
+  const token = typeof req.query.token === 'string' ? req.query.token : '';
+  if (!STATS_TOKEN || token !== STATS_TOKEN) {
+    res.status(401).json({ error: 'bad token' });
+    return;
+  }
+  res.set('Cache-Control', 'no-store').json(await checkWallets());
+});
+
 app.get('/stats', async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*').set('Cache-Control', 'no-store');
   if (!STATS_TOKEN) {
@@ -1102,6 +1119,7 @@ const port = Number.parseInt(
 initUsageLedger();
 initFreeTier();
 initPasses();
+initWalletMonitor();
 
 initApifyBilling()
   .then(() => initPayments())
