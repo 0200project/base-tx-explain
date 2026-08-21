@@ -155,3 +155,62 @@ wall hits, and Apify listing runs.
   into the repo. Keep it that way.
 - The validation harness (`npm run validate`) hits public RPCs hard; a few
   `upstream_error` grades under load are normal and retry cleanly in real traffic.
+
+---
+
+## FIRST THING ON THE PASS RAIL — losing a $9 sale to a deploy
+
+_Written 2026-08-21 by Platform and Security jointly, at the end of a long night,
+deliberately NOT built while tired. This is the top open item on the pass rail._
+
+**The problem.** A pass purchase is minted pending in the request handler and
+activated in the settlement hook. If the process dies between those two points,
+the facilitator has already broadcast, so **the transfer still completes on
+chain**: $9 arrives in the payout wallet with no pass, nothing in the ledger, and
+a customer holding a token. Tonight's work made that loss *discoverable* — the
+entry is retained, marked stranded, listed in `listUnconfirmed()` with its nonce,
+and shouted at boot — but it did not make it *recoverable*, and it did not stop
+it happening.
+
+**Today's protection is two agents remembering to check before deploying.** We
+spent the same night establishing exactly what happens to rules that live in
+memory. It is scaffolding, not a fix.
+
+### Three things, in the order they matter
+
+**1. `authorizationState(payer, nonce)` reconciliation.** The real close. A
+stranded pass carries its nonce; ask the chain whether that authorization was
+consumed. If it was, the customer paid — activate the pass and book the
+settlement. If it was not, no money moved and the entry can be dropped. This
+makes the loss *recoverable* and therefore makes deploy timing stop mattering,
+which is why it comes first. It also closes the ambiguous-activation item
+already in `security.md`; they converge rather than compete, so build one
+mechanism.
+
+**2. There is NO GRACEFUL SHUTDOWN, and this is wider than we said.** Verified
+2026-08-21: `src/index.ts` has no `process.on('SIGINT'|'SIGTERM')` handler at
+all. Fly sends **SIGINT** on every deploy and Node's default is to exit
+immediately, so in-flight requests are killed rather than drained — including a
+request sitting between mint and settle. The window is not "a purchase might
+start while we deploy"; it is "any purchase in progress when we deploy dies."
+Stop accepting connections, let in-flight requests finish, then exit. Small and
+well understood — and it is the shutdown path, which is where the last
+cheap-and-correct-at-4am change produced the boot-gate bug, so it wants someone
+rested.
+
+**3. Verify-then-deploy is a race, not a guarantee.** Checking that nothing is in
+flight before shipping narrows the window; it does not close it, because a
+purchase can begin between the check and the machine stopping. Worth doing until
+(1) and (2) land. Worth retiring afterwards, rather than keeping a ritual whose
+purpose has been engineered away.
+
+### Two known artifacts, needing a decision rather than code
+
+- **Two active passes are ours**, minted during the overnight build on
+  2026-08-21 (05:21 and 06:11 UTC, no payer, no settlement). They show in
+  `active_passes`, where they read as two customers holding passes. Revoke, or
+  mark them internal the way settlements now are. Founder's call.
+- **The Circadian probe settlement has no `id`**, so it can never be promoted.
+  That is correct — an arrival nobody can name is one nobody can vouch for — and
+  it now resolves into `known_non_revenue` rather than sitting in `unattributed`
+  forever. Nothing to do; recorded so nobody re-discovers it as a bug.
