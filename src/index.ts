@@ -39,6 +39,7 @@ import {
   sessionKind,
   validSessionId,
   verifyStripeSignature,
+  isSelfPurchase,
   type StripeEvent,
 } from './stripe.js';
 import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, renewPass, passSnapshot, refundPassUse, activatePass, revokePass, revokePendingPass, usePass } from './passes.js';
@@ -751,13 +752,31 @@ function handleStripeWebhook(req: express.Request, res: express.Response): void 
           subscription_id: typeof obj.subscription === 'string' ? obj.subscription : undefined,
           delivered_at: Date.now(),
         });
+        const isSelf = isSelfPurchase(obj);
         if (isLive) {
           recordEvent({
             t: new Date().toISOString(),
             e: 'settled',
             client: 'stripe',
             amount_usd: typeof obj.amount_total === 'number' ? obj.amount_total / 100 : 0,
+            // Labelled at the moment it happens rather than reconciled later.
+            // Our own proving purchase is money that ARRIVED, not money we
+            // EARNED, and the public revenue figure must not conflate them.
+            ...(isSelf ? { self: true } : {}),
           });
+          if (isSelf) {
+            console.log('[stripe] self-purchase: booked as arrived, excluded from customer revenue');
+          } else {
+            // THE MILESTONE NOBODY SHOULD READ WITHOUT CHECKING. Said loudly
+            // because the self-purchase label fails in the flattering
+            // direction: an unset SELF_PURCHASE_EMAIL turns our own test into
+            // "first customer". Better a line someone verifies than a number
+            // that quietly becomes a story.
+            console.log(
+              '[stripe] CUSTOMER REVENUE BOOKED — verify this is a real stranger and not one of us ' +
+                'before reporting it as a sale.',
+            );
+          }
         }
         console.log(
           `[stripe] ${kind} PAID${isLive ? '' : ' (TEST MODE, no revenue booked)'}, ` +

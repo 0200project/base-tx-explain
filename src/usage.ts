@@ -15,7 +15,7 @@ import { CHANNEL_CAVEAT, DIRECT, OTHER, PRE_ATTRIBUTION, knownChannels } from '.
 
 export type UsageEvent =
   | { t: string; e: 'call'; charge: boolean; paid?: boolean; pass?: boolean; client: string; ok?: boolean; internal?: boolean; degraded?: boolean; channel?: string }
-  | { t: string; e: 'settled'; client: string; amount_usd: number; payer?: string; tx?: string };
+  | { t: string; e: 'settled'; client: string; amount_usd: number; payer?: string; tx?: string; self?: boolean };
 
 /**
  * Everything the ledger carries. Risk-check availability rides the same file
@@ -75,7 +75,7 @@ const dataDir = process.env.DATA_DIR ?? './data';
 const ledgerPath = join(dataDir, 'events.jsonl');
 
 const days = new Map<string, DayAgg>();
-const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0 };
+const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0, self_revenue_usd: 0 };
 const lifetimeExternalClients = new Set<string>();
 const lifetimeClients = new Set<string>();
 /** External calls per channel, lifetime. */
@@ -170,8 +170,12 @@ function absorb(ev: LedgerEvent): void {
   } else if (ev.e === 'settled') {
     agg.settlements++;
     lifetime.settlements++;
+    // Raw revenue still counts it: the money really did settle, and hiding
+    // that would be its own dishonesty. It is subtracted from the CUSTOMER
+    // figure instead, alongside the hand-logged non-revenue arrivals.
     agg.revenue_usd += ev.amount_usd;
     lifetime.revenue_usd += ev.amount_usd;
+    if (ev.self) lifetime.self_revenue_usd += ev.amount_usd;
   }
 }
 
@@ -285,6 +289,16 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
       unique_clients: agg?.clients.size ?? 0,
     });
   }
+  // Money that settled minus money that was never a sale: the hand-logged
+  // non-revenue arrivals, and our own self-labelled proving purchases. Computed
+  // once so the figure and the sentence describing it cannot disagree — they
+  // did once, and the endpoint said "$0.02 settled, of which $0.04 is not
+  // revenue".
+  const customerRevenue = Math.max(
+    0,
+    lifetime.revenue_usd - bookedNonRevenueTotal() - lifetime.self_revenue_usd,
+  );
+
   return {
     persisted: ledgerReady,
     first_event_at: firstEventAt,
@@ -306,13 +320,15 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
       // declined to buy. The raw number stays — money really did settle, and
       // hiding it would be its own dishonesty — but it no longer travels alone.
       known_non_revenue_usd: bookedNonRevenueTotal(),
-      revenue_from_customers_usd: Number(
-        Math.max(0, lifetime.revenue_usd - bookedNonRevenueTotal()).toFixed(6),
-      ),
-      revenue_note: revenueNote(
-        Number(lifetime.revenue_usd.toFixed(6)),
-        Math.max(0, lifetime.revenue_usd - bookedNonRevenueTotal()),
-      ),
+      // Our own proving purchases, self-labelled at settlement rather than
+      // reconciled afterwards. Kept apart from `known_non_revenue_usd`, which
+      // is the hand-logged list: one is a decision made in advance about an
+      // identity, the other is a record made after the fact about a specific
+      // arrival, and merging them would hide which of the two a number came
+      // from.
+      self_revenue_usd: Number(lifetime.self_revenue_usd.toFixed(6)),
+      revenue_from_customers_usd: Number(customerRevenue.toFixed(6)),
+      revenue_note: revenueNote(Number(lifetime.revenue_usd.toFixed(6)), customerRevenue),
       revenue_usd: Number(lifetime.revenue_usd.toFixed(6)),
       unique_clients: lifetimeClients.size,
     },

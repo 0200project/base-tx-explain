@@ -195,3 +195,39 @@ export function validSessionId(raw: unknown): string | null {
 export function sessionKind(session: Record<string, unknown>): 'pass' | 'subscription' {
   return session.mode === 'subscription' ? 'subscription' : 'pass';
 }
+
+/**
+ * Was this checkout OUR OWN, rather than a customer's?
+ *
+ * The founder is expected to buy a $9 pass himself to prove the card rail end
+ * to end. That purchase is `livemode: true`, so it books as revenue and
+ * `/healthz` — public and unauthenticated — would report
+ * `revenue_from_customers_usd: 9.00` on the night that number is being watched.
+ * It would read as the first real sale.
+ *
+ * The obvious fix, pre-logging it in KNOWN_NON_REVENUE, is WRONG and was
+ * correctly refused: an entry for money that has not arrived subtracts from a
+ * total that does not contain it, producing the same arithmetic nonsense that
+ * file exists to prevent. Pre-logging is only safe for entries already true.
+ *
+ * So the purchase labels ITSELF, the way our own HTTP traffic does. Set
+ * SELF_PURCHASE_EMAIL to the address used at checkout and any settlement from
+ * it is booked as arrived-but-not-earned, at the moment it happens, with no
+ * hand-entry afterwards and no window where the public number is wrong.
+ *
+ * HONEST LIMIT, and it is the opposite of the internal marker's: forgetting to
+ * set this makes a self-purchase look like a CUSTOMER, which is the flattering
+ * direction. There is no way to invert it — requiring proof of being a stranger
+ * would exclude every genuine sale. That is why the first booked customer
+ * revenue also logs loudly (see index.ts): the milestone nobody should read
+ * without checking is exactly the one this could get wrong.
+ */
+export function isSelfPurchase(obj: Record<string, unknown> | undefined): boolean {
+  const expected = (process.env.SELF_PURCHASE_EMAIL ?? '').trim().toLowerCase();
+  if (!expected) return false;
+  const direct = typeof obj?.customer_email === 'string' ? obj.customer_email : '';
+  const details = obj?.customer_details as { email?: unknown } | undefined;
+  const nested = typeof details?.email === 'string' ? details.email : '';
+  const seen = (direct || nested).trim().toLowerCase();
+  return seen.length > 0 && seen === expected;
+}
