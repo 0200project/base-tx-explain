@@ -19,6 +19,7 @@ import { getTreasury } from './treasury.js';
 import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
 import { passFromHeaders, passFromPath, passUrl } from './passUrl.js';
 import { isInternalRequest } from './internal.js';
+import { normalizeMcpPayments } from './mcpPayment.js';
 import {
   alreadyHandled,
   passForSession,
@@ -998,6 +999,15 @@ app.post(['/mcp', '/mcp/:token'], async (req, res) => {
     return;
   }
 
+  // Normalise BEFORE anything reads the payment. A payer may present it as an
+  // object, as JSON, as base64 (the encoding our own HTTP face uses), or in an
+  // X-PAYMENT header. Only the object form used to work, and the others failed
+  // silently — indistinguishable from never having paid. Reported by the first
+  // external party ever to send a real payment through this path.
+  const norm = normalizeMcpPayments(req.body, req.headers as Record<string, unknown>);
+  if (norm.normalized) {
+    console.log(`[x402] payment normalized${norm.fromHeader ? ' from X-PAYMENT header' : ' (re-encoded form)'}`);
+  }
   const messages = Array.isArray(req.body) ? req.body : [req.body];
   const toolCallCount = messages.filter((m) => m?.method === 'tools/call').length;
   const isToolCall = toolCallCount > 0;
