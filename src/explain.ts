@@ -265,8 +265,13 @@ export async function explainTransaction(txHashRaw: string): Promise<ExplainResu
       checks.first_interaction === 'not_applicable' &&
       checks.drainer_blacklist === 'not_applicable';
     if (!unranAll) {
+      // "completed" was accurate when every non-ok status meant a failure. It
+      // stopped being accurate when `inconclusive` arrived: that check ran fine
+      // and simply cannot answer for this input, so reporting it as incomplete
+      // blames our infrastructure for a limit of the method. "returned an
+      // answer" is true of every non-ok status, including that one.
       summary +=
-        ' Not all risk checks completed for this transaction; see checks. Absence of a risk flag here does not mean none exists.';
+        ' Not all risk checks returned an answer for this transaction; see checks. Absence of a risk flag here does not mean none exists.';
     }
   }
 
