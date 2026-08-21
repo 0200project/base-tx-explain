@@ -48,6 +48,27 @@ fi
 
 echo "predeploy: tree is clean across $IMAGE_PATHS"
 
+# The shutdown window is decided in two places TOML cannot put next to each
+# other: `kill_timeout` at top level, and the KILL_TIMEOUT_MS the process reads
+# to derive its drain grace. If they drift, we either SIGKILL mid-drain or drain
+# far longer than Fly will wait -- and every comment keeps claiming otherwise.
+# A comment cannot hold an invariant across two sections; this can.
+KT=$(sed -n "s/^kill_timeout *= *'\{0,1\}\([0-9]*\)s\{0,1\}'\{0,1\}.*/\1/p" fly.toml | head -1)
+KTMS=$(sed -n "s/^ *KILL_TIMEOUT_MS *= *'\([0-9]*\)'.*/\1/p" fly.toml | head -1)
+if [ -z "$KT" ] || [ -z "$KTMS" ]; then
+  fail "could not read kill_timeout / KILL_TIMEOUT_MS from fly.toml. Both are
+  required: the process derives its shutdown drain grace from KILL_TIMEOUT_MS
+  and Fly enforces kill_timeout."
+fi
+if [ "$((KT * 1000))" -ne "$KTMS" ]; then
+  fail "fly.toml disagrees with itself: kill_timeout=${KT}s but KILL_TIMEOUT_MS=${KTMS}.
+
+  The process derives its drain grace from KILL_TIMEOUT_MS. If that is larger
+  than what Fly actually waits, a paid request gets SIGKILLed mid-settle -- the
+  payer's money moves and they get nothing. Set KILL_TIMEOUT_MS to $((KT * 1000))."
+fi
+echo "predeploy: shutdown window agrees (kill_timeout ${KT}s = ${KTMS}ms)"
+
 npx tsc --noEmit || fail "typecheck failed"
 echo "predeploy: typecheck passed"
 

@@ -20,9 +20,16 @@ primary_region = 'iad'
 # settle; the in-process grace is 25s so we exit on our own terms first.
 kill_signal = 'SIGINT'
 kill_timeout = '30s'
+# MIRRORED as KILL_TIMEOUT_MS under [env] below, because the process cannot read
+# its own kill_timeout and derives the drain grace from it (kill_timeout - 5s).
+# TOML puts these in different sections so they CANNOT sit adjacent, which is
+# exactly the two-place invariant that decays — so it is enforced rather than
+# described: scripts/predeploy.sh refuses to deploy if the two disagree.
 
 [build]
 [env]
+  # Must equal kill_timeout above, in ms. Enforced by scripts/predeploy.sh.
+  KILL_TIMEOUT_MS = '30000'
   BASE_RPC_URLS = 'https://mainnet.base.org,https://base-rpc.publicnode.com,https://base.llamarpc.com'
   DATA_DIR = '/data'
   FREE_CALLS_PER_IP = '10'

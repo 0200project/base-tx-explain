@@ -47,7 +47,7 @@ import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, renewPa
 import { HOUR, TtlCache } from './cache.js';
 import { APIFY_BILLING_ACTIVE, initApifyBilling, chargeApifyCall } from './apifyBilling.js';
 import { checkHealthSnapshot } from './checkHealth.js';
-import { initUsageLedger, recordEvent, usageSnapshot, flushCheckHealth} from './usage.js';
+import { initUsageLedger, recordEvent, usageSnapshot, flushCheckHealth } from './usage.js';
 
 const VERSION = '0.1.2';
 const NETWORK = 'eip155:8453' as const; // Base mainnet
@@ -1398,6 +1398,9 @@ logChannelConfig();
  */
 const httpServer = app.listen(port, () => {
   console.log(`base-tx-explain v${VERSION} listening on :${port} (payment mode: ${PAYMENT_MODE})`);
+  // Stated at boot so the live values are observable rather than inferred from
+  // two files: this is the window a paid request has to finish before we leave.
+  console.log(`[shutdown] drain grace ${SHUTDOWN_GRACE_MS}ms, inside kill_timeout ${KILL_TIMEOUT_MS}ms`);
 });
 
 /**
@@ -1430,7 +1433,20 @@ const httpServer = app.listen(port, () => {
  *    `fly.toml` now sets `kill_timeout = '30s'`, and the grace below is kept
  *    under it so we exit on our own terms rather than being shot.
  */
-const SHUTDOWN_GRACE_MS = 25_000; // must stay below fly.toml kill_timeout
+/**
+ * DERIVED, not chosen, because the relationship is the thing that matters.
+ *
+ * The grace must stay under Fly's `kill_timeout` or we get SIGKILLed mid-drain
+ * while every comment still claims we exit first. Written as two constants in
+ * two files that is an invariant held together by prose — and today alone we
+ * caught three statements that outlived the thing they described. So the
+ * timeout is the single knob: `fly.toml` sets `kill_timeout` and mirrors it as
+ * `KILL_TIMEOUT_MS` on two adjacent lines (any diff touching one shows the
+ * other), and the grace is computed from it here. Raising or lowering the
+ * timeout moves the grace with it and cannot invert the relationship.
+ */
+const KILL_TIMEOUT_MS = Number.parseInt(process.env.KILL_TIMEOUT_MS ?? '30000', 10) || 30_000;
+const SHUTDOWN_GRACE_MS = Math.max(1_000, KILL_TIMEOUT_MS - 5_000);
 let shuttingDown = false;
 
 function leave(code: number): never {
