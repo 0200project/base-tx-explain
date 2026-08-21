@@ -469,6 +469,56 @@ the way there is on the x402 side. Finance's check on a card proposal is
 therefore: is the need and expected return actually stated and plausible, not
 "is it under some fixed number" — there isn't one.
 
+**D-4. The reconciler flipped to a permanent false `overbooked` alarm — the
+opposite failure of D-1, same root cause.** Raised 2026-08-21 by platform, who
+found and fixed it before Finance saw it. When the known-non-revenue exclusion
+(built to fix D-1) shipped, it was applied to the *received* side of the
+reconciliation ($0.04 → correctly excluding the Circadian $0.02) but not to the
+*booked* side, which still held the $0.02 as booked. Both sides must exclude
+the same known-non-revenue amount or the comparison measures the exclusion
+itself rather than the money — asymmetric subtraction manufactured a $0.02
+"shortfall" where none existed. `/stats` had read `status: overbooked` with a
+note claiming USDC was swept out of the payout wallet undeclared, continuously,
+since the Circadian probe settled. **Nothing was swept; Finance's own
+independent chain read throughout this period showed the correct $0.04.**
+
+Why this one is worse than D-1 through D-3: it failed in the direction that
+**disables a control rather than merely misinforming.** The wallet monitor
+built this afternoon exists specifically to catch an unexplained payout
+decrease. A standing false alarm on a neighbouring surface is exactly the
+condition under which a real one gets ignored — "it's probably that bug
+again." Detection depends on quiet-when-fine being reliable.
+
+Verified independently by Finance after the fix, not taken from platform's
+report: `/stats` now reads `status: reconciled`, `delta_usd: 0`,
+`booked_from_customers_usd: 0`, `received_from_customers_usd: 0`. The public
+`/healthz` also now carries `revenue_from_customers_usd: 0` with an explicit
+note — confirms D-3 is closed on the actual public surface, not just `/stats`.
+
+Also notable on how it was found: the reconciler's own test suite was green
+throughout, because the tests asserted a contract the production caller never
+honored (fed the reconciler a customer-only figure; `index.ts` feeds it the
+raw ledger total). Found by reading the deployed server's actual output, not
+by trusting a passing test suite — the same discipline this ledger has needed
+all day.
+
+**D-5. Two of eight unbooked paid-call attempts belong to an unidentified
+client.** Investigated by Finance directly, not left unexamined per platform's
+flag. Raw ledger breakdown of the 8 `paid:true` events:
+- **4** from `3f4d2c03` — known, ours, established since day one.
+- **2** from `8f92f999` — Circadian. One at 17:14:47Z (an earlier attempt on
+  the same interaction), one at 17:14:49Z (the settled probe, already booked
+  as non-revenue above). Accounted for.
+- **2** from **`53d7ceaf`** — **unidentified.** 17:26:32Z and 17:26:50Z, both
+  `internal: false` (did not carry the team's internal-call marker), both
+  roughly one minute after the 17:25:41Z machine restart. Not a fingerprint
+  that has appeared in any prior discussion today. Could be a team member
+  re-testing post-restart without the marker header set, or could be a
+  genuine second external party whose payment never settled. **Not resolved.
+  Asked platform and growth to check server logs for this fingerprint before
+  it gets attributed either way** — same discipline applied to the Circadian
+  attribution, which turned out to matter.
+
 ## Known corrections to the record
 
 - **Phantom $9 Stripe settlement, removed 2026-08-21** (by the platform
