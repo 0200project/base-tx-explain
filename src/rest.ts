@@ -1,3 +1,4 @@
+import { passUrl } from './passUrl.js';
 import { paymentMiddleware } from '@x402/express';
 import type { x402ResourceServer } from '@x402/core/server';
 import type express from 'express';
@@ -220,12 +221,16 @@ export function registerPassRoutes(app: express.Express, deps: PassRouteDeps): v
     // caller either way; do not leave it counted as an active pass.
     res.on('close', finish);
     res.status(200).json({
+      mcp_url: passUrl(publicUrl, pass.token),
       pass_token: pass.token,
       expires_at: pass.expires_at,
       call_cap: pass.call_cap,
       how_to_use: {
-        rest: `POST ${publicUrl}/explain with header "X-BTX-Pass: ${pass.token}"`,
-        mcp: 'attach the token at _meta["btx/pass"] on tools/call',
+        // Same order as every other purchase path: the URL first, because it is
+        // the only form that works in clients with a single URL field.
+        url: 'Use mcp_url as the server URL in any MCP client. That is the whole setup.',
+        rest: `or POST ${publicUrl}/explain with "Authorization: Bearer ${pass.token}"`,
+        mcp: 'or attach the token at _meta["btx/pass"] on tools/call',
       },
       keep_this_token: 'This is a bearer pass. It is the only proof of purchase; store it now.',
     });

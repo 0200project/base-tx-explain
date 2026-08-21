@@ -386,12 +386,18 @@ async function initPayments(): Promise<void> {
       minted.token = pass.token;
       minted.nonce = nonce ?? undefined;
       const payload = {
+        mcp_url: passUrl(PUBLIC_URL, pass.token),
         pass_token: pass.token,
         expires_at: pass.expires_at,
         call_cap: pass.call_cap,
         how_to_use: {
-          mcp: 'attach the token at _meta["btx/pass"] on tools/call',
-          rest: `POST ${PUBLIC_URL}/explain with header "X-BTX-Pass: <token>"`,
+          // The URL leads because it is the only form that works in clients
+          // offering a single URL field and no way to set a header. A buyer
+          // paying by wallet was being handed the clunkier method while a
+          // buyer paying by card got this one.
+          url: 'Use mcp_url as the server URL in any MCP client. That is the whole setup.',
+          header: `or POST ${PUBLIC_URL}/explain with "Authorization: Bearer <token>" (X-BTX-Pass also accepted)`,
+          meta: 'or attach the token at _meta["btx/pass"] on tools/call',
         },
         keep_this_token: 'This is a bearer pass. It is the only proof of purchase; store it now.',
       };
@@ -698,7 +704,14 @@ app.get('/paid', (req, res) => {
   const sessionId = validSessionId(req.query.session_id);
   // Referer would otherwise carry the session id to any link this page shows,
   // and no-store keeps a token out of a shared browser's back button.
-  res.set('Referrer-Policy', 'no-referrer').set('Cache-Control', 'no-store');
+  // Reachable from the site's own success page, which is a different origin
+  // to this API. Without this the one route whose whole job is to be fetched
+  // by a browser cannot be fetched by a browser — the same gap that already
+  // exists on /pass and /explain, which I found and then reproduced here.
+  res
+    .set('Referrer-Policy', 'no-referrer')
+    .set('Cache-Control', 'no-store')
+    .set('Access-Control-Allow-Origin', '*');
 
   if (!sessionId) {
     res.status(400).json({ error: 'missing or malformed session_id', code: 'invalid_session' });
