@@ -194,7 +194,32 @@ memory. It is scaffolding, not a fix.
 
 ### Three things, in the order they matter
 
-**1. `authorizationState(payer, nonce)` reconciliation.** The real close, and it
+**ORDER REVISED 2026-08-21 ~23:00, and the old order is kept below rather than
+overwritten.** It was reasoned entirely from the $9 pass rail, where a stranded
+payment is worth a human's time to chase. Two independent parties have since
+said **per-call suits them rather than the pass**, so the rail that matters is
+the $0.02 one — and there the ordering inverts:
+
+**Graceful shutdown moves to FIRST.** Reconciliation *recovers* a loss; shutdown
+*prevents* one. Recovery is worth a human's time at $9 and worth nobody's at
+$0.02 — **nobody reconciles two cents by hand**, so on the per-call rail an
+unrecoverable loss is simply a loss. And the real cost there is not the money:
+an agent that intermittently pays and receives nothing concludes the rail is
+unreliable and leaves, which is expensive in a way two cents is not. Fifteen
+lines, protecting the path a customer has actually asked for.
+
+**Reconciliation stays second, not dropped.** It is the only route back for an
+already-stranded pass, and shutdown does nothing for a machine that dies rather
+than being asked to stop. Both are needed; only the order changed.
+
+Note what kind of staleness this was: the original order was not wrong when
+written and no code change falsified it — **the evidence underneath it moved.**
+Summaries decay when the code changes, when the measurements change, and when
+the world changes, and only the first is even theoretically visible in a diff.
+
+---
+
+**(Original order, superseded.) 1. `authorizationState(payer, nonce)` reconciliation.** The real close, and it
 covers both rails: an authorization consumed on chain with nothing recorded on
 our side is the same question whether it bought a pass or a single decode. A
 stranded pass carries its nonce; ask the chain whether that authorization was
