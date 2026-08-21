@@ -190,7 +190,7 @@ data. Keep that list honest as fields change.
   write, degrades to in-memory on file error — over-granting, never wrongly
   charging). Verified live: `/data/free-tier.json` initializes on boot. (Minor
   residual: the key salt is a constant prefix, so file keys are IP-reversible the
-  same way the logged `ipTag` is — same class as the ipTag item in Open #5, not new.)
+  same way the logged `ipTag` is — same class as the ipTag item in Open #6, not new.)
 
 - **One signed authorization could buy an unbounded number of decodes**
   (`src/authOnce.ts`). An EIP-3009 nonce is not consumed until SETTLE, and our
@@ -256,7 +256,36 @@ data. Keep that list honest as fields change.
    forged token legs show as addresses. A swap is not a custody-safety claim, so
    this ranks below the closed cases. Candidate fix: require corroborating
    fungible movements before trusting a swap event.
-2. **Ambiguous pass activation (residual of the $9-pass fix in §4).** A pass activated
+2. **A $9 pass whose payment settles during a restart is destroyed SILENTLY, and
+   the money is on-chain with no record anywhere on our side.** Proven by
+   booting the real module twice against the same file, not argued.
+   `activatePass(nonce)` resolves through `pendingByNonce`, an in-memory Map;
+   `PassEntry` carries no nonce, so `passes.json` cannot express the mapping.
+   `initPasses` then deliberately drops every non-active entry on boot — the
+   comment is right that a restored pending pass could never be activated, but
+   the consequence is that the entry disappears with no trace. Measured after a
+   restart: `activatePass` returns false, `usePass` returns `invalid` (not
+   `not_activated` — the token is GONE), `listUnconfirmed()` is empty, and
+   `active_passes` is 0. Nothing logs it.
+   The window is between mint (in the handler, post-verify) and `activatePass`
+   (in `onAfterSettlement`) — seconds wide, but THIS PROJECT DEPLOYS MANY TIMES
+   AN EVENING and a rolling deploy stops the machine. If the process dies after
+   the facilitator broadcast but before the hook, the transfer still completes
+   on chain: the payout wallet receives $9 that our ledger never recorded and no
+   pass exists for. That is worse than money-taken-no-service, because it is
+   also money-taken-no-RECORD — the reconciler sees a wallet receipt it cannot
+   attribute, and the customer holds a token string that answers `invalid`.
+   Fix, in order of what matters: (a) stop dropping silently — retain pending
+   entries at boot, log loudly, and surface them in `listUnconfirmed()` so a
+   lost pass is discoverable at all; (b) persist the nonce on `PassEntry` so a
+   restored pending pass can still be identified; (c) resolve it against
+   `authorizationState(payer, nonce)` — the same on-chain ground truth already
+   named below as the correct close for ambiguous activation, so these converge
+   rather than compete. Visibility is the part worth doing before the first real
+   $9 sale; the rest can follow.
+   Operational note until fixed: do not deploy while a $9 purchase could be in
+   flight.
+3. **Ambiguous pass activation (residual of the $9-pass fix in §4).** A pass activated
    because settlement was ambiguous rather than confirmed could, in principle,
    turn out to be unpaid — bounded at $9 of calls. Deliberately NOT capped: this
    path produced two serious bugs in one evening precisely because it accumulated
@@ -264,7 +293,7 @@ data. Keep that list honest as fields change.
    The correct close is a reconciler against `authorizationState(payer, nonce)`
    (the same call verify uses) plus the payout wallet, not a cap that papers over
    it.
-3. **UNVERIFIED: that the Stripe signing secret in Fly is the newly-ROLLED one.**
+4. **UNVERIFIED: that the Stripe signing secret in Fly is the newly-ROLLED one.**
    The malformed entry whose NAME was a secret value is confirmed deleted, and a
    secret is loaded and verifying (an unsigned POST to `/stripe/webhook` returns
    400, not 503). But deleting that entry removed a COPY of the secret; it does
@@ -278,7 +307,7 @@ data. Keep that list honest as fields change.
    exercised it. Closes on the first real delivery, or a Stripe "send test event"
    — Stripe's dashboard was erroring when we tried. This also gates card payments
    working at all: a stale value means charged-at-Stripe, no pass minted.
-4. **Test files are never typechecked**, so a signature change silently leaves
+5. **Test files are never typechecked**, so a signature change silently leaves
    stale callers. `tsconfig.json` includes only `src/**/*.ts`; `npm run typecheck`
    therefore passes while a test calls a function with the wrong shape. Found when
    adding a required field to `buildAssetsMoved` produced no error in
@@ -290,7 +319,7 @@ data. Keep that list honest as fields change.
    `src` and `test`, wired to a `typecheck:test` script. Not done here: it touches
    shared build config and would surface errors across test files owned by several
    sessions, so it wants its own change rather than riding along with a bug fix.
-5. **Info/ops:** `/healthz` publishes lifetime revenue + funnel unauthenticated;
+6. **Info/ops:** `/healthz` publishes lifetime revenue + funnel unauthenticated;
    payer EIP-3009 signature written to logs on facilitator error; `ipTag` is a
    reversible 32-bit hash; unbounded usage-ledger Sets on a 256 MB box.
 
