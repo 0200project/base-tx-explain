@@ -44,7 +44,35 @@ const client = createx402MCPClient({
   },
 });
 
-await client.connect(new StreamableHTTPClientTransport(new URL(SERVER_URL)));
+/**
+ * Mark this run as ours, so a test payment does not land in the ledger looking
+ * like a stranger who paid.
+ *
+ * This script had no marker until now, and it cost real analyst time: two paid
+ * calls it made on 2026-08-21 at 17:26 showed up as `internal: false` and had
+ * to be run down by hand before they could be ruled out as a new customer. The
+ * script that exists to simulate a buyer is, unsurprisingly, the single most
+ * convincing counterfeit customer we can produce.
+ *
+ * Unset means unmarked, never a guess: an absent INTERNAL_MARKER makes this run
+ * look external, which is the cheap mistake (we investigate ourselves) rather
+ * than the expensive one (a real stranger dismissed as internal). The warning
+ * below exists so that choice is visible at the time rather than an hour later.
+ */
+const marker = process.env.INTERNAL_MARKER ?? '';
+if (!marker) {
+  console.warn(
+    'WARNING: INTERNAL_MARKER is not set, so this run will be counted as EXTERNAL\n' +
+      '         traffic in the ledger and somebody will have to rule it out by hand.\n' +
+      '         Set it from .internal-marker before running against production.\n',
+  );
+}
+
+await client.connect(
+  new StreamableHTTPClientTransport(new URL(SERVER_URL), {
+    requestInit: marker ? { headers: { 'x-btx-internal': marker } } : undefined,
+  }),
+);
 
 try {
 for (let i = 1; i <= 12; i++) {
