@@ -300,3 +300,42 @@ Current count: to be read at each daily close. Lifetime `pass_calls`: 1.
 
 Free $0 (10 calls/client) · x402 $0.02/call · 0200 Pass $9 one-time (30 days,
 10,000 calls) · 0200 Developer $9/month recurring · Apify $20/1,000 calls.
+
+---
+
+## Daily close — 2026-08-21
+
+Verified at source (wallet balances via RPC, `/stats` re-read after the earlier
+failed read). Not inherited from any report that could not complete.
+
+| | |
+|---|---|
+| Revenue — x402 | $0.00 |
+| Revenue — Stripe (Pass + Developer) | $0.00 |
+| Revenue — marketplace (Apify) | $0.00 |
+| **Total revenue** | **$0.00** |
+| Growth spend | $0.00 |
+| Infrastructure cash out | $0.00 |
+| **Net cash flow** | **$0.00** |
+| Funds on hand | **$5.00** ($4.98 budget + $0.02 payout) |
+| Growth budget | $20.00 allocated · $0.00 spent · **$4.98 verified available** |
+
+Usage context, not revenue: 102 lifetime calls · 33 paywall hits · 4 payment
+attempts · **0 settlements** · 1 pass call. Payment attempts remain 100% from
+our own client.
+
+**CAC: undefined.** Zero spend and zero customers is not a $0 CAC — it is no
+ratio at all.
+
+**What today actually established:** nothing was earned and nothing was spent,
+so the financial position is unchanged from opening. The day's work was making
+the position *knowable* — opening this ledger, correcting the $0.02 from
+"revenue from a self-test" to an internal transfer with zero net effect,
+pre-logging an expected non-revenue inbound before it arrives, and flagging an
+automated reconciler that asserts revenue we do not have.
+
+**Blocking Finance, all needing the Founder:** the COO role is unassigned, so
+the two-key spend check cannot run; the funding form of the $20 is unconfirmed,
+capping approvals at $4.98; and the Stripe signing secret rotation is his to
+execute. Nothing has blocked the team yet — no spend above $4.98 has been
+requested.
