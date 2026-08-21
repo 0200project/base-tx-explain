@@ -1,3 +1,4 @@
+import { knownNonRevenueTotal, revenueNote } from './knownNonRevenue.js';
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { absorbCheckHealthEvent, takeCheckHealthEvents, type CheckHealthEvent } from './checkHealth.js';
@@ -214,6 +215,19 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
       payment_attempted: lifetime.paid_calls,
       // The number that actually answers "has a stranger used this".
       external_clients: lifetimeExternalClients.size,
+      // /healthz is PUBLIC. A non-zero revenue_usd reads to a stranger as
+      // "this service has a paying customer", and the raw figure alone cannot
+      // say that some of it is our own transfer and a favour from a party who
+      // declined to buy. The raw number stays — money really did settle, and
+      // hiding it would be its own dishonesty — but it no longer travels alone.
+      known_non_revenue_usd: knownNonRevenueTotal(),
+      revenue_from_customers_usd: Number(
+        Math.max(0, lifetime.revenue_usd - knownNonRevenueTotal()).toFixed(6),
+      ),
+      revenue_note: revenueNote(
+        Number(lifetime.revenue_usd.toFixed(6)),
+        Math.max(0, lifetime.revenue_usd - knownNonRevenueTotal()),
+      ),
       revenue_usd: Number(lifetime.revenue_usd.toFixed(6)),
       unique_clients: lifetimeClients.size,
     },

@@ -1,3 +1,4 @@
+import { KNOWN_NON_REVENUE } from './knownNonRevenue.js';
 import type { TreasurySnapshot } from './treasury.js';
 
 /**
@@ -21,45 +22,6 @@ import type { TreasurySnapshot } from './treasury.js';
  * balance == receipts; the moment that stops being true, set
  * TREASURY_WITHDRAWN_USD to the running total swept so the delta stays honest.
  */
-
-/**
- * Money that arrived in the payout wallet and is NOT revenue.
- *
- * The reconciler compares what the wallet received against what the ledger
- * booked, and called any positive delta unbooked revenue. That has no concept
- * of a known non-revenue arrival, so our own test money made it permanently
- * assert unrecorded revenue that does not exist — and the only way it could
- * ever read `reconciled` was if someone wrongly booked $0.02 to silence it.
- *
- * This is the fourth appearance of one missing invariant, restated per rail:
- * revenue is booked only from a confirmed, live, settled payment, and every
- * surface that displays money must distinguish attempted from received. The
- * earlier three were an unconditional settle booking, payment attempts reading
- * as revenue on the dashboard, and Stripe test-mode purchases. This one is
- * worse than those because it is automated: it does not need anyone to misread
- * a field, it asserts the wrong thing in prose.
- *
- * Listed by transaction hash rather than as a lump sum, because a hash survives
- * a re-read, documents its own reason, and cannot silently absorb a future
- * arrival the way a number can.
- */
-export interface KnownNonRevenue {
-  /** Base transaction hash, or a marker when the arrival predates our records. */
-  tx: string;
-  amount_usd: number;
-  why: string;
-}
-
-export const KNOWN_NON_REVENUE: KnownNonRevenue[] = [
-  {
-    // Verified on chain: both wallets have zero outbound transactions because
-    // the value moved by EIP-3009, where the payer signs and the facilitator
-    // submits. Budget 4.98 + payout 0.02 = the 5.00 originally funded.
-    tx: 'internal-transfer-2026-08-20-selftest',
-    amount_usd: 0.02,
-    why: 'Internal transfer, budget wallet to payout wallet, during our own first paid-call test. Same company on both sides, net cash effect zero. Never revenue.',
-  },
-];
 
 export type ReconcileStatus = 'reconciled' | 'unbooked_revenue' | 'overbooked' | 'unknown';
 
