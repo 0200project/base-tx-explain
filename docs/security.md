@@ -167,8 +167,22 @@ data. Keep that list honest as fields change.
 5. **IPv6 /64 not normalized** — free-tier/rate-limit keyed on the full address;
    a routed /64 mints many tiers. Mask to /64. (Bounded by machine throughput;
    the real harm is upstream-quota exhaustion.)
-6. **Phantom settlement** — a facilitator `200 {success:false}` still returns the
-   decode and books $0.02. Gate `onAfterSettlement` on `settlement.success`.
+6. **Phantom settlement — now amplified to $9 by the pass rail.** The x402 flow
+   is verify → run handler → settle, and `@x402/mcp` returns the handler's result
+   even when settle comes back `200 {success:false}`; `onAfterSettlement` fires
+   unconditionally, booking revenue that never arrived. Originally worth one
+   $0.02 decode. `buyPassHandler` now mints inside that same handler
+   (`src/index.ts:244-245` → `mintPass()`), so the artifact handed over on a
+   failed settle is a **durable, transferable $9 bearer token good for 10,000
+   calls**. Two exposures: (a) a facilitator answering `200 {success:false}`
+   yields a free pass plus a fake $9 ledger entry; (b) no server-side dedup on
+   the payment authorization means N concurrent buys carrying the SAME signed
+   payload all pass verify (nonce not yet consumed on-chain) and all mint
+   distinct passes, while only one settles. Fix: gate `onAfterSettlement` on
+   `settlement.success === true`, and do not release the minted token unless the
+   settle succeeded — mint after settlement, or mint-then-revoke on failure; plus
+   a short-TTL dedup keyed on the authorization nonce. This is now the
+   highest-value open money bug.
 7. **Info/ops:** `/healthz` publishes lifetime revenue + funnel unauthenticated;
    payer EIP-3009 signature written to logs on facilitator error; `ipTag` is a
    reversible 32-bit hash; unbounded usage-ledger Sets on a 256 MB box.
