@@ -339,3 +339,29 @@ the two-key spend check cannot run; the funding form of the $20 is unconfirmed,
 capping approvals at $4.98; and the Stripe signing secret rotation is his to
 execute. Nothing has blocked the team yet — no spend above $4.98 has been
 requested.
+
+---
+
+## Standing rule, now enforced by the codebase itself
+
+The security session has written Finance's core rule directly into
+`docs/security.md` (85bc761) as a re-review trigger for every new payment rail:
+
+> REVENUE IS BOOKED ONLY FROM A CONFIRMED, LIVE, SETTLED PAYMENT, AND EVERY
+> SURFACE THAT DISPLAYS MONEY MUST DISTINGUISH ATTEMPTED FROM RECEIVED.
+
+Three violations on three separate rails inside twelve hours — the x402
+unconfirmed-settle booking, `paid_calls` counting attempts beside
+`revenue_usd` on a public endpoint, and the test-mode $9 phantom row —
+each arrived as a fresh bug, not a regression of a fixed one, because each
+new rail arrived without the rule attached. It is now checked against
+every new rail rather than rediscovered per-rail. Finance is told
+whenever the definition of a verified settlement changes on either rail —
+standing commitment from the security session.
+
+**The one deliberate exception, not a bug:** a pass is activated on
+ambiguous x402 settlement — service delivered without confirmed payment,
+on purpose, because withholding from someone whose money probably moved
+is the worse error. This must never be "fixed" by someone tidying up
+service delivery; it is tracked as its own known category above, not
+mixed into the revenue definition.
