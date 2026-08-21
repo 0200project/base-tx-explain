@@ -1273,6 +1273,21 @@ let paidRoutesRegistered = false;
  */
 for (const path of ['/explain', '/pass'] as const) {
   app.post(path, (_req, res, next) => {
+    // PAYMENT_MODE=none has no REST rail by design and never will — that is the
+    // README's own quickstart, so it is what a self-hoster runs first. Without
+    // this the shim answers 503 FOREVER: registerPaidRoutes returns early in
+    // that mode without setting the flag, so it never defers, and the message
+    // tells the operator to retry something that will never exist. It also
+    // contradicts its own response set, which reports payments_ready:true.
+    //
+    // Which is this same finding pointing back at me. I replaced "404 for
+    // something temporarily degraded" with the right word, and introduced "503
+    // for something permanently absent" in the same edit. Falling through to
+    // the honest 404 is correct here: the route genuinely does not exist.
+    if (PAYMENT_MODE !== 'x402') {
+      next();
+      return;
+    }
     if (paidRoutesRegistered) {
       next();
       return;
