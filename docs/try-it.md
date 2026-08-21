@@ -46,13 +46,41 @@ curl -s -X POST https://base-tx-explain.fly.dev/explain \
 at 0/13 — see `segment-research-2026-08-21.md`. The honest line is *"we tell you
 what we could not determine instead of returning null."*
 
-## The rough edge, say it before they find it
+## The 402 shape: not a defect, and do not apologise for it
 
-A 402 payment challenge currently arrives at `content[0].text` with
-`isError: true` rather than in `_meta`. A client using a payment wrapper may see
-an error where it expected a payment prompt. Circadian found this. It is known,
-it is ours, and it is not the prospect's mistake — saying so first costs nothing
-and stops them concluding the payment path is broken.
+**Corrected 2026-08-21 after reading `@x402/mcp` 2.23.0 rather than taking the
+report at face value.** This was carried for a day as a known bug of ours. It is
+not one, and disclosing it as one would suggest we do not understand our own
+protocol.
+
+An unpaid MCP `tools/call` returns `isError: true`, the challenge JSON in
+`content[0].text`, and the parsed object in `structuredContent`. That is exactly
+what the library's own server emits and exactly what its client requires:
+
+```js
+// @x402/mcp client
+extractPaymentRequiredFromResult(result) {
+  if (!result.isError) return null;   // isError:true is MANDATORY
+  if (result.structuredContent) { ... }   // preferred
+  // else content[0].text            // required
+}
+```
+
+Its own comment reads: *"Per MCP transport spec, supports: 1. structuredContent
+(optional, preferred) 2. content[0].text (required)."* We emit all three fields.
+
+`_meta` is not where a challenge lives. It carries the payment in
+(`x402/payment`) and the settlement receipt back (`x402/payment-response`).
+Expecting the challenge there conflates the receipt with the challenge.
+
+**Empirical proof it is not blocking:** Circadian, an external party with their
+own client, completed a real settled payment through this exact path.
+
+**What IS true, and worth saying:** a *plain* MCP client with no x402 wrapper
+sees `isError: true` and reads it as a tool failure. That is inherent — the
+challenge has to be an error for the wrapper to detect it. So the honest line is
+**"you need an x402-capable client; with a plain MCP client the 402 surfaces as
+isError, which is per spec"** — not "we have a bug here."
 
 ## Paying, if they get that far
 
