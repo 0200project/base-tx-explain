@@ -392,6 +392,7 @@ npm run dev</code></pre>
             <tr><td><code class="inline">assets_moved</code></td><td>array</td><td>Each entry: <code class="inline">token</code>, <code class="inline">amount</code> (decimal string), <code class="inline">from</code>, <code class="inline">to</code>, <code class="inline">token_address</code>, <code class="inline">standard</code>.</td></tr>
             <tr><td><code class="inline">counterparties</code></td><td>array</td><td>Each entry: <code class="inline">address</code>, <code class="inline">label</code> (string or null). Labels come from a verified table of major Base contracts.</td></tr>
             <tr><td><code class="inline">risk_flags</code></td><td>array</td><td>Each entry: <code class="inline">flag</code>, <code class="inline">detail</code>. See the flag table below.</td></tr>
+            <tr><td><code class="inline">checks</code></td><td>object</td><td>Which risk checks actually ran. Read this before drawing any conclusion from an empty <code class="inline">risk_flags</code> — see below.</td></tr>
             <tr><td><code class="inline">gas_paid_usd</code></td><td>number</td><td>Total gas cost in USD, including the OP-stack L1 data fee. ETH is priced from the Chainlink ETH/USD feed at the transaction's block.</td></tr>
             <tr><td><code class="inline">timestamp</code></td><td>—</td><td>Block timestamp of the transaction.</td></tr>
             <tr><td><code class="inline">block_number</code></td><td>number</td><td>Block that included the transaction.</td></tr>
@@ -438,7 +439,7 @@ npm run dev</code></pre>
       </ul>
 
       <h3><code>risk_flags</code> values</h3>
-      <p>A flag always means evidence was found — a failed lookup never produces a flag. Sources: Sourcify and Basescan verification status, the ScamSniffer and MyEtherWallet public blocklists (consumed at runtime, refreshed twice daily), and approval semantics.</p>
+      <p>A flag always means evidence was found — a failed lookup never produces a flag, which is why <a href="#response"><code class="inline">checks</code></a> below tells you whether the lookup happened. Sources: Sourcify and Basescan verification status, the ScamSniffer and MyEtherWallet public blocklists (consumed at runtime, refreshed twice daily), and approval semantics.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -456,6 +457,25 @@ npm run dev</code></pre>
           </tbody>
         </table>
       </div>
+
+      <h3><code>checks</code></h3>
+      <p>Because a failed lookup never produces a flag, an empty <code class="inline">risk_flags</code> has two possible meanings: nothing was found, or nothing was looked at. <code class="inline">checks</code> tells you which one you are holding. Each check reports one of four values:</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Status</th><th>Meaning</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><code class="inline">ok</code></td><td>The check ran against every address that warranted it.</td></tr>
+            <tr><td><code class="inline">partial</code></td><td>It ran against some but not all of them.</td></tr>
+            <tr><td><code class="inline">unavailable</code></td><td>It could not run at all — the upstream source was unreachable, or the answer was indeterminate.</td></tr>
+            <tr><td><code class="inline">not_applicable</code></td><td>There was nothing for this check to look at.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The keys are <code class="inline">contract_verification</code> (Sourcify, then Basescan), <code class="inline">first_interaction</code> (Blockscout, then Basescan) and <code class="inline">drainer_blacklist</code>, plus a <code class="inline">note</code> naming anything that did not fully run — <code class="inline">null</code> when everything did.</p>
+      <p>An empty <code class="inline">risk_flags</code> alongside any status other than <code class="inline">ok</code> means <em>not checked</em>, not <em>clean</em>. Two cases produce <code class="inline">partial</code> rather than <code class="inline">ok</code> even when every lookup succeeds: a transaction touching more unfamiliar addresses than the per-transaction lookup cap, and a sender whose history is longer than one page, where first-time interaction cannot be honestly asserted.</p>
+      <p>Absence of a flag is never a safety guarantee. These are observations about a transaction that has already been mined, not a verdict on it, and not advice about whether to act.</p>
 
       <h2 id="error-handling">Error handling</h2>
       <p>Tool-level errors return <code class="inline">isError: true</code> with a body of the shape <code class="inline">{ "error": "...", "code": "..." }</code>:</p>
@@ -512,6 +532,12 @@ npm run dev</code></pre>
   <span class="tok-key">"risk_flags"</span><span class="tok-punc">: [</span>
     <span class="tok-punc">{</span> <span class="tok-key">"flag"</span><span class="tok-punc">:</span> <span class="tok-flag">"unverified_contract"</span> <span class="tok-punc">}</span>
   <span class="tok-punc">],</span>
+  <span class="tok-key">"checks"</span><span class="tok-punc">: {</span>
+    <span class="tok-key">"contract_verification"</span><span class="tok-punc">:</span> <span class="tok-str">"ok"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"first_interaction"</span><span class="tok-punc">:</span> <span class="tok-str">"ok"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"drainer_blacklist"</span><span class="tok-punc">:</span> <span class="tok-str">"ok"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"note"</span><span class="tok-punc">:</span> <span class="tok-flag">null</span>
+  <span class="tok-punc">},</span>
   <span class="tok-key">"gas_paid_usd"</span><span class="tok-punc">:</span> <span class="tok-num">0.020562</span><span class="tok-punc">,</span>
   <span class="tok-key">"tx_hash"</span><span class="tok-punc">:</span> <span class="tok-str">"0x0c84b951051f…9d6c4d8c"</span><span class="tok-punc">,</span>
   <span class="tok-key">"basescan_url"</span><span class="tok-punc">:</span> <span class="tok-str">"https://basescan.org/tx/0x0c84…"</span><span class="tok-punc">,</span>
