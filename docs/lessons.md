@@ -276,3 +276,60 @@ The generalisable checks, in the order they cost:
 Found by curling the deployed server and reading the sentence out loud. That is
 now twice in two days that a live read caught what a green suite did not, both
 times on the endpoint where money is described to strangers.
+
+## Our own activity keeps arriving disguised as a stranger's
+
+_2026-08-21. Six instances in one day, found by five different people._
+
+Every one of these was the same defect: something we did ourselves became
+indistinguishable from something a customer did, and the resemblance was only
+visible while someone still remembered. Every one of them also pointed the
+**flattering** way — toward revenue, demand, or traction we did not have.
+
+| # | What it looked like | What it was | Caught by |
+|---|---|---|---|
+| 1 | 6 external clients | mostly our own testing | the internal marker, after the fact |
+| 2 | revenue on the dashboard | payment *attempts* | growth, before reporting it |
+| 3 | our first sale, $0.02 | a favour from a party who declined to buy | the accountant |
+| 4 | a stranger paying twice | `scripts/paid-call.ts`, unlabelled | the accountant, by hand |
+| 5 | a rejected Stripe delivery | a forged signature I fired to test the alarm | growth, mid-answer to the founder |
+| 6 | people hitting the paywall | an outage giving service away free | security, writing the fail-open path |
+
+Instance 6 appeared **twice in one commit**: fixed in the ledger's `wall_hits`,
+missed in `since_boot.paywalled`, which is published on the public `/healthz`.
+Two people reviewed it before the second copy was found.
+
+### Why it recurs
+
+The two events are genuinely identical on the wire. A test payment IS a payment.
+A forged signature rejection IS a rejection. An outage giveaway IS a call with
+`charge=true` and no payment attached. Nothing downstream can recover the
+difference, because the difference was never in the data — it was in the intent
+of whoever ran it, and intent is not persisted.
+
+### The rule
+
+**Label it at the moment it happens, automatically, or accept that it is lost.**
+
+Not "remember to check" — `internal.ts` already made this argument and I
+reproduced the bug against the very instrument built on it. The person who knows
+is the person who will forget, usually within the hour, and the cost lands on
+whoever is asked a question later.
+
+Three properties, all cheap at write time and impossible to add afterwards:
+
+1. **Self-identifying.** Our own traffic carries a marker; we do not reconstruct
+   it from timestamps or commit logs. Instance 5 was nearly attributed to the
+   wrong agent because their commits matched the minute.
+2. **Failing toward suspicion.** A missing label makes our activity look
+   external — we investigate ourselves, which is cheap. The reverse dismisses a
+   real stranger, which throws away the one signal this project is waiting for.
+3. **In its own bucket, not merely excluded.** Excluding degraded calls from
+   `free` would have pushed them into `wall_hits`. A category with nowhere to go
+   lands somewhere, and it will be somewhere flattering.
+
+### The tell
+
+Ask of any counter that is about to go up: *if I did this myself, five minutes
+ago, would this number look different?* If not, the label is missing. Every one
+of the six above answers no.
