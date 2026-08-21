@@ -22,6 +22,12 @@ import { isInternalRequest } from './internal.js';
 import { normalizeMcpPayments } from './mcpPayment.js';
 import { checkWallets, initWalletMonitor } from './walletMonitor.js';
 import {
+  initWebhookHealth,
+  recordWebhookRejected,
+  recordWebhookVerified,
+  webhookHealth,
+} from './webhookHealth.js';
+import {
   alreadyHandled,
   passForSession,
   passForSubscription,
@@ -625,10 +631,17 @@ function handleStripeWebhook(req: express.Request, res: express.Response): void 
   const raw = Buffer.isBuffer(req.body) ? req.body.toString('utf8') : '';
   const verdict = verifyStripeSignature(raw, req.headers['stripe-signature'] as string | undefined, STRIPE_WEBHOOK_SECRET);
   if (!verdict.ok) {
-    console.error('[stripe] signature rejected:', verdict.reason);
+    // Not merely logged: a SIGNED delivery we cannot match is a customer who
+    // was charged and got no pass, and one console line in a log nobody
+    // watches is how that stays invisible until they complain.
+    recordWebhookRejected(verdict.reason);
     res.status(400).json({ error: 'invalid signature' });
     return;
   }
+  // The only thing that ever proves the secret matches the one Stripe signs
+  // with. Recorded before any parsing so a malformed body still counts as
+  // cryptographic proof of the secret, which is what it is.
+  recordWebhookVerified();
 
   let event: StripeEvent;
   try {
@@ -941,6 +954,10 @@ app.get('/stats', async (req, res) => {
     check_health: checkHealthSnapshot(24),
     check_health_7d: checkHealthSnapshot(24 * 7),
     passes: passSnapshot(),
+    // Whether the card rail has ever been proven, and whether it is currently
+    // turning away signed deliveries. `never_exercised` is deliberately not
+    // reported as healthy.
+    webhook: webhookHealth(),
   });
 });
 
@@ -1120,6 +1137,9 @@ initUsageLedger();
 initFreeTier();
 initPasses();
 initWalletMonitor();
+// Persisted, so a deploy does not erase the memory of a rejected delivery —
+// deploys are frequent here, which makes that the common case, not an edge one.
+initWebhookHealth();
 
 initApifyBilling()
   .then(() => initPayments())
