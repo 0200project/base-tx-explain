@@ -26,6 +26,22 @@ export interface KnownNonRevenue {
   tx: string;
   amount_usd: number;
   why: string;
+  /**
+   * Did the ledger actually BOOK this as a settlement?
+   *
+   * The distinction is load-bearing and I got it wrong first time. Two
+   * different denominators want this list:
+   *
+   *  - the reconciler compares WALLET RECEIPTS against booked revenue, so it
+   *    must exclude EVERY arrival, booked or not;
+   *  - `revenue_usd` is the sum of BOOKED settlements, so subtracting an
+   *    arrival that was never booked removes money that was never there.
+   *
+   * Conflating them produced "$0.02 settled, of which $0.04 is not revenue" on
+   * a public endpoint — arithmetic nonsense, in the exact place this list was
+   * created to make honest.
+   */
+  booked: boolean;
 }
 
 export const KNOWN_NON_REVENUE: KnownNonRevenue[] = [
@@ -36,6 +52,9 @@ export const KNOWN_NON_REVENUE: KnownNonRevenue[] = [
     tx: 'internal-transfer-2026-08-20-selftest',
     amount_usd: 0.02,
     why: 'Internal transfer, budget wallet to payout wallet, during our own first paid-call test. Same company on both sides, net cash effect zero.',
+    // Arrived ~70 minutes before the ledger that could have recorded it
+    // existed, so it was never booked and must not be subtracted from revenue.
+    booked: false,
   },
   {
     // Circadian evaluated the pass and declined to buy, with numbers: 24 hashes
@@ -47,12 +66,27 @@ export const KNOWN_NON_REVENUE: KnownNonRevenue[] = [
     tx: '0x6ce5e3948c9c6b8e0ef8413f3c29623163bb7b58155eda90a67464f3bb119110',
     amount_usd: 0.02,
     why: 'Pre-arranged technical probe by Circadian, who declined to buy. A favour, not a sale.',
+    // Settled through the normal path, so the ledger did book it as revenue.
+    booked: true,
   },
 ];
 
-/** Total known non-revenue, in USD. */
+const round6 = (n: number): number => Math.round(n * 1e6) / 1e6;
+
+/**
+ * Every non-revenue arrival, booked or not. For comparing against WALLET
+ * RECEIPTS, which contain all of them regardless of what the ledger recorded.
+ */
 export function knownNonRevenueTotal(): number {
-  return Math.round(KNOWN_NON_REVENUE.reduce((t, k) => t + k.amount_usd, 0) * 1e6) / 1e6;
+  return round6(KNOWN_NON_REVENUE.reduce((t, k) => t + k.amount_usd, 0));
+}
+
+/**
+ * Only the arrivals the ledger actually booked. For subtracting from
+ * `revenue_usd`, which contains nothing else.
+ */
+export function bookedNonRevenueTotal(): number {
+  return round6(KNOWN_NON_REVENUE.filter((k) => k.booked).reduce((t, k) => t + k.amount_usd, 0));
 }
 
 /**
@@ -65,11 +99,11 @@ export function knownNonRevenueTotal(): number {
  * travels alone.
  */
 export function revenueNote(rawRevenueUsd: number, customerRevenueUsd: number): string | null {
-  const excluded = knownNonRevenueTotal();
+  const excluded = bookedNonRevenueTotal();
   if (excluded <= 0 || rawRevenueUsd <= 0) return null;
   return (
     `$${rawRevenueUsd.toFixed(2)} settled on chain, of which $${excluded.toFixed(2)} is not revenue ` +
-    '(our own internal transfer and a pre-arranged technical probe by a party who declined to buy). ' +
+    '(a pre-arranged technical probe by a party who evaluated this service and declined to buy). ' +
     `Revenue from customers is $${customerRevenueUsd.toFixed(2)}.`
   );
 }

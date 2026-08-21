@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { knownNonRevenueTotal } from '../src/knownNonRevenue.js';
+import { KNOWN_NON_REVENUE, bookedNonRevenueTotal, knownNonRevenueTotal } from '../src/knownNonRevenue.js';
 
 /**
  * Every case sits on top of whatever finance has logged as known non-revenue.
@@ -130,5 +130,37 @@ describe('known non-revenue must not read as unbooked revenue', () => {
     });
     // A silent adjustment is its own hazard: finance must see what was excluded.
     expect(r.known_non_revenue_usd).toBe(BASE);
+  });
+});
+
+describe('booked vs merely arrived', () => {
+  /**
+   * Two denominators want the known-non-revenue list, and conflating them put
+   * "$0.02 settled, of which $0.04 is not revenue" on a public endpoint — in
+   * the exact place the list exists to make honest.
+   *
+   * Wallet receipts contain every arrival. `revenue_usd` contains only what the
+   * ledger booked. Subtracting an unbooked arrival from revenue removes money
+   * that was never counted.
+   */
+  it('never excludes more from revenue than was ever booked', () => {
+    expect(bookedNonRevenueTotal()).toBeLessThanOrEqual(knownNonRevenueTotal());
+  });
+
+  it('counts every arrival for receipts, booked or not', () => {
+    const all = KNOWN_NON_REVENUE.reduce((t, k) => t + k.amount_usd, 0);
+    expect(knownNonRevenueTotal()).toBeCloseTo(all, 6);
+  });
+
+  it('counts only booked entries for the revenue adjustment', () => {
+    const booked = KNOWN_NON_REVENUE.filter((k) => k.booked).reduce((t, k) => t + k.amount_usd, 0);
+    expect(bookedNonRevenueTotal()).toBeCloseTo(booked, 6);
+  });
+
+  it('every entry declares whether it was booked, so the next one cannot omit it', () => {
+    for (const k of KNOWN_NON_REVENUE) {
+      expect(typeof k.booked).toBe('boolean');
+      expect(k.why.length).toBeGreaterThan(20);
+    }
   });
 });
