@@ -255,3 +255,44 @@ in our favour, and it should be sold as the former.
 With this, every hypothesis §6 flagged as unverified has been tested or
 retired. Nothing in the segment research is now waiting on evidence except the
 accounting/tax segment, which was never fetched at all.
+
+---
+
+## Addendum, later the same night: the inputs to §5 moved
+
+_Added 2026-08-21 ~22:45 UTC, by auditing this file against `/stats` rather than
+trusting it. The practice that caught it: **before acting on a summary, check its
+claims against the source** — a summary describes a whole moving area, so every
+change anywhere in that area can falsify it and none of them touch the file it
+lives in._
+
+**The table above is stale.** It reads 126 calls and six clients; the ledger now
+holds 155 calls and 14 clients. Do not quote those figures.
+
+**What changed materially, and what did not.**
+
+**A real person arrived and used the product.** `0a43aec8` came through a tagged
+outreach link, and the recipient confirmed it in their own words on the issue
+14.5 seconds later — quoting our actual response fields back and calling the
+output "a much better integration boundary than parsing a narrative response".
+That is the first external technical validation this project has had, and §5 was
+written when no such event existed.
+
+**Most of the rest of the growth is machines, not interest.** Arrivals since
+have a distinct signature: two different addresses, three to five seconds apart,
+one call each, no return — twice. Not periodic, and the bursts began after a
+public URL was posted, which fits scanners reacting to a new link. **A rising
+unique-client count is therefore not rising interest**, and will climb every
+time anything is posted publicly.
+
+**THE §5 CONCLUSION STILL HOLDS, but its basis narrowed.** It said the problem is
+distribution rather than demand, because essentially nobody had arrived. Someone
+has now arrived, evaluated the output, and judged it technically right — while
+still saying per-call suits their volume rather than the $9 pass, which is
+Circadian's arithmetic reaching the same answer from a second independent party.
+
+So the honest position is no longer "nobody has looked". It is: **two parties have
+now looked closely, both concluded the product is sound, and both concluded the
+pass is not for them.** That is a pricing signal, and §4's per-address watchlist
+idea is the one that addresses it. Zero customers still, and nothing has returned
+for a second call.

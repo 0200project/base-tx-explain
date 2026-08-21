@@ -23,8 +23,9 @@ curl -s -X POST https://base-tx-explain.fly.dev/explain \
 ```
 
 > **If you run that curl yourself and get `Payment required`, nothing is broken.**
-> The free tier is **per IP**, and ours is spent — we have made 126 calls from
-> this address. A prospect on a fresh IP gets their 10. Verified: running the
+> The free tier is **per IP**, and ours is spent — this address has made well
+> over a hundred calls (the exact figure moves; check `/stats` rather than
+> trusting a number written in a doc). A prospect on a fresh IP gets their 10. Verified: running the
 > exact curl above from here returns 402 today, which is correct behaviour and
 > not what they will see. Do not "fix" it, and do not let a 402 from your own
 > machine convince you the free tier is off.
