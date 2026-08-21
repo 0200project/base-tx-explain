@@ -910,10 +910,22 @@ function send402(res: express.Response): void {
     res.status(500).json({ error: 'payment configuration missing' });
     return;
   }
-  const { hint, ...paymentRequired } = httpPaymentRequired;
+  // The header carries the SAME object as the body, hint included.
+  //
+  // It previously stripped `hint`, presumably for header size. That made the
+  // base64 header a strict subset of the JSON body, and under x402 v2 the
+  // header is the canonical carrier — so the client doing the conforming thing,
+  // reading the header alone, was the only one that lost the free-tier notice.
+  // Backwards, and reported by Circadian who found it by running their own
+  // conformance checker over our envelope.
+  //
+  // Measured rather than assumed: the hint adds roughly 950 base64 bytes, for a
+  // total near 3.5KB against the usual 8KB header cap. Everything a payer needs
+  // was always in both; this is the advisory line, and the conforming client
+  // should not be the one that misses it.
   res
     .status(402)
-    .set('PAYMENT-REQUIRED', Buffer.from(JSON.stringify(paymentRequired)).toString('base64'))
+    .set('PAYMENT-REQUIRED', Buffer.from(JSON.stringify(httpPaymentRequired)).toString('base64'))
     .json(httpPaymentRequired);
 }
 
