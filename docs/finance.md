@@ -342,10 +342,15 @@ behalf, so an attacker with the key can still move the full balance.
 small, deliberate increments once balance became the security boundary. The
 Founder funded the full $20.00 in one transfer before that recommendation
 reached him. Recorded plainly, not reversed: **the full allocated budget is
-now the blast radius until a balance-bounded, destination-unpinned spend
-mechanism is live.** Nothing currently has the technical means to spend it —
-see Open Item 7 — but the exposure is real from the moment any such mechanism
-ships, and it ships into a wallet that already holds the whole $20.
+now the blast radius from the moment a signer is wired, not before** —
+security confirmed no spending key exists anywhere on the server or in any
+agent's reach today (audited directly: only `STATS_TOKEN`, the two CDP keys,
+`STRIPE_WEBHOOK_SECRET`, `INTERNAL_MARKER`; `X402_TEST_PRIVATE_KEY` appears
+only in `scripts/paid-call.ts` and is unset). **Controls before capability**:
+no spending key gets wired into anything agent-reachable until the caps below
+exist. The $20 is not at risk today; it becomes the risk the day a signer
+ships, so that is the sequencing to hold the line on, not a drawdown of funds
+that are currently safe.
 
 The sharpest finding, recorded here because it is a hard boundary Finance
 should hold the team to regardless of implementation: **if a spending agent
@@ -353,6 +358,31 @@ ever consumes this product's own `explain_transaction` output as a decision
 input, an attacker who crafts a transaction can write text directly into the
 spender's context — a closed loop from attacker-controlled chain data to our
 own money.** Must never be wired that way.
+
+**Finance's detection posture, set 2026-08-21 per security's design.** Because
+the payee is agent-chosen and agent inputs are attacker-reachable, a
+manipulated agent paying an attacker's own x402 endpoint is indistinguishable
+from a legitimate payment at every technical level — well-formed transaction,
+valid signature, plausible service, correct amount. **There is no anomaly to
+spot, so detection cannot be anomaly-based.** It has to be reconciliation:
+**every outflow from the SPEND wallet gets matched against a pre-justified,
+already-logged expense in this ledger; anything unmatched is the alert.** This
+ledger is the control, not a record kept after the fact — the four-line
+proposal format (Amount / Purpose / Channel / Expected outcome) that already
+exists for Growth spend is what "pre-justified" means in practice, and it now
+does double duty as a security control, not just a bookkeeping courtesy.
+Caps, sized to the current $20 balance: **roughly $1/transaction, $5/day** —
+keeps a fully-compromised agent's daily damage small without blocking real
+use. Same spec handed to platform.
+
+**Open product question, explicitly not decided by security or Finance —
+needs the Founder.** "Anything endpoint" as a product goal does not require
+"anything endpoint" as a signing permission. An alternative: the agent
+discovers and *proposes* a payee, a human approves it once, and payment to
+that payee is automatic thereafter. This converts the worst-case attack — pay
+the attacker — from an undetectable success into a blocked transaction,
+materially stronger than amount caps alone. If declined, caps and balance
+still work, they just become the whole defense rather than a backstop.
 
 **8. Funding form of the $20 — still open.** Where the $20 should be loaded
 depends on its purpose and has not been decided: USDC into the budget wallet
