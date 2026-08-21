@@ -176,31 +176,16 @@ which I trust as far as the webhook is trustworthy — see Open Item 6. Until I
 have a second source I will book Stripe revenue from the ledger and treat it as
 unreconciled. *Needs either Stripe read access or a reliable relay.*
 
-**6. The Stripe webhook signing secret is exposed. — HIGH, books-integrity.**
-Found 2026-08-21 while resolving a contradiction between two sessions. The
-deployed machine carries a second secret whose **name is the literal signing
-secret value** (`whsec_…`), alongside the correctly-set `STRIPE_WEBHOOK_SECRET`
-— the signature of a `fly secrets set NAME value` with a missing `=`. Both are
-38 characters, so the exposed name is near-certainly the live secret. It is
-visible in `fly secrets list` output, `printenv` on the machine, and any shell
-history or transcript that captured either. Treat as disclosed.
+**6. Card-rail books-integrity item — tracked privately.** A credential-handling
+issue affecting the integrity of Stripe-side revenue booking was identified
+2026-08-21 and is being handled with the security session and the Founder.
+Details are deliberately **not** recorded in this file: this repository is
+public, and a written description of an unresolved control weakness is an
+advertisement. Recorded here only so the ledger shows the item exists and is
+owned. Remove this note once resolved.
 
-Why Finance cares more than it might appear: that secret is the only thing
-standing between this ledger and forged revenue. Anyone holding it can sign a
-`checkout.session.completed` event with `livemode: true`; our webhook verifies
-it, mints a real pass, and writes a `settled` $9 row into `/data/events.jsonl`.
-That is free service plus **fabricated revenue in the books** — the phantom-$9
-failure again, but deliberate and unbounded. It cannot move money out; it can
-put money in that never existed, which is the direction that destroys the
-numbers. Rotation handed to the security session; not executed by Finance
-(infra changes and a machine restart are outside this lane).
-
-**4. `data/passes.json` is presumed test data.** — 8 pass records in the working
-tree, one with `payer: "0xpayer"`. Excluded from the ledger entirely pending
-confirmation. If any of it is real, revenue above is wrong.
-
-**5. Infra costs are unconfirmed.** — Only Fly has even an estimate. Domain,
-Proton and Cloudflare are unknown rather than zero.
+Finance's position while it is open: Stripe-side `settled` rows are booked but
+treated as **unreconciled** until verified against Stripe itself.
 
 ## Known corrections to the record
 
