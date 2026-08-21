@@ -178,12 +178,23 @@ data. Keep that list honest as fields change.
 2. **Reverted tx with value reports a phantom ETH movement**; ERC-1155 batch
    truncates at 60 with `truncated:false`. Both make `assets_moved` assert
    something false.
-3. **Negative-cache poisoning of security signals** — `verificationStatus`
-   caches transient `unknown` for a day; `drainers.ts` disables `known_drainer`
-   for 12 h after a failed cold start. Both silently drop a risk flag. The
-   token-metadata instance is now Fixed; `TtlCache.getOrLoad` takes a per-result
-   TTL, so the same one-line pattern (`(v) => v === null ? NEGATIVE_TTL : …`)
-   closes these two — not yet applied to `verification.ts` / `drainers.ts`.
+3. **Negative-cache poisoning of security signals — now live-exercised, and the
+   fix is two one-liners.** `verification.ts:15` caches a transient `'unknown'`
+   for a DAY, keyed on ADDRESS ONLY — so one Sourcify blip suppresses
+   `unverified_contract` for that contract for 24h across every transaction and
+   every client. `firstTime.ts:40` does the same with a `null` verdict (keyed
+   including `beforeBlock`, so narrower impact). Base Blockscout returned HTTP
+   500 at 22:04 on 2026-08-20 and 200 by 22:20 — a 16-minute outage that poisoned
+   those keys for 24 hours, long after recovery. The `checks` field now makes the
+   resulting degradation visible, which is a real improvement, but the poisoning
+   itself is unchanged. The machinery to fix it already exists (per-result TTL in
+   `TtlCache.getOrLoad`, plus `NEGATIVE_TTL`):
+   - `verification.ts`: pass `(v) => (v === 'unknown' ? NEGATIVE_TTL : DAY)` as
+     the `getOrLoad` TTL.
+   - `firstTime.ts`: `cache.set(cacheKey, verdict, verdict === null ? NEGATIVE_TTL : DAY)`.
+   Priority note: this is cheaper and closes more than the deferred
+   truncated-vs-unreachable status split, which is a return-type change touching
+   these same cache semantics. Do these first.
 4. **Facilitator outage = total outage** — `app.listen()` is gated behind
    `initPayments()`; a PayAI blip at boot crash-loops the whole service. Bind
    first, init payments in the background.
