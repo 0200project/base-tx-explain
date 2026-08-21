@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { _resetAuthOnce, authKeyOf, forgetAuthorization, onceByAuthorization } from '../src/authOnce.js';
+import {
+  _authOnceSize,
+  _resetAuthOnce,
+  authKeyOf,
+  forgetAuthorization,
+  onceByAuthorization,
+} from '../src/authOnce.js';
 
 /**
  * The property under test is cost, not revenue. One signed EIP-3009
@@ -44,6 +50,15 @@ describe('authKeyOf — a silent null here would make the whole fix a no-op', ()
   });
 });
 
+const TX_A = '0xaaa1';
+const TX_B = '0xbbb2';
+/** Unwrap the common case; a conflict in these tests would be a failure. */
+async function once<T>(key: string | null, arg: string, work: () => Promise<T>): Promise<T> {
+  const r = await onceByAuthorization(key, arg, work);
+  if (r.kind !== 'result') throw new Error(`unexpected conflict, bound to ${r.boundTo}`);
+  return r.value;
+}
+
 describe('onceByAuthorization — one authorization buys exactly one decode', () => {
   it('runs the work ONCE for concurrent copies of one authorization', async () => {
     let runs = 0;
@@ -56,7 +71,7 @@ describe('onceByAuthorization — one authorization buys exactly one decode', ()
     };
 
     const key = authKeyOf(boundaryCtx());
-    const burst = Promise.all(Array.from({ length: 20 }, () => onceByAuthorization(key, work)));
+    const burst = Promise.all(Array.from({ length: 20 }, () => once(key, TX_A, work)));
     release?.();
     const results = await burst;
 
@@ -71,8 +86,8 @@ describe('onceByAuthorization — one authorization buys exactly one decode', ()
     const key = authKeyOf(boundaryCtx());
     const work = async () => ({ decode: ++runs });
 
-    const first = await onceByAuthorization(key, work);
-    const retry = await onceByAuthorization(key, work);
+    const first = await once(key, TX_A, work);
+    const retry = await once(key, TX_A, work);
     expect(runs).toBe(1);
     expect(retry).toBe(first);
   });
@@ -80,8 +95,8 @@ describe('onceByAuthorization — one authorization buys exactly one decode', ()
   it('keeps DIFFERENT authorizations independent — two payments are two decodes', async () => {
     let runs = 0;
     const work = async () => ({ decode: ++runs });
-    await onceByAuthorization(authKeyOf(boundaryCtx(FROM, '0xaa')), work);
-    await onceByAuthorization(authKeyOf(boundaryCtx(FROM, '0xbb')), work);
+    await once(authKeyOf(boundaryCtx(FROM, '0xaa')), TX_A, work);
+    await once(authKeyOf(boundaryCtx(FROM, '0xbb')), TX_A, work);
     expect(runs).toBe(2);
   });
 
@@ -90,9 +105,77 @@ describe('onceByAuthorization — one authorization buys exactly one decode', ()
     // module existed. Withholding a decode from a payer is the worse error.
     let runs = 0;
     const work = async () => ({ decode: ++runs });
-    await onceByAuthorization(null, work);
-    await onceByAuthorization(null, work);
+    await once(null, TX_A, work);
+    await once(null, TX_A, work);
     expect(runs).toBe(2);
+  });
+});
+
+/**
+ * The dangerous failure of any shared-result cache: answering the question the
+ * caller did NOT ask. Sharing is only sound while every caller of one
+ * authorization wants the same transaction, so the first call binds it.
+ */
+describe('onceByAuthorization — an authorization is bound to one transaction', () => {
+  it('REFUSES a different tx_hash rather than returning the bound decode', async () => {
+    let runs = 0;
+    const key = authKeyOf(boundaryCtx());
+    const work = async () => ({ decode: `decode-of-${++runs}` });
+
+    await once(key, TX_A, work);
+    const second = await onceByAuthorization(key, TX_B, work);
+
+    expect(second.kind).toBe('conflict'); // not TX_A's decode wearing TX_B's name
+    if (second.kind === 'conflict') expect(second.boundTo).toBe(TX_A);
+    expect(runs).toBe(1); // and refusing costs no upstream work either
+  });
+
+  it('refuses the mismatch in a concurrent burst, which is the attack shape', async () => {
+    // One authorization, many DIFFERENT hashes fired together: the shape that
+    // maximises RPC spend, and the shape a key without the hash would answer
+    // wrongly for all but one caller.
+    let runs = 0;
+    let release: (() => void) | null = null;
+    const gate = new Promise<void>((r) => (release = r));
+    const work = async () => {
+      runs++;
+      await gate;
+      return { decode: 'bound' };
+    };
+
+    const key = authKeyOf(boundaryCtx());
+    const burst = Promise.all([
+      onceByAuthorization(key, TX_A, work),
+      ...Array.from({ length: 10 }, (_, i) => onceByAuthorization(key, `0xdiff${i}`, work)),
+    ]);
+    release?.();
+    const outcomes = await burst;
+
+    expect(runs).toBe(1);
+    expect(outcomes[0]?.kind).toBe('result');
+    expect(outcomes.slice(1).every((o) => o.kind === 'conflict')).toBe(true);
+  });
+
+  it('lets a fresh authorization ask about the transaction another one was refused for', async () => {
+    let runs = 0;
+    const work = async () => ({ decode: ++runs });
+    await once(authKeyOf(boundaryCtx(FROM, '0xaa')), TX_A, work);
+    // A second, separately paid authorization is a second purchase and must work.
+    await once(authKeyOf(boundaryCtx(FROM, '0xbb')), TX_B, work);
+    expect(runs).toBe(2);
+  });
+});
+
+/**
+ * The map must not become a cheaper attack than the one it closes: this runs on
+ * a single 256 MB machine, so unbounded retention would turn a cost bug into an
+ * availability bug.
+ */
+describe('onceByAuthorization — retention is bounded', () => {
+  it('caps the number of retained authorizations, evicting oldest first', async () => {
+    const work = async () => ({ decode: 'x' });
+    for (let i = 0; i < 1500; i++) await once(`payer:${i}`, TX_A, work);
+    expect(_authOnceSize()).toBeLessThanOrEqual(1000);
   });
 });
 
@@ -105,8 +188,8 @@ describe('onceByAuthorization — a failure leaves the authorization unspent', (
       throw new Error('upstream down');
     };
 
-    await expect(onceByAuthorization(key, failing)).rejects.toThrow('upstream down');
-    await expect(onceByAuthorization(key, failing)).rejects.toThrow('upstream down');
+    await expect(onceByAuthorization(key, TX_A, failing)).rejects.toThrow('upstream down');
+    await expect(onceByAuthorization(key, TX_A, failing)).rejects.toThrow('upstream down');
     expect(runs).toBe(2); // the payment never settled; the caller is owed a real attempt
   });
 
@@ -116,9 +199,9 @@ describe('onceByAuthorization — a failure leaves the authorization unspent', (
     const key = authKeyOf(boundaryCtx());
     const work = async () => ({ isError: true, run: ++runs });
 
-    await onceByAuthorization(key, work);
+    await once(key, TX_A, work);
     forgetAuthorization(key);
-    await onceByAuthorization(key, work);
+    await once(key, TX_A, work);
     expect(runs).toBe(2);
   });
 });

@@ -203,7 +203,13 @@ data. Keep that list honest as fields change.
   resource. Cost amplification, not a revenue bug, and only we could close it,
   because nothing is wrong on-chain until settle. Now single-flighted on
   `(payer, nonce)`: every caller of one authorization gets the SAME decode,
-  computed once. It DEDUPES rather than rejects on purpose — a client whose
+  computed once. The first call also BINDS the authorization to its transaction
+  hash, and a later call on that authorization asking about a different hash is
+  refused rather than answered — without that, a burst of one authorization plus
+  N different hashes would have collapsed to one decode and returned it to
+  callers who asked about other transactions, which is a silently wrong
+  authoritative answer and worse than the cost bug being fixed. Caught in review
+  by platform's question about key composition, before deploy. It DEDUPES rather than rejects on purpose — a client whose
   response was lost retries with the same authorization, and rejecting that
   after the first settled would take the money and withhold the decode, which is
   the one error this service must never make. Errors are not retained (a failed
@@ -297,6 +303,16 @@ data. Keep that list honest as fields change.
 - **Facilitator outage _during verify_** — verify precedes the handler, so it
   fails closed (no free decode). The settle-after window leaked until the
   authorization single-flight closed it (§4).
+- **Free decodes from an unfunded wallet** — does not exist. `verify` in
+  `@x402/evm` is NOT signature-only: it runs `simulateEip3009TransferResult`
+  against present chain state, so an authorization from a zero-balance wallet (or
+  one whose nonce is already consumed) fails verify and never reaches the
+  handler. This is load-bearing for how the paid path is reasoned about: the
+  settle-after window leaks only what a payer who CAN pay is able to replay, not
+  unlimited free service. Note the asymmetry — settle defaults to
+  `simulateInSettle: false`, so it re-checks signature/expiry/value but does not
+  re-simulate before broadcasting; an on-chain revert after broadcast is
+  therefore still possible and is why `provablyUnpaid` requires an absent tx hash.
 - **Non-string `tx_hash` crash** — the MCP SDK's zod layer rejects it (`-32602`)
   before `runExplain`. Confirmed live.
 - **Malformed-JSON stack leak** — Express 5 under `NODE_ENV=production` returns a

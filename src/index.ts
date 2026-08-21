@@ -314,7 +314,29 @@ async function initPayments(): Promise<void> {
   const chargedExplain = paid(runExplain);
   paidHandler = (async (args: { tx_hash: string }, extra: unknown) => {
     const key = authKeyOf(extra);
-    const result = await onceByAuthorization(key, async () => chargedExplain(args, extra as never));
+    const outcome = await onceByAuthorization(key, args.tx_hash.trim().toLowerCase(), async () =>
+      chargedExplain(args, extra as never),
+    );
+    // One authorization buys one transaction. Answering a different hash from
+    // the bound decode would return authoritative JSON about the wrong
+    // transaction, so this refuses instead - and never settles, since the
+    // inner paid handler is not called at all.
+    if (outcome.kind === 'conflict') {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              error:
+                'This payment authorization was already used to explain a different transaction. Each payment covers one transaction; send a new payment for this one.',
+              code: 'authorization_already_used',
+            }),
+          },
+        ],
+        isError: true,
+      };
+    }
+    const result = outcome.value;
     // An errored decode does not settle, so that authorization is still unspent
     // and a retry has to really run instead of replaying the failure.
     if ((result as { isError?: boolean } | null)?.isError) forgetAuthorization(key);
