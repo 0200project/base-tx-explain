@@ -68,6 +68,12 @@ export interface WebhookHealth {
   probe_count: number;
   /** Well-formed but stale timestamps. Ambiguous, so recorded not alarmed. */
   stale_timestamp_count: number;
+  /**
+   * Our own verification probes, self-identified with the internal marker.
+   * Never alarms: Stripe does not send our marker, so a marked rejection is by
+   * construction not a delivery.
+   */
+  internal_probe_count: number;
   /** When a human last cleared an incident, so a live alarm can be dismissed. */
   last_acknowledged_at: string | null;
   /** Rejections cleared by acknowledgement over all time. Never reset. */
@@ -85,6 +91,7 @@ interface Stored {
   bad_signature_count: number;
   probe_count: number;
   stale_timestamp_count: number;
+  internal_probe_count: number;
   /** When a human last confirmed they had dealt with an incident. */
   last_acknowledged_at: string | null;
   /** Running total of rejections cleared by acknowledgement, never reset. */
@@ -99,6 +106,7 @@ const EMPTY: Stored = {
   bad_signature_count: 0,
   probe_count: 0,
   stale_timestamp_count: 0,
+  internal_probe_count: 0,
   last_acknowledged_at: null,
   acknowledged_total: 0,
 };
@@ -156,9 +164,33 @@ const PROBE_REASONS = new Set([
  * rather than optional — a caller that cannot say why it rejected something
  * should not be able to record it as harmless by omission.
  */
-export function recordWebhookRejected(reason: string, now = new Date()): void {
+export function recordWebhookRejected(
+  reason: string,
+  opts: { internal?: boolean; now?: Date } = {},
+): void {
+  const now = opts.now ?? new Date();
   state.last_rejected_at = now.toISOString();
   state.last_reject_reason = reason;
+
+  // OUR OWN VERIFICATION PROBES MUST LABEL THEMSELVES, not be remembered.
+  //
+  // I tested this instrument by firing a forged signature at production, which
+  // raised a real incident that a teammate then spent time running down while
+  // answering the founder's question about whether we had a customer — and
+  // nearly attributed to a third agent whose commits happened to match the
+  // minute. The confusion was not the bug. The bug was that a deliberate test
+  // and a genuine event were indistinguishable once the moment had passed.
+  //
+  // Same fix as `internal.ts` and for the same stated reason: a scoreboard that
+  // depends on somebody recalling what they ran an hour ago is not a
+  // scoreboard. Stripe never sends our marker, so a marked rejection is by
+  // definition not a delivery, and forgetting the marker still errs toward
+  // alarm rather than silence.
+  if (opts.internal) {
+    state.internal_probe_count += 1;
+    persist();
+    return;
+  }
 
   if (PROBE_REASONS.has(reason)) {
     state.probe_count += 1;
@@ -217,6 +249,7 @@ export function webhookHealth(): WebhookHealth {
     bad_signature_count: state.bad_signature_count,
     probe_count: state.probe_count,
     stale_timestamp_count: state.stale_timestamp_count,
+    internal_probe_count: state.internal_probe_count,
     last_acknowledged_at: state.last_acknowledged_at,
     acknowledged_total: state.acknowledged_total,
   };

@@ -223,3 +223,45 @@ describe('acknowledging an incident', () => {
     expect(m.webhookHealth().status).toBe('never_exercised');
   });
 });
+
+describe('our own probes must label themselves', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  /**
+   * Written after I fired a forged signature at production to verify this very
+   * instrument, raised a real incident, and a teammate spent time running it
+   * down mid-way through answering the founder — nearly attributing it to a
+   * third agent whose commits matched the minute. A deliberate test and a
+   * genuine event must not be indistinguishable after the fact.
+   */
+  it('never alarms on a rejection carrying our internal marker', async () => {
+    const m = await load();
+    m.recordWebhookRejected('no_matching_signature', { internal: true });
+    const h = m.webhookHealth();
+    expect(h.internal_probe_count).toBe(1);
+    expect(h.bad_signature_count).toBe(0);
+    expect(h.needs_attention).toBe(false);
+    expect(h.status).toBe('never_exercised');
+  });
+
+  it('still alarms on the same reason WITHOUT the marker', async () => {
+    // Forgetting the marker errs toward alarm, never toward silence — the same
+    // failure direction internal.ts chose, and for the same reason.
+    const m = await load();
+    m.recordWebhookRejected('no_matching_signature');
+    expect(m.webhookHealth().needs_attention).toBe(true);
+  });
+
+  it('keeps our probes out of the stranger-probe count too', async () => {
+    // Separate bucket, so "how often do strangers poke this endpoint" stays
+    // answerable and is not inflated by our own testing.
+    const m = await load();
+    m.recordWebhookRejected('missing_signature_header', { internal: true });
+    const h = m.webhookHealth();
+    expect(h.internal_probe_count).toBe(1);
+    expect(h.probe_count).toBe(0);
+  });
+});
