@@ -197,9 +197,26 @@ const DASH_SCRIPT = `
     return parseDay(s).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }
 
-  /* ---------- revenue (on-chain, public API) ---------- */
+  /* ---------- revenue ---------- */
 
-  function loadRevenue() {
+  // The balance is authoritative and comes from our own server (/stats
+  // treasury block, read via Base RPC with failover). The per-payment list
+  // below is a public-explorer nicety and degrades on its own: Blockscout
+  // being down must never blank the number this page exists to show.
+  function renderTreasury(t) {
+    if (!t) return;
+    var bal = Number(t.usdc_balance);
+    $('rev-total').textContent = usd(bal);
+    var pct = Math.min(100, (bal / TARGET_USD) * 100);
+    $('rev-bar').style.width = pct.toFixed(1) + '%';
+    $('rev-target-label').textContent = usd(bal) + ' of $' + TARGET_USD + ' validation target';
+    var note = 'Balance read from Base RPC by this server';
+    if (t.read_at) note += ' as of ' + new Date(t.read_at).toLocaleTimeString();
+    if (t.error) note += ' \\u2014 latest refresh failed, this is the last good read';
+    $('rev-note').textContent = note + '.';
+  }
+
+  function loadTransfers() {
     var msg = $('rev-msg');
     return fetch(TRANSFERS_URL, { cache: 'no-store' })
       .then(function (r) {
@@ -225,11 +242,7 @@ const DASH_SCRIPT = `
 
         rows.sort(function (a, b) { return (b.time ? b.time.getTime() : 0) - (a.time ? a.time.getTime() : 0); });
 
-        $('rev-total').textContent = usd(total);
-        $('rev-count').textContent = rows.length + (rows.length === 1 ? ' payment' : ' payments');
-        var pct = Math.min(100, (total / TARGET_USD) * 100);
-        $('rev-bar').style.width = pct.toFixed(1) + '%';
-        $('rev-target-label').textContent = usd(total) + ' of $' + TARGET_USD + ' validation target';
+        $('rev-count').textContent = rows.length + (rows.length === 1 ? ' payment received' : ' payments received');
 
         var wrap = $('rev-table');
         if (rows.length === 0) {
@@ -287,7 +300,8 @@ const DASH_SCRIPT = `
         wrap.appendChild(box);
       })
       .catch(function () {
-        msg.textContent = 'Could not load on-chain data from Blockscout right now. The section will retry on the next refresh.';
+        $('rev-count').textContent = 'payment list unavailable';
+        msg.textContent = 'The public explorer (Blockscout) is not answering, so the per-payment list is unavailable. The balance above reads directly from the chain and stays live.';
       });
   }
 
@@ -411,6 +425,7 @@ const DASH_SCRIPT = `
         return r.json();
       })
       .then(function (d) {
+        renderTreasury(d.treasury);
         var daily = d.daily || [];
         renderChart(daily);
         renderStatsTable(daily);
@@ -439,7 +454,7 @@ const DASH_SCRIPT = `
   function refreshAll() {
     var btn = $('refresh');
     btn.disabled = true;
-    Promise.all([loadRevenue(), loadUsage()])
+    Promise.all([loadTransfers(), loadUsage()])
       .then(function () { return loadStats(); })
       .then(function () {
         stamp();
@@ -465,7 +480,7 @@ export function dashboardPage(): string {
     '<section class="page-hero"><div class="container">' +
     '<span class="eyebrow">Dashboard</span>' +
     '<h1 class="h-section">Revenue and usage</h1>' +
-    '<p class="lead">On-chain USDC received by the payment wallet, plus lifetime server counters. Served token-gated from the API origin; revenue loads from Blockscout in your browser, usage and daily detail come from this server over your session cookie.</p>' +
+    '<p class="lead">On-chain USDC in the payment wallet, plus lifetime server counters. Served token-gated from the API origin; the balance is read by this server straight from Base RPC, while the per-payment list comes from a public explorer and may lag or drop out independently.</p>' +
     '</div></section>' +
     '<div class="container dash-body"><div class="dash-col">' +
     '<div class="dash-meta">' +
@@ -477,7 +492,8 @@ export function dashboardPage(): string {
     '<h2>Revenue</h2>' +
     '<div class="panel"><div class="rev-hero">' +
     '<div><div class="rev-amount" id="rev-total">&mdash;</div>' +
-    '<div class="small faint rev-sub"><span id="rev-count">&mdash;</span> &middot; USDC on Base</div></div>' +
+    '<div class="small faint rev-sub"><span id="rev-count">&mdash;</span> &middot; USDC on Base</div>' +
+    '<div class="small faint rev-sub" id="rev-note"></div></div>' +
     '<div class="rev-target"><div class="small faint" id="rev-target-label">$25 validation target</div>' +
     '<div class="progress"><i id="rev-bar"></i></div></div>' +
     '</div></div>' +
