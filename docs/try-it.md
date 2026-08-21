@@ -168,3 +168,41 @@ nothing was skipped, there was nothing to look at. That is the field behaving
 correctly, and it is the honest version. A richer transaction (a swap, an
 approval) exercises all three. Do not present this one as a showcase of risk
 checking; present it as a showcase of an audit line.
+
+---
+
+## If the first real paid call errors, read this before diagnosing anything
+
+Written 2026-08-21, the night before a first paid call was plausible, so that it
+is not diagnosed cold.
+
+**Check for `authorization_already_used` first.** A single-flight guard binds one
+x402 payment authorization to one transaction hash. A well-behaved client mints
+a fresh authorization per request and never sees it. A client that reuses one
+authorization across *different* hashes gets a refusal instead of a decode:
+
+```json
+{ "error": "This payment authorization was already used to explain a different
+            transaction. Each payment covers one transaction; send a new payment
+            for this one.",
+  "code": "authorization_already_used" }
+```
+
+**That is correct behaviour, not a bug** — one payment buys one decode, and
+without it a burst sharing one authorization would run N decodes for one payment.
+But it would be a confusing first paid experience, so name it immediately rather
+than letting someone hunt.
+
+**Other things to check, in order:**
+
+| Symptom | Look at |
+|---|---|
+| paid call refused as above | client reusing one authorization — see above |
+| 402 loop, client never pays | they need an x402-capable client; a plain MCP client reads the challenge as an error, which is per spec |
+| card purchase, no pass | `webhook.status` on `/stats` — if `REJECTING_SIGNED_DELIVERIES`, our secret disagrees with Stripe and Stripe retries ~3 days |
+| paid but `revenue_from_customers_usd` still 0 | correct until a human promotes it. `/stats` → `unattributed[]` gives the exact handle to POST to `/revenue/attribute` |
+| pass token answers `not_activated` after a deploy | a restart stranded it mid-settlement; `listUnconfirmed()` has it, with the nonce |
+
+**The last two are by design and will look like bugs.** Revenue does not
+self-promote and a stranded pass is not silently deleted — both under-report
+until a human looks, which is the direction chosen deliberately.
