@@ -251,7 +251,7 @@
   /* Five real Base transactions, decoded by the production pipeline. */
   var SAMPLES = {
     "0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c": {
-          "summary": "0x401d...f2c5 swapped 0.03 ETH for 12,899,422 WNL via Uniswap V4 PoolManager. Not all risk checks completed for this transaction; see checks. Absence of a risk flag here does not mean none exists.",
+          "summary": "0x401d...f2c5 swapped 0.03 ETH for 12,899,422 WNL via Uniswap V4 PoolManager.",
           "action_type": "swap",
           "status": "success",
           "assets_moved": [
@@ -290,10 +290,10 @@
           ],
           "checks": {
             "contract_verification": "ok",
-            "first_interaction": "unavailable",
+            "first_interaction": "ok",
             "drainer_blacklist": "ok",
             "unchecked_addresses": [],
-            "note": "counterparty history could not be checked. No flag was emitted for those checks, and that absence carries no information: treat it as unknown, not as clean."
+            "note": null
           },
           "gas_paid_usd": 0.020562,
           "timestamp": "2026-08-20T03:54:19.000Z",
@@ -311,7 +311,7 @@
           }
         },
     "0x8b246d458fd8b982455cdc172613272a090d1f84da559feb3392c152a09721c8": {
-          "summary": "0xf9b6...af41 called Aerodrome Slipstream Router (function: exactInputSingle), but the transaction reverted and no assets moved. Not all risk checks completed for this transaction; see checks. Absence of a risk flag here does not mean none exists.",
+          "summary": "0xf9b6...af41 called Aerodrome Slipstream Router (function: exactInputSingle), but the transaction reverted and no assets moved. Not all risk checks returned an answer for this transaction; see checks. Absence of a risk flag here does not mean none exists.",
           "action_type": "contract_interaction",
           "status": "reverted",
           "assets_moved": [],
@@ -350,7 +350,7 @@
           }
         },
     "0x8f1e67833a72c7d2d82ff57731fefaf96fa17bdecb9da7f9ac3f4c6b5679fa12": {
-          "summary": "0x81db...cf4d added liquidity of 2,770,537 BRETT and 0.688192 WETH to a pool via Aerodrome Slipstream Position Manager. Not all risk checks completed for this transaction; see checks. Absence of a risk flag here does not mean none exists.",
+          "summary": "0x81db...cf4d added liquidity of 2,770,537 BRETT and 0.688192 WETH to a pool via Aerodrome Slipstream Position Manager. Not all risk checks returned an answer for this transaction; see checks. Absence of a risk flag here does not mean none exists.",
           "action_type": "add_liquidity",
           "status": "success",
           "assets_moved": [
@@ -410,7 +410,7 @@
           }
         },
     "0x08d78d805d54d3bface91a2f8d081d79429279bdd5a2f8c10da2b833dd3e0100": {
-          "summary": "0x8581...c402 sent 0.000792 USDC to 0x6652...0B38. Not all risk checks completed for this transaction; see checks. Absence of a risk flag here does not mean none exists.",
+          "summary": "0x8581...c402 sent 0.000792 USDC to 0x6652...0B38. Not all risk checks returned an answer for this transaction; see checks. Absence of a risk flag here does not mean none exists.",
           "action_type": "erc20_transfer",
           "status": "success",
           "assets_moved": [
@@ -457,7 +457,7 @@
           }
         },
     "0x3002b2c60d153e11e69986103b42d4887da30f8e02890f834d6de16e0c358be3": {
-          "summary": "0x3304...566a sent 0.00925 ETH to 0xf919...700d. Not all risk checks completed for this transaction; see checks. Absence of a risk flag here does not mean none exists.",
+          "summary": "0x3304...566a sent 0.00925 ETH to 0xf919...700d. Not all risk checks returned an answer for this transaction; see checks. Absence of a risk flag here does not mean none exists.",
           "action_type": "eth_transfer",
           "status": "success",
           "assets_moved": [
@@ -484,7 +484,7 @@
             "unchecked_addresses": [],
             "note": null
           },
-          "gas_paid_usd": 0.00592,
+          "gas_paid_usd": 0.005921,
           "timestamp": "2026-08-20T06:36:41.000Z",
           "block_number": 50209227,
           "tx_hash": "0x3002b2c60d153e11e69986103b42d4887da30f8e02890f834d6de16e0c358be3",
