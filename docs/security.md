@@ -348,7 +348,11 @@ Settled decisions:
   move. But EIP-3009 lets any third party submit a signed authorization and pay
   the gas themselves, which is exactly why both our wallets show nonce 0 while
   holding funds. Zero ETH shapes a theft; it does not prevent one. Do not record
-  it as a protection.
+  it as a protection. This is proven here, not inferred: 0.02 USDC demonstrably
+  LEFT the SPEND wallet while its nonce is still 0. Money has moved in both
+  directions across two wallets that have never sent a transaction — and that
+  mechanism is the one this product exists to explain, which makes writing zero
+  ETH down as protection a particularly bad look.
 - **HARD RULE — no closed loop.** A spending agent must NEVER consume this
   product's own `explain_transaction` output as decision input. We ingest
   attacker-controlled strings off a public chain (forged events, hostile token
@@ -357,6 +361,14 @@ Settled decisions:
   no key theft required. This outranks every mechanism below it.
 - **Separate the signer from the parser.** Whatever holds signing capability must
   not be the process that ingests untrusted chain data.
+- **`scripts/paid-call.ts` is a working signer already in the repo.** It reads
+  `X402_TEST_PRIVATE_KEY` and signs with viem. It is a developer script, the
+  variable is unset, and nothing the server runs imports it — so it is not a live
+  exposure. It is a *footgun*: it is the nearest thing to reach for if someone
+  builds autonomous spend under time pressure, and copying it yields exactly the
+  design this section exists to prevent — a raw private key in an environment
+  variable, in-process with everything else. If you are here because you are
+  implementing spend, do not start from that file.
 - **Detection: balance and ERC-20 Transfer events, NEVER transaction count.**
   Transaction-based monitoring is blind on this rail by construction — a drain via
   a signed authorization leaves the wallet's nonce at 0 and puts no transaction
