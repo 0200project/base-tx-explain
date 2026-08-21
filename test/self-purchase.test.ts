@@ -243,6 +243,47 @@ describe('settlement attribution in the ledger', () => {
     expect(l.known_non_revenue_usd).toBe(0.02);
   });
 
+  /**
+   * PRODUCTION ORDER, and asserting on what attribute() RETURNED rather than
+   * only on the buckets afterwards.
+   *
+   * The previous version of this test called attribute() before settle() — the
+   * author's order — inside the test written to demonstrate the fix for the
+   * author's order. And it never checked the return value, so it passed while
+   * the function reported success for something it had not done.
+   */
+  it('REFUSES to promote a written-off arrival, and records nothing', async () => {
+    const { usage, attribution } = await load();
+    const tx = '0x6ce5e3948c9c6b8e0ef8413f3c29623163bb7b58155eda90a67464f3bb119110';
+
+    settle(usage, { amount_usd: 0.02, tx, id: tx });
+    const result = attribution.attribute(tx) as { promoted: boolean; reason?: string; why?: string };
+
+    // 1. It must not claim success for something it did not do.
+    expect(result.promoted).toBe(false);
+    expect(result.reason).toBe('known_non_revenue');
+    // 2. It must say WHY, so the operator is not left guessing.
+    expect(String(result.why ?? '')).toMatch(/favour|probe|declined/i);
+
+    // 3. THE LANDMINE. Nothing may be persisted. A suppressed-but-stored
+    //    promotion sits inert only while isKnownNonRevenue is checked first,
+    //    and would activate by itself the day anyone edits KNOWN_NON_REVENUE —
+    //    money moving into customer revenue with nobody clicking at that
+    //    moment, caused by a click months earlier.
+    expect(attribution.isAttributed(tx)).toBe(false);
+  });
+
+  it('a legitimate promotion still works and still says so', async () => {
+    // The guard must refuse the written-off case WITHOUT breaking the case the
+    // endpoint exists for.
+    const { usage, attribution } = await load();
+    settle(usage, { id: 'cs_ordinary' });
+    const result = attribution.attribute('cs_ordinary') as { promoted: boolean };
+    expect(result.promoted).toBe(true);
+    expect(attribution.isAttributed('cs_ordinary')).toBe(true);
+    expect(lt(usage).revenue_from_customers_usd).toBe(9);
+  });
+
   it('never reports a negative customer figure', async () => {
     const { usage } = await load();
     settle(usage, { amount_usd: 0.01, self: true, id: 'x' });

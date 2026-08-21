@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { knownNonRevenueReason } from './knownNonRevenue.js';
 import { join } from 'node:path';
 
 /**
@@ -99,7 +100,22 @@ export function isAttributed(id: string | undefined): boolean {
  * stranger cannot silence it, and a sale is worth reporting only if a human
  * said it was one.
  */
-export function attribute(id: string, now = new Date()): { promoted: boolean; id: string } {
+export function attribute(
+  id: string,
+  now = new Date(),
+): { promoted: boolean; id: string; reason?: string; why?: string } {
+  // REFUSE, DO NOT ACCEPT-AND-SUPPRESS. The bucket logic already ignores a
+  // written-off arrival, so storing the promotion anyway would be harmless
+  // today and a landmine tomorrow: the entry persists, sits inert only while
+  // `isKnownNonRevenue` is checked first, and would ACTIVATE BY ITSELF the day
+  // anyone edits KNOWN_NON_REVENUE — money moving into customer revenue with
+  // nobody clicking at that moment, caused by a click months earlier.
+  //
+  // It would also log "attributed to a customer by a human" when no human did
+  // and the system does not believe it. An untrue log line is worse than none,
+  // because it is what somebody reconstructs from at 2am.
+  const why = knownNonRevenueReason(id);
+  if (why) return { promoted: false, id, reason: 'known_non_revenue', why };
   if (!id || attributed.has(id)) return { promoted: false, id };
   attributed.add(id);
   state.attributed.push(id);

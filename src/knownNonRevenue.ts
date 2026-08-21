@@ -137,3 +137,16 @@ export function isKnownNonRevenue(ref: string | undefined): boolean {
   const needle = ref.toLowerCase();
   return KNOWN_NON_REVENUE.some((k) => k.tx.toLowerCase() === needle);
 }
+
+/**
+ * The written reason this arrival was ruled out, or null.
+ *
+ * Exposed so a refusal can TELL the operator why rather than just saying no.
+ * A guard that blocks without explaining gets worked around; one that quotes
+ * the paragraph somebody wrote gets understood.
+ */
+export function knownNonRevenueReason(ref: string | undefined): string | null {
+  if (!ref) return null;
+  const needle = ref.toLowerCase();
+  return KNOWN_NON_REVENUE.find((k) => k.tx.toLowerCase() === needle)?.why ?? null;
+}

@@ -1051,7 +1051,22 @@ app.post('/revenue/attribute', (req, res) => {
     return;
   }
   const undo = req.query.undo === '1';
-  const result = undo ? unattribute(id) : attribute(id);
+  if (undo) {
+    res.set('Cache-Control', 'no-store').json({ ...unattribute(id), attribution: attributionSnapshot() });
+    return;
+  }
+  const result = attribute(id);
+  // 409 rather than 200-with-promoted-false: this is a refusal with a reason,
+  // and the reason names a source-level list, so the operator learns that
+  // overriding it means editing KNOWN_NON_REVENUE and deploying — not clicking
+  // harder.
+  if (result.reason === 'known_non_revenue') {
+    res.status(409).set('Cache-Control', 'no-store').json({
+      ...result,
+      how: 'This arrival is recorded as non-revenue with a written reason. To change that, edit KNOWN_NON_REVENUE in src/knownNonRevenue.ts and deploy.',
+    });
+    return;
+  }
   res.set('Cache-Control', 'no-store').json({ ...result, attribution: attributionSnapshot() });
 });
 
