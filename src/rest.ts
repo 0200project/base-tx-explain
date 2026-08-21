@@ -153,7 +153,9 @@ export interface PassRouteDeps {
   callCap: number;
   days: number;
   mint: () => { token: string; expires_at: string; call_cap: number };
-  /** Record the $9 settlement in the usage ledger. */
+  /** Drop a pass whose payment did not settle (the caller never received it). */
+  revoke: (token: string) => void;
+  /** Record the $9 settlement in the usage ledger. Only on a confirmed sale. */
   recordSale: () => void;
 }
 
@@ -194,7 +196,29 @@ export function registerPassRoutes(app: express.Express, deps: PassRouteDeps): v
 
   app.post('/pass', passGate, (_req, res) => {
     const pass = deps.mint();
-    deps.recordSale();
+    // The handler runs BEFORE settlement, so at this point we do not yet know
+    // whether the $9 moved. The middleware buffers this response and either
+    // replays it verbatim (settled) or discards the body and sends its own
+    // failure status (did not settle), so the FINAL status is a precise signal
+    // — no age heuristic, which would eventually reap a real buyer's unused
+    // pass. Book the sale only on a delivered success; otherwise the caller
+    // never received this token, so drop it rather than leave it active and
+    // inflate the pass count.
+    let resolved = false;
+    const finish = (): void => {
+      if (resolved) return;
+      resolved = true;
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        deps.recordSale();
+        return;
+      }
+      deps.revoke(pass.token);
+      console.error(`[pass] REST sale not settled (status ${res.statusCode}); pass dropped, no revenue booked`);
+    };
+    res.on('finish', finish);
+    // A dropped connection never delivered the token, so it is worthless to the
+    // caller either way; do not leave it counted as an active pass.
+    res.on('close', finish);
     res.status(200).json({
       pass_token: pass.token,
       expires_at: pass.expires_at,

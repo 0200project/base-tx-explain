@@ -16,7 +16,7 @@ import { buildOpenApiDocument } from './openapi.js';
 import { registerPassRoutes, registerRestRoutes } from './rest.js';
 import { getTreasury } from './treasury.js';
 import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
-import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, passSnapshot, refundPassUse, activatePass, revokePendingPass, usePass } from './passes.js';
+import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, passSnapshot, refundPassUse, activatePass, revokePass, revokePendingPass, usePass } from './passes.js';
 import { HOUR, TtlCache } from './cache.js';
 import { APIFY_BILLING_ACTIVE, initApifyBilling, chargeApifyCall } from './apifyBilling.js';
 import { initUsageLedger, recordEvent, usageSnapshot } from './usage.js';
@@ -771,10 +771,13 @@ initApifyBilling()
         // receive this token without having paid. Minting pending here would
         // strand real payers - nothing on this rail activates them.
         mint: () => mintPass(),
+        revoke: revokePass,
         recordSale: () => {
-          // Settlement details for HTTP sales are recorded by the payment
-          // middleware's receipt; the ledger row here keeps revenue whole
-          // even if that receipt is lost.
+          // Called only once the response was actually delivered, which on this
+          // rail means settlement succeeded. Booking before that inflated the
+          // revenue line with sales that never happened - and an over-reported
+          // sale is invisible from inside the ledger, while an under-reported
+          // one is always recoverable from the payout wallet on-chain.
           recordEvent({ t: new Date().toISOString(), e: 'settled', client: 'rest-pass', amount_usd: Number.parseFloat(PASS_PRICE_USD) });
         },
       });
