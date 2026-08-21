@@ -123,6 +123,24 @@ data. Keep that list honest as fields change.
   the customer. "Withhold, maybe activate" looks safer than "grant, maybe
   revoke" but flips the ambiguous cases — where real payers sit — from fail-open
   to fail-closed._
+- **IPv6 /64 not normalised — the free tier and rate limit were optional for any
+  IPv6 caller.** Both counters keyed on the full client address. IPv6's smallest
+  routed allocation is a /64, which any VPS or home line controls in full, so a
+  caller binding a new source address per request presented up to 2^64 identities
+  — each a fresh 10-call tier and a fresh 60/minute window — without forging
+  anything. `clientKey` (src/clientKey.ts) now collapses IPv6 to its /64 while
+  leaving IPv4 exact, which makes the two families behave alike rather than
+  making IPv6 stricter: an IPv4 household behind NAT has always shared one
+  bucket. Normalised once in `clientIpOf`, so the free tier, the throttle and the
+  ledger cannot drift into disagreeing about who a client is.
+  _Proven end to end, not argued: with the tier set to 2, four calls from four
+  different addresses inside one /64 went free, free, free-degraded,
+  free-degraded — the counter depleting across the rotation — while a fifth call
+  from a different /64 got its own tier._
+  **Ledger semantics changed with it:** `client` is hashed from the same key, so
+  unique/external client counts now treat a /64 as one client. Deliberate — a
+  number answering "has a stranger used this" must not be inflatable by one
+  stranger — and the accountant has been told rather than left to notice.
 - **Metadata negative-cache poisoning** (per-result cache TTL). `getTokenMeta`,
   `getContractName`, and `getTokenSupply` returned `null` on any read failure and
   cached it FOREVER, so one transient RPC blip rendered a token's amounts at the
@@ -224,9 +242,7 @@ data. Keep that list honest as fields change.
 5. **Facilitator outage = total outage** — `app.listen()` is gated behind
    `initPayments()`; a PayAI blip at boot crash-loops the whole service. Bind
    first, init payments in the background.
-6. **IPv6 /64 not normalized** — free-tier/rate-limit keyed on the full address;
-   a routed /64 mints many tiers. Mask to /64. (Bounded by machine throughput;
-   the real harm is upstream-quota exhaustion.)
+6. _(moved to Fixed: IPv6 /64 normalisation)_
 7. **Ambiguous pass activation (residual of the fix below).** A pass activated
    because settlement was ambiguous rather than confirmed could, in principle,
    turn out to be unpaid — bounded at $9 of calls. Deliberately NOT capped: this

@@ -19,6 +19,7 @@ import { getTreasury } from './treasury.js';
 import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
 import { passFromHeaders, passFromPath, passUrl } from './passUrl.js';
 import { isInternalRequest } from './internal.js';
+import { clientKey } from './clientKey.js';
 import { normalizeMcpPayments } from './mcpPayment.js';
 import { checkWallets, initWalletMonitor } from './walletMonitor.js';
 import {
@@ -553,13 +554,19 @@ app.use(express.json({ limit: '256kb' }));
 
 // On Fly the edge stamps Fly-Client-IP itself; elsewhere fall back to
 // Express's rightmost-untrusted-hop resolution.
+//
+// The result is normalised by `clientKey` before anything counts it: an IPv6
+// caller controls a whole /64 and can present a new address per request, which
+// on the raw address would be a fresh free tier and a fresh rate-limit window
+// every time. One key here rather than at each call site, so the free tier, the
+// throttle and the ledger cannot drift into disagreeing about who a client is.
 const ON_FLY = Boolean(process.env.FLY_APP_NAME);
 const clientIpOf = (req: express.Request): string => {
   if (ON_FLY) {
     const flyIp = req.headers['fly-client-ip'];
-    if (typeof flyIp === 'string' && flyIp) return flyIp;
+    if (typeof flyIp === 'string' && flyIp) return clientKey(flyIp);
   }
-  return req.ip ?? 'unknown';
+  return clientKey(req.ip);
 };
 
 // Root responds instantly: humans, uptime checks, and the Apify standby
