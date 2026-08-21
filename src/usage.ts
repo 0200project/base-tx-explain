@@ -1,5 +1,6 @@
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { absorbCheckHealthEvent, takeCheckHealthEvents, type CheckHealthEvent } from './checkHealth.js';
 
 /**
  * Append-only usage ledger. One JSONL file on disk (a Fly volume in
@@ -13,6 +14,14 @@ import { join } from 'node:path';
 export type UsageEvent =
   | { t: string; e: 'call'; charge: boolean; paid?: boolean; pass?: boolean; client: string; ok?: boolean }
   | { t: string; e: 'settled'; client: string; amount_usd: number; payer?: string; tx?: string };
+
+/**
+ * Everything the ledger carries. Risk-check availability rides the same file
+ * rather than a second store: one machine, one volume, one writer, and a
+ * monitoring signal that needs its own database is a monitoring signal this
+ * budget cannot keep.
+ */
+export type LedgerEvent = UsageEvent | CheckHealthEvent;
 
 interface DayAgg {
   calls: number;
@@ -57,9 +66,18 @@ function aggFor(day: string): DayAgg {
   return agg;
 }
 
-function absorb(ev: UsageEvent): void {
+function absorb(ev: LedgerEvent): void {
+  // Check-health rollups are not demand events: they carry no client and must
+  // not move `first_event_at`, which means "when did anyone first call this".
+  if (ev.e === 'checks') {
+    absorbCheckHealthEvent(ev);
+    return;
+  }
   if (!firstEventAt || ev.t < firstEventAt) firstEventAt = ev.t;
   const agg = aggFor(dayOf(ev.t));
+  // Every type is matched explicitly. A line this replay does not recognise —
+  // a rollback to a build that predates an event type, say — must be ignored,
+  // not fall through a trailing `else` and be counted as a settlement.
   if (ev.e === 'call') {
     agg.calls++;
     lifetime.calls++;
@@ -78,13 +96,17 @@ function absorb(ev: UsageEvent): void {
     }
     agg.clients.add(ev.client);
     lifetimeClients.add(ev.client);
-  } else {
+  } else if (ev.e === 'settled') {
     agg.settlements++;
     lifetime.settlements++;
     agg.revenue_usd += ev.amount_usd;
     lifetime.revenue_usd += ev.amount_usd;
   }
 }
+
+/** How often to look for check-health buckets due to be persisted. */
+const CHECK_HEALTH_FLUSH_MS = 60_000;
+let checkHealthTimer: NodeJS.Timeout | null = null;
 
 /** Replay the ledger into memory. Corrupt trailing lines (crash mid-write) are skipped. */
 export function initUsageLedger(): void {
@@ -94,13 +116,15 @@ export function initUsageLedger(): void {
       for (const line of readFileSync(ledgerPath, 'utf8').split('\n')) {
         if (!line.trim()) continue;
         try {
-          absorb(JSON.parse(line) as UsageEvent);
+          absorb(JSON.parse(line) as LedgerEvent);
         } catch {
           /* torn write; ignore the line */
         }
       }
     }
     ledgerReady = true;
+    // Unref'd: a monitoring flush must never be the reason the process stays alive.
+    checkHealthTimer ??= setInterval(flushCheckHealth, CHECK_HEALTH_FLUSH_MS).unref();
     console.log(`usage ledger: ${ledgerPath} (${lifetime.calls} calls, $${lifetime.revenue_usd.toFixed(2)} settled on record)`);
   } catch (err) {
     // A broken ledger must never take the payment path down with it.
@@ -108,8 +132,7 @@ export function initUsageLedger(): void {
   }
 }
 
-export function recordEvent(ev: UsageEvent): void {
-  absorb(ev);
+function appendToLedger(ev: LedgerEvent): void {
   if (!ledgerReady) return;
   try {
     appendFileSync(ledgerPath, JSON.stringify(ev) + '\n');
@@ -117,6 +140,23 @@ export function recordEvent(ev: UsageEvent): void {
     ledgerReady = false;
     console.error('usage ledger write failed, disabling persistence:', err);
   }
+}
+
+export function recordEvent(ev: UsageEvent): void {
+  absorb(ev);
+  appendToLedger(ev);
+}
+
+/**
+ * Persist any risk-check rollups the write policy says are due.
+ *
+ * Bails before taking them when the ledger is unwritable, so the buckets stay
+ * dirty and land on a later flush instead of being marked written into a file
+ * that rejected them.
+ */
+export function flushCheckHealth(): void {
+  if (!ledgerReady) return;
+  for (const ev of takeCheckHealthEvents()) appendToLedger(ev);
 }
 
 /** Aggregates for /stats: lifetime totals plus a recent daily series. */

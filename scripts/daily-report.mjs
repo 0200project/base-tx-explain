@@ -81,6 +81,62 @@ if (stats) {
   say(`Visitor -> tester is unmeasurable (static site, no analytics by design; Search Console pending founder signup).`);
 }
 
+// --- 1b. Risk-check availability ---
+// A check that cannot run emits no flag, and no flag is indistinguishable from
+// "looked and found nothing". Per-response `checks` tells one caller that; only
+// this aggregate can say a check was dark for everybody, for a stretch of time.
+// Reported when a check crossed either threshold below, so a quiet day is one
+// line and an outage is named.
+const DARK_HOURS_ALERT = 1; // any full hour where every attempt failed
+const UNAVAILABLE_RATE_ALERT = 0.05; // 5% of attempts, over a floor of...
+const MIN_ATTEMPTS_FOR_RATE = 20; // ...this many, so three calls cannot raise an alarm
+if (stats?.check_health) {
+  const h = stats.check_health;
+  say(`\n## Risk-check availability (source: server ledger, last ${h.window_hours}h)\n`);
+  const rows = Object.entries(h.checks ?? {});
+  const alerts = rows.filter(
+    ([, c]) =>
+      c.dark_hours >= DARK_HOURS_ALERT ||
+      (c.attempts >= MIN_ATTEMPTS_FOR_RATE && c.unavailable_rate >= UNAVAILABLE_RATE_ALERT),
+  );
+  for (const [name, c] of rows) {
+    if (c.attempts === 0) {
+      say(`- \`${name}\`: no traffic to measure (${c.not_applicable} responses had nothing for it to check)`);
+      continue;
+    }
+    const rate = `${(c.unavailable_rate * 100).toFixed(1)}%`;
+    const state = c.dark_hours > 0 ? `**DARK ${c.dark_hours}h**` : c.unavailable > 0 ? 'degraded' : 'answering';
+    say(
+      `- \`${name}\`: ${state} — ${c.attempts} ran, ${c.unavailable} unavailable (${rate})` +
+        (c.inconclusive > 0 ? `, ${c.inconclusive} inconclusive` : '') +
+        (c.last_unavailable_at ? `, last failing hour ${c.last_unavailable_at}` : ''),
+    );
+  }
+  if (alerts.length > 0) {
+    say(
+      `\n**CHECK AVAILABILITY ALERT:** ${alerts.map(([n]) => `\`${n}\``).join(', ')} ` +
+        `exceeded the threshold (any hour fully dark, or ${(UNAVAILABLE_RATE_ALERT * 100).toFixed(0)}% ` +
+        `unavailable over ${MIN_ATTEMPTS_FOR_RATE}+ attempts). For that period the flag(s) behind it could ` +
+        `not have fired, so an empty risk_flags in those responses means not checked, not clean.`,
+    );
+  } else if (rows.length > 0) {
+    say(`\nNo check crossed the alert threshold in this window.`);
+  }
+  if (stats.check_health_7d) {
+    const worst = Object.entries(stats.check_health_7d.checks ?? {})
+      .filter(([, c]) => c.dark_hours > 0)
+      .sort((a, b) => b[1].dark_hours - a[1].dark_hours);
+    if (worst.length > 0) {
+      say(
+        `\n7-day worst: ${worst.map(([n, c]) => `\`${n}\` dark ${c.dark_hours}h`).join(', ')}.`,
+      );
+    }
+  }
+} else if (stats) {
+  say(`\n## Risk-check availability\n`);
+  say(`Not reported by this server build (needs the deploy that added \`check_health\` to /stats).`);
+}
+
 // --- 2. On-chain revenue truth ---
 say(`\n## Revenue (source: Base chain)\n`);
 try {

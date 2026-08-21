@@ -1,4 +1,5 @@
 import { formatEther, isHex, type Address, type Hex, type TransactionReceipt } from 'viem';
+import { recordChecks } from './checkHealth.js';
 import { buildAssetsMoved } from './decode/assets.js';
 import { classify } from './decode/classify.js';
 import { getVerifiedEventNames } from './decode/abiEvents.js';
@@ -165,6 +166,9 @@ export async function explainTransaction(txHashRaw: string): Promise<ExplainResu
     ethUsdAtBlock(receipt.blockNumber),
   ]);
   const { flags: riskFlags, checks } = assessment;
+  // Per-response honesty tells this caller what ran. Only the aggregate can say
+  // a check is dark for everyone, so every explained transaction votes.
+  recordChecks(checks);
 
   // A token whose self-reported symbol could not be trusted is shown by its
   // address; flag it factually so a consuming agent knows the identity string

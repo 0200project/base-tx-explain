@@ -201,3 +201,27 @@ Related: transient upstream failures were cached with the same TTL as real
 answers, so a sixteen-minute outage suppressed a check for twenty-four hours
 across every caller. Fixed in `2d446d2`. Making the degradation *visible* does
 not stop it happening.
+
+### The aggregate half
+
+Per-response honesty tells a caller about their own call. It cannot tell *us*
+that a check is broken for everybody: nobody re-reads a served response, so a
+check can be dark for hours and leave no trace anywhere we look. A check dark
+for N hours is an incident, not a per-response footnote.
+
+So the same statuses are also counted in hourly buckets and reported as
+`check_health` on `/healthz` (public, alongside the per-response honesty it
+aggregates) and `/stats`, printed by `npm run status`, and named in the daily
+report whenever a check was fully dark for an hour or exceeded 5% unavailable
+over at least 20 attempts.
+
+Two definitions carry the weight. `not_applicable` is excluded from the
+denominator, so padding a day with transactions a check has no work on cannot
+dilute an outage into invisibility. And an hour with no traffic neither starts
+nor ends an outage — treating silence as recovery would end an incident on the
+strength of nobody having called.
+
+It rides the existing ledger as one rollup line per hour (more only while
+something is degrading) rather than a monitoring event per call: on a 256MB
+machine with a single append-only file replayed into memory at boot, telemetry
+that grows with success is telemetry that eventually breaks the boot.
