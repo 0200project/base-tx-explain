@@ -36,7 +36,10 @@ const TOOL_DESCRIPTION =
   'counterparties[] (labeled where known: routers, bridges, marketplaces), risk_flags[] ' +
   '(unverified_contract, unlimited_approval, approval_for_all, known_drainer, ' +
   'first_time_counterparty, nonstandard_token_symbol, impersonated_token, ' +
-  'transaction_reverted), gas_paid_usd, timestamp, basescan_url. ' +
+  'transaction_reverted), checks, gas_paid_usd, timestamp, basescan_url. ' +
+  'Risk checks fail open, so read `checks` before drawing any conclusion from an empty ' +
+  'risk_flags: it reports whether each check ran (ok / partial / unavailable / not_applicable), ' +
+  'and no flags alongside a non-ok status means not checked, not clean. ' +
   'Deterministic onchain decode - no LLM in the response path. Base mainnet (chain id 8453) only.';
 
 const INPUT_SHAPE = {

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Address } from 'viem';
 import type { DecodedEvent } from '../src/decode/events.js';
-import type { AssetMovement, RiskFlag } from '../src/types.js';
+import type { AssetMovement } from '../src/types.js';
 
 // Controllable stand-ins for the network-backed risk lookups. hoisted so the
 // vi.mock factories (which are hoisted above the imports) can close over them.
@@ -10,18 +10,24 @@ const state = vi.hoisted(() => ({
   firstTime: new Set<string>(), // addresses for which isFirstInteraction returns true
   drainers: new Set<string>(), // addresses on the drainer blocklist
   supply: new Map<string, bigint | null>(), // token address -> totalSupply (null = read failed)
+  // Upstream outages, so the coverage reporting can be exercised.
+  verificationDown: false, // Sourcify/Basescan unreachable -> 'unknown'
+  historyDown: false, // Blockscout/Basescan unreachable -> null
+  drainerListDown: false, // blacklist never loaded
 }));
 
 vi.mock('../src/risk/verification.js', () => ({
   verificationStatus: async (addr: string) =>
-    state.verified.has(addr.toLowerCase()) ? 'verified' : 'unverified',
+    state.verificationDown ? 'unknown' : state.verified.has(addr.toLowerCase()) ? 'verified' : 'unverified',
 }));
 vi.mock('../src/risk/firstTime.js', () => ({
   isFirstInteraction: async (_from: string, counterparty: string) =>
-    state.firstTime.has(counterparty.toLowerCase()),
+    state.historyDown ? null : state.firstTime.has(counterparty.toLowerCase()),
 }));
 vi.mock('../src/risk/drainers.js', () => ({
-  isKnownDrainer: async (addr: string) => state.drainers.has(addr.toLowerCase()),
+  isKnownDrainer: async (addr: string) =>
+    !state.drainerListDown && state.drainers.has(addr.toLowerCase()),
+  drainerListLoaded: () => !state.drainerListDown,
 }));
 // Partial mock: keep the real shortAddress/sanitizeSymbol, stub the network read.
 vi.mock('../src/decode/tokens.js', async (importActual) => {
@@ -32,7 +38,7 @@ vi.mock('../src/decode/tokens.js', async (importActual) => {
   };
 });
 
-import { buildRiskFlags } from '../src/risk/flags.js';
+import { buildRiskFlags, type RiskAssessment } from '../src/risk/flags.js';
 
 // Real labeled Base addresses (getLabel is NOT mocked, so these must be genuine
 // entries in src/labels.ts to exercise the "labeled address is skipped" path).
@@ -51,9 +57,9 @@ const approvalEvent = (spender: Address, value = 1_000_000n): DecodedEvent => ({
   logIndex: 0,
 });
 
-const flagCodes = (flags: RiskFlag[]) => flags.map((f) => f.flag);
-const detailFor = (flags: RiskFlag[], code: string) =>
-  flags.find((f) => f.flag === code)?.detail ?? '';
+const flagCodes = (r: RiskAssessment) => r.flags.map((f) => f.flag);
+const detailFor = (r: RiskAssessment, code: string) =>
+  r.flags.find((f) => f.flag === code)?.detail ?? '';
 
 // shortAddress form used in the flag details.
 const short = (a: string) => `${a.slice(0, 6)}...${a.slice(-4)}`;
@@ -63,6 +69,9 @@ beforeEach(() => {
   state.firstTime.clear();
   state.drainers.clear();
   state.supply.clear();
+  state.verificationDown = false;
+  state.historyDown = false;
+  state.drainerListDown = false;
 });
 
 describe('buildRiskFlags — approval trust target resolution', () => {
@@ -70,7 +79,7 @@ describe('buildRiskFlags — approval trust target resolution', () => {
     // approve(ATTACKER, amount) on USDC: `to` is the labeled token, ATTACKER is unverified and new.
     state.firstTime.add(ATTACKER.toLowerCase());
 
-    const flags = await buildRiskFlags({
+    const res = await buildRiskFlags({
       from: SENDER,
       to: USDC, // the token contract, NOT the spender
       blockNumber: 1000n,
@@ -81,17 +90,17 @@ describe('buildRiskFlags — approval trust target resolution', () => {
     });
 
     // Before the fix this returned [] because checks keyed on `to` (a labeled token).
-    expect(flagCodes(flags)).toContain('unverified_contract');
-    expect(flagCodes(flags)).toContain('first_time_counterparty');
+    expect(flagCodes(res)).toContain('unverified_contract');
+    expect(flagCodes(res)).toContain('first_time_counterparty');
     // The spender must be named in the output, not the token.
-    expect(detailFor(flags, 'unverified_contract')).toContain(short(ATTACKER));
-    expect(detailFor(flags, 'unverified_contract')).toContain('spender');
-    expect(detailFor(flags, 'first_time_counterparty')).toContain(short(ATTACKER));
+    expect(detailFor(res, 'unverified_contract')).toContain(short(ATTACKER));
+    expect(detailFor(res, 'unverified_contract')).toContain('spender');
+    expect(detailFor(res, 'first_time_counterparty')).toContain(short(ATTACKER));
   });
 
   it('does not flag when the spender is a labeled address (approving Permit2 is not a first-time/unverified event)', async () => {
     state.firstTime.add(PERMIT2.toLowerCase());
-    const flags = await buildRiskFlags({
+    const res = await buildRiskFlags({
       from: SENDER,
       to: USDC,
       blockNumber: 1000n,
@@ -100,14 +109,14 @@ describe('buildRiskFlags — approval trust target resolution', () => {
       events: [approvalEvent(PERMIT2)],
       movements: [],
     });
-    expect(flagCodes(flags)).not.toContain('unverified_contract');
-    expect(flagCodes(flags)).not.toContain('first_time_counterparty');
+    expect(flagCodes(res)).not.toContain('unverified_contract');
+    expect(flagCodes(res)).not.toContain('first_time_counterparty');
   });
 
   it('still checks `to` additively: an unlabeled router in an approve+swap is not blinded by the spender resolution', async () => {
     // Distinct spender (Permit2, labeled → filtered) and an unlabeled router as `to`.
     state.firstTime.add(UNLABELED_ROUTER.toLowerCase());
-    const flags = await buildRiskFlags({
+    const res = await buildRiskFlags({
       from: SENDER,
       to: UNLABELED_ROUTER,
       blockNumber: 1000n,
@@ -118,13 +127,13 @@ describe('buildRiskFlags — approval trust target resolution', () => {
         { token: 'USDC', amount: '100', from: SENDER, to: UNLABELED_ROUTER, token_address: USDC, standard: 'erc20' } as AssetMovement,
       ],
     });
-    expect(flagCodes(flags)).toContain('unverified_contract');
-    expect(detailFor(flags, 'unverified_contract')).toContain(short(UNLABELED_ROUTER));
+    expect(flagCodes(res)).toContain('unverified_contract');
+    expect(detailFor(res, 'unverified_contract')).toContain(short(UNLABELED_ROUTER));
   });
 
   it('does not regress the labeled-router swap: no approval, labeled `to` → no unverified/first-time flags', async () => {
     state.firstTime.add(UNI_ROUTER.toLowerCase());
-    const flags = await buildRiskFlags({
+    const res = await buildRiskFlags({
       from: SENDER,
       to: UNI_ROUTER, // labeled dex router
       blockNumber: 1000n,
@@ -135,13 +144,13 @@ describe('buildRiskFlags — approval trust target resolution', () => {
         { token: 'USDC', amount: '100', from: SENDER, to: UNI_ROUTER, token_address: USDC, standard: 'erc20' } as AssetMovement,
       ],
     });
-    expect(flagCodes(flags)).not.toContain('unverified_contract');
-    expect(flagCodes(flags)).not.toContain('first_time_counterparty');
+    expect(flagCodes(res)).not.toContain('unverified_contract');
+    expect(flagCodes(res)).not.toContain('first_time_counterparty');
   });
 
   it('surfaces a known_drainer spender on an approval', async () => {
     state.drainers.add(ATTACKER.toLowerCase());
-    const flags = await buildRiskFlags({
+    const res = await buildRiskFlags({
       from: SENDER,
       to: USDC,
       blockNumber: 1000n,
@@ -150,8 +159,8 @@ describe('buildRiskFlags — approval trust target resolution', () => {
       events: [approvalEvent(ATTACKER)],
       movements: [],
     });
-    expect(flagCodes(flags)).toContain('known_drainer');
-    expect(detailFor(flags, 'known_drainer')).toContain(short(ATTACKER));
+    expect(flagCodes(res)).toContain('known_drainer');
+    expect(detailFor(res, 'known_drainer')).toContain(short(ATTACKER));
   });
 });
 
@@ -169,23 +178,23 @@ describe('buildRiskFlags — unlimited_approval via totalSupply', () => {
 
   it('flags an approval at or above the token total supply', async () => {
     state.supply.set(USDC.toLowerCase(), 1_000_000_000n);
-    const flags = await approve(1_000_000_000n);
-    expect(flagCodes(flags)).toContain('unlimited_approval');
-    expect(detailFor(flags, 'unlimited_approval')).toContain('circulating supply');
+    const res = await approve(1_000_000_000n);
+    expect(flagCodes(res)).toContain('unlimited_approval');
+    expect(detailFor(res, 'unlimited_approval')).toContain('circulating supply');
   });
 
   it('does NOT flag a bounded approval below total supply', async () => {
     state.supply.set(USDC.toLowerCase(), 1_000_000_000n);
-    const flags = await approve(1_000n);
-    expect(flagCodes(flags)).not.toContain('unlimited_approval');
+    const res = await approve(1_000n);
+    expect(flagCodes(res)).not.toContain('unlimited_approval');
   });
 
   it('catches the 2^128-1 evasion when supply is known (the old fixed-threshold gap)', async () => {
     // 2^128 - 1 slips under the old `value >= 2^128` rule, but it is astronomically
     // larger than any real token supply, so the supply comparison still flags it.
     state.supply.set(USDC.toLowerCase(), 1_000_000n);
-    const flags = await approve(2n ** 128n - 1n);
-    expect(flagCodes(flags)).toContain('unlimited_approval');
+    const res = await approve(2n ** 128n - 1n);
+    expect(flagCodes(res)).toContain('unlimited_approval');
   });
 
   it('falls back to the 2^128 rule when the supply read is unavailable', async () => {
@@ -194,5 +203,103 @@ describe('buildRiskFlags — unlimited_approval via totalSupply', () => {
     expect(flagCodes(atThreshold)).toContain('unlimited_approval');
     const belowThreshold = await approve(2n ** 128n - 1n);
     expect(flagCodes(belowThreshold)).not.toContain('unlimited_approval');
+  });
+});
+
+describe('buildRiskFlags — check coverage (D-003)', () => {
+  const approvalToAttacker = () =>
+    buildRiskFlags({
+      from: SENDER,
+      to: USDC,
+      blockNumber: 1000n,
+      reverted: false,
+      classification: { action: 'erc20_approval', detail: {} },
+      events: [approvalEvent(ATTACKER)],
+      movements: [],
+    });
+
+  it('reports ok when every lookup answered', async () => {
+    state.verified.add(ATTACKER.toLowerCase());
+    const res = await approvalToAttacker();
+    expect(res.checks.contract_verification).toBe('ok');
+    expect(res.checks.first_interaction).toBe('ok');
+    expect(res.checks.drainer_blacklist).toBe('ok');
+    expect(res.checks.note).toBeNull();
+  });
+
+  it('an empty risk_flags from a total outage is reported as unavailable, not clean', async () => {
+    // The dangerous case: every upstream is down, so no flag is emitted for an
+    // address we know nothing about. Without `checks` this is byte-identical to
+    // a transaction that was checked and found clean.
+    state.verificationDown = true;
+    state.historyDown = true;
+    state.drainerListDown = true;
+
+    const res = await approvalToAttacker();
+
+    expect(res.flags.filter((f) => f.flag === 'unverified_contract')).toHaveLength(0);
+    expect(res.flags.filter((f) => f.flag === 'first_time_counterparty')).toHaveLength(0);
+    expect(res.checks.contract_verification).toBe('unavailable');
+    expect(res.checks.first_interaction).toBe('unavailable');
+    expect(res.checks.drainer_blacklist).toBe('unavailable');
+    expect(res.checks.note).toContain('not as clean');
+  });
+
+  it('reports the blacklist separately from the other two', async () => {
+    // Exactly the live production case at the time this was written: Blockscout
+    // was 500ing, so counterparty history could not be checked, while Sourcify
+    // and the blacklist were both fine.
+    state.historyDown = true;
+    state.verified.add(ATTACKER.toLowerCase());
+
+    const res = await approvalToAttacker();
+    expect(res.checks.contract_verification).toBe('ok');
+    expect(res.checks.first_interaction).toBe('unavailable');
+    expect(res.checks.drainer_blacklist).toBe('ok');
+    expect(res.checks.note).toContain('counterparty history could not be checked');
+    expect(res.checks.note).not.toContain('source-code verification');
+  });
+
+  it('reports partial when CHECK_CAP drops addresses, so padding cannot manufacture full coverage', async () => {
+    // Four unfamiliar spenders, only three are looked at. Reporting `ok` here
+    // would let an attacker pad a transaction to push the real target past the
+    // cap and still have the output claim complete coverage.
+    const spenders = [
+      '0xaaaa000000000000000000000000000000000001',
+      '0xbbbb000000000000000000000000000000000002',
+      '0xcccc000000000000000000000000000000000003',
+      '0xdddd000000000000000000000000000000000004',
+    ] as Address[];
+    for (const s of spenders) state.verified.add(s.toLowerCase());
+
+    const res = await buildRiskFlags({
+      from: SENDER,
+      to: USDC,
+      blockNumber: 1000n,
+      reverted: false,
+      classification: { action: 'erc20_approval', detail: {} },
+      events: spenders.map((s, i) => ({ ...approvalEvent(s), logIndex: i })),
+      movements: [],
+    });
+
+    expect(res.checks.contract_verification).toBe('partial');
+    expect(res.checks.first_interaction).toBe('partial');
+    expect(res.checks.note).toContain('only some addresses');
+  });
+
+  it('reports not_applicable when there was nothing to check', async () => {
+    const res = await buildRiskFlags({
+      from: SENDER,
+      to: null,
+      blockNumber: 1000n,
+      reverted: false,
+      classification: { action: 'eth_transfer', detail: {} },
+      events: [],
+      movements: [],
+    });
+    expect(res.checks.contract_verification).toBe('not_applicable');
+    expect(res.checks.first_interaction).toBe('not_applicable');
+    expect(res.checks.drainer_blacklist).toBe('not_applicable');
+    expect(res.checks.note).toBeNull();
   });
 });

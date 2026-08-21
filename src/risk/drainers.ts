@@ -51,6 +51,18 @@ async function refresh(): Promise<void> {
   }
 }
 
+/**
+ * Whether the blacklist is actually loaded.
+ *
+ * `isKnownDrainer` answers `false` both for "checked, not on the list" and for
+ * "the list never loaded", and those mean opposite things to a caller. Callers
+ * reporting check coverage must consult this rather than inferring safety from
+ * a `false`.
+ */
+export function drainerListLoaded(): boolean {
+  return drainerSet.size > 0;
+}
+
 /** Membership check against the merged drainer lists. Never throws. */
 export async function isKnownDrainer(address: string): Promise<boolean> {
   if (Date.now() - lastRefresh > REFRESH_MS && !refreshing) {

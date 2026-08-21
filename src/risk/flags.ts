@@ -4,8 +4,8 @@ import { isUnlimitedApproval } from '../decode/classify.js';
 import type { DecodedEvent } from '../decode/events.js';
 import { getTokenSupply, shortAddress } from '../decode/tokens.js';
 import { getLabel } from '../labels.js';
-import type { AssetMovement, RiskFlag } from '../types.js';
-import { isKnownDrainer } from './drainers.js';
+import type { AssetMovement, CheckStatus, ChecksPerformed, RiskFlag } from '../types.js';
+import { drainerListLoaded, isKnownDrainer } from './drainers.js';
 import { isFirstInteraction } from './firstTime.js';
 import { verificationStatus } from './verification.js';
 
@@ -21,11 +21,36 @@ interface FlagContext {
   movements: AssetMovement[];
 }
 
+export interface RiskAssessment {
+  flags: RiskFlag[];
+  checks: ChecksPerformed;
+}
+
+/**
+ * Roll per-address outcomes into one status.
+ *
+ * `total` counts every address that warranted this check, including any dropped
+ * by CHECK_CAP — so a transaction that fans out past the cap reports `partial`
+ * rather than claiming full coverage.
+ */
+function rollUp(total: number, attempted: number, indeterminate: number): CheckStatus {
+  if (total === 0) return 'not_applicable';
+  if (attempted === 0) return 'unavailable';
+  if (indeterminate >= attempted && attempted === total) return 'unavailable';
+  if (indeterminate > 0 || attempted < total) return 'partial';
+  return 'ok';
+}
+
 /**
  * Assemble risk_flags. Every check degrades to "no flag" rather than an error —
  * a risk flag must always mean evidence was found, never that a lookup failed.
+ *
+ * Because of that, the flags alone cannot be read as a verdict: an unreachable
+ * upstream produces the same empty list as a transaction with nothing wrong. The
+ * returned `checks` says which lookups actually ran, so the caller can tell those
+ * two cases apart instead of defaulting to the reassuring one.
  */
-export async function buildRiskFlags(ctx: FlagContext): Promise<RiskFlag[]> {
+export async function buildRiskFlags(ctx: FlagContext): Promise<RiskAssessment> {
   const flags: RiskFlag[] = [];
   const { from, to, classification, events, movements } = ctx;
   const sender = from.toLowerCase();
@@ -86,6 +111,9 @@ export async function buildRiskFlags(ctx: FlagContext): Promise<RiskFlag[]> {
     if (m.from.toLowerCase() === sender) exposedAddresses.add(m.to.toLowerCase());
   }
 
+  // Read once, before the lookups: a background refresh could populate the list
+  // mid-assessment, which would report coverage the answers below did not have.
+  const drainerListReady = drainerListLoaded();
   const drainerChecks = await Promise.all(
     [...exposedAddresses].map(async (a) => ((await isKnownDrainer(a)) ? a : null)),
   );
@@ -133,9 +161,10 @@ export async function buildRiskFlags(ctx: FlagContext): Promise<RiskFlag[]> {
   // address, and anything already labeled as known infrastructure. Cap the
   // number of upstream checks so a crafted tx cannot fan out unboundedly.
   const CHECK_CAP = 3;
-  const toCheck = targets
-    .filter((t) => t.addr !== sender && t.addr !== ZERO_ADDRESS && !getLabel(t.addr))
-    .slice(0, CHECK_CAP);
+  const eligible = targets.filter(
+    (t) => t.addr !== sender && t.addr !== ZERO_ADDRESS && !getLabel(t.addr),
+  );
+  const toCheck = eligible.slice(0, CHECK_CAP);
 
   // Run the lookups concurrently but emit flags in a deterministic order
   // (toCheck order, unverified before first_time per address).
@@ -166,5 +195,41 @@ export async function buildRiskFlags(ctx: FlagContext): Promise<RiskFlag[]> {
     }
   }
 
-  return flags;
+  // --- Coverage ---
+  // Counted against `eligible`, not `toCheck`, so addresses dropped by CHECK_CAP
+  // lower the reported coverage. Otherwise a transaction touching many unfamiliar
+  // addresses would report full coverage of the three we happened to look at,
+  // which is exactly the reassurance an attacker would want to manufacture.
+  const verifyIndeterminate = trustResults.filter((r) => r.status === 'unknown').length;
+  const firstIndeterminate = trustResults.filter((r) => r.first === null).length;
+
+  const checks: ChecksPerformed = {
+    contract_verification: rollUp(eligible.length, trustResults.length, verifyIndeterminate),
+    first_interaction: rollUp(eligible.length, trustResults.length, firstIndeterminate),
+    drainer_blacklist:
+      exposedAddresses.size === 0 ? 'not_applicable' : drainerListReady ? 'ok' : 'unavailable',
+    note: null,
+  };
+
+  const degraded: string[] = [];
+  if (checks.contract_verification === 'unavailable') {
+    degraded.push('source-code verification could not be checked');
+  } else if (checks.contract_verification === 'partial') {
+    degraded.push('source-code verification ran on only some addresses');
+  }
+  if (checks.first_interaction === 'unavailable') {
+    degraded.push('counterparty history could not be checked');
+  } else if (checks.first_interaction === 'partial') {
+    degraded.push('counterparty history ran on only some addresses');
+  }
+  if (checks.drainer_blacklist === 'unavailable') {
+    degraded.push('the scam/drainer blacklist was unavailable');
+  }
+  if (degraded.length > 0) {
+    checks.note =
+      `${degraded.join('; ')}. No flag was emitted for those checks, and that absence ` +
+      'carries no information: treat it as unknown, not as clean.';
+  }
+
+  return { flags, checks };
 }

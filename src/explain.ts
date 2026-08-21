@@ -152,7 +152,7 @@ export async function explainTransaction(txHashRaw: string): Promise<ExplainResu
   });
 
   // --- Risk flags + gas price (independent; run together) ---
-  const [riskFlags, ethUsd] = await Promise.all([
+  const [assessment, ethUsd] = await Promise.all([
     buildRiskFlags({
       from: tx.from,
       to: tx.to ?? null,
@@ -164,6 +164,7 @@ export async function explainTransaction(txHashRaw: string): Promise<ExplainResu
     }),
     ethUsdAtBlock(receipt.blockNumber),
   ]);
+  const { flags: riskFlags, checks } = assessment;
 
   // A token whose self-reported symbol could not be trusted is shown by its
   // address; flag it factually so a consuming agent knows the identity string
@@ -253,6 +254,7 @@ export async function explainTransaction(txHashRaw: string): Promise<ExplainResu
     assets_moved: movements,
     counterparties,
     risk_flags: riskFlags,
+    checks,
     gas_paid_usd: gasPaidUsd,
     timestamp: new Date(Number(block.timestamp) * 1000).toISOString(),
     block_number: Number(receipt.blockNumber),

@@ -62,6 +62,41 @@ export interface RiskFlag {
   detail: string;
 }
 
+/**
+ * Whether a risk check actually ran.
+ *
+ *  - `ok`             — the check ran against every address it needed to.
+ *  - `partial`        — it ran against some but not all of them.
+ *  - `unavailable`    — it could not run at all (upstream unreachable, or the
+ *                       answer was indeterminate). No flag was emitted, and that
+ *                       absence carries no information.
+ *  - `not_applicable` — there was nothing for this check to look at.
+ */
+export type CheckStatus = 'ok' | 'partial' | 'unavailable' | 'not_applicable';
+
+/**
+ * Which risk checks ran on this transaction.
+ *
+ * Every check in `risk_flags` fails open: when an upstream source is unreachable
+ * we emit no flag, which in the output is indistinguishable from having looked
+ * and found nothing. That silence is the dangerous case — an empty `risk_flags`
+ * would otherwise read as "clean" when it may mean "never checked". This field
+ * makes the difference explicit and machine-readable.
+ *
+ * `risk_flags` is only as meaningful as the checks that produced it: an empty
+ * `risk_flags` alongside any status other than `ok` is not a clean result.
+ */
+export interface ChecksPerformed {
+  /** Verified source code lookup (Sourcify, then Basescan when configured). */
+  contract_verification: CheckStatus;
+  /** Sender's prior history with the counterparty (Blockscout, then Basescan). */
+  first_interaction: CheckStatus;
+  /** Membership in the public scam/drainer blacklists. */
+  drainer_blacklist: CheckStatus;
+  /** Plain-language reason, present only when some check did not fully run. */
+  note: string | null;
+}
+
 export interface Provenance {
   /**
    * Output fields whose string contents are derived from attacker-controllable
@@ -79,6 +114,8 @@ export interface ExplainResult {
   assets_moved: AssetMovement[];
   counterparties: Counterparty[];
   risk_flags: RiskFlag[];
+  /** Which risk checks ran, so an empty risk_flags can be read correctly. */
+  checks: ChecksPerformed;
   gas_paid_usd: number | null;
   timestamp: string;
   block_number: number;

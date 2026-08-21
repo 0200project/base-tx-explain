@@ -47,6 +47,18 @@ const EXPLAIN_RESULT_SCHEMA = {
         required: ['flag', 'detail'],
       },
     },
+    checks: {
+      type: 'object',
+      description:
+        'Which risk checks actually ran. Every check fails open: when an upstream source is unreachable no flag is emitted, which is indistinguishable in risk_flags from having looked and found nothing. An empty risk_flags is only meaningful when the relevant check is "ok" — alongside "unavailable" or "partial" it means not checked, NOT clean. Absence of a flag is never a safety guarantee.',
+      properties: {
+        contract_verification: { type: 'string', enum: ['ok', 'partial', 'unavailable', 'not_applicable'] },
+        first_interaction: { type: 'string', enum: ['ok', 'partial', 'unavailable', 'not_applicable'] },
+        drainer_blacklist: { type: 'string', enum: ['ok', 'partial', 'unavailable', 'not_applicable'] },
+        note: { type: ['string', 'null'], description: 'Why coverage was incomplete; null when every check ran.' },
+      },
+      required: ['contract_verification', 'first_interaction', 'drainer_blacklist', 'note'],
+    },
     gas_paid_usd: { type: ['number', 'null'] },
     timestamp: { type: 'string' },
     block_number: { type: 'number' },
@@ -64,7 +76,7 @@ const EXPLAIN_RESULT_SCHEMA = {
       required: ['untrusted_fields', 'note'],
     },
   },
-  required: ['summary', 'action_type', 'status', 'assets_moved', 'counterparties', 'risk_flags', 'gas_paid_usd', 'timestamp', 'basescan_url', 'provenance'],
+  required: ['summary', 'action_type', 'status', 'assets_moved', 'counterparties', 'risk_flags', 'checks', 'gas_paid_usd', 'timestamp', 'basescan_url', 'provenance'],
 } as const;
 
 const PASS_OPERATION = (publicUrl: string): Record<string, unknown> => ({
