@@ -12,7 +12,14 @@ const state = vi.hoisted(() => ({
   supply: new Map<string, bigint | null>(), // token address -> totalSupply (null = read failed)
   // Upstream outages, so the coverage reporting can be exercised.
   verificationDown: false, // Sourcify/Basescan unreachable -> 'unknown'
-  historyDown: false, // Blockscout/Basescan unreachable -> null
+  historyDown: false, // Blockscout/Basescan unreachable -> { kind: 'unreachable' }
+  // Counterparties whose history lookup reports one kind of no-answer or the other.
+  // Truncation is really a property of the SENDER (their history is longer than the
+  // page the lookup reads), so in production every counterparty in one transaction
+  // truncates together; keying it per counterparty here is only so the roll-up's
+  // mixed cases can be exercised.
+  truncatedFor: new Set<string>(), // -> { kind: 'truncated' }
+  unreachableFor: new Set<string>(), // -> { kind: 'unreachable' }, without a global outage
   drainerListDown: false, // blacklist never loaded
   drainerAgeMs: 0, // how long since the blacklist last actually rebuilt
 }));
@@ -22,8 +29,12 @@ vi.mock('../src/risk/verification.js', () => ({
     state.verificationDown ? 'unknown' : state.verified.has(addr.toLowerCase()) ? 'verified' : 'unverified',
 }));
 vi.mock('../src/risk/firstTime.js', () => ({
-  isFirstInteraction: async (_from: string, counterparty: string) =>
-    state.historyDown ? null : state.firstTime.has(counterparty.toLowerCase()),
+  isFirstInteraction: async (_from: string, counterparty: string) => {
+    const c = counterparty.toLowerCase();
+    if (state.historyDown || state.unreachableFor.has(c)) return { kind: 'unreachable' };
+    if (state.truncatedFor.has(c)) return { kind: 'truncated' };
+    return state.firstTime.has(c) ? { kind: 'first' } : { kind: 'seen' };
+  },
 }));
 vi.mock('../src/risk/drainers.js', () => ({
   isKnownDrainer: async (addr: string) =>
@@ -72,6 +83,8 @@ beforeEach(() => {
   state.firstTime.clear();
   state.drainers.clear();
   state.supply.clear();
+  state.truncatedFor.clear();
+  state.unreachableFor.clear();
   state.verificationDown = false;
   state.historyDown = false;
   state.drainerListDown = false;
@@ -400,5 +413,63 @@ describe('buildRiskFlags — coverage cannot be gamed', () => {
 
     expect(res.checks.drainer_blacklist).toBe('partial');
     expect(res.checks.note).toContain('30 hours');
+  });
+});
+
+describe('buildRiskFlags — a truncated history is not an outage', () => {
+  const approvalTo = (spenders: Address[]) =>
+    buildRiskFlags({
+      from: SENDER,
+      to: USDC,
+      blockNumber: 1000n,
+      reverted: false,
+      classification: { action: 'erc20_approval', detail: {} },
+      events: spenders.map((s, i) => ({ ...approvalEvent(s), logIndex: i })),
+      movements: [],
+    });
+
+  it('reports inconclusive, not unavailable, when the sender has more history than the check reads', async () => {
+    // Nothing failed here: Blockscout answered, and the answer was a full page.
+    // Calling that `unavailable` blames our infrastructure for a limit of the
+    // method, and sends the caller back to retry a question that cannot be
+    // answered this way — on exactly the high-activity wallets agents ask about.
+    state.truncatedFor.add(ATTACKER.toLowerCase());
+    state.verified.add(ATTACKER.toLowerCase());
+
+    const res = await approvalTo([ATTACKER]);
+
+    expect(res.checks.first_interaction).toBe('inconclusive');
+    expect(res.checks.contract_verification).toBe('ok');
+    // Still no flag: an unanswerable check never produces evidence.
+    expect(flagCodes(res)).not.toContain('first_time_counterparty');
+    expect(res.checks.note).toContain('more transaction history than this check reads');
+    expect(res.checks.note).toContain('not as clean');
+    // The one thing it must not say is that a lookup failed.
+    expect(res.checks.note).not.toContain('could not be checked');
+  });
+
+  it('reports unavailable when even one indeterminate answer is a failed lookup', async () => {
+    // Mixed: one truncated, one unreachable, nothing usable. `unavailable` is the
+    // honest roll-up — a retry may still learn something about the second address.
+    const other = '0xaaaa000000000000000000000000000000000001' as Address;
+    state.truncatedFor.add(ATTACKER.toLowerCase());
+    state.unreachableFor.add(other.toLowerCase());
+
+    const res = await approvalTo([ATTACKER, other]);
+
+    expect(res.checks.first_interaction).toBe('unavailable');
+    expect(res.checks.note).toContain('counterparty history could not be checked');
+  });
+
+  it('reports partial when a truncated answer sits alongside a real one', async () => {
+    const other = '0xaaaa000000000000000000000000000000000001' as Address;
+    state.truncatedFor.add(ATTACKER.toLowerCase());
+    state.firstTime.add(other.toLowerCase());
+
+    const res = await approvalTo([ATTACKER, other]);
+
+    expect(res.checks.first_interaction).toBe('partial');
+    expect(flagCodes(res)).toContain('first_time_counterparty');
+    expect(detailFor(res, 'first_time_counterparty')).toContain(short(other));
   });
 });

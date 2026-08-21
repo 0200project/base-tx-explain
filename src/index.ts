@@ -38,7 +38,7 @@ const TOOL_DESCRIPTION =
   'first_time_counterparty, nonstandard_token_symbol, impersonated_token, ' +
   'transaction_reverted), checks, gas_paid_usd, timestamp, basescan_url. ' +
   'Risk checks fail open, so read `checks` before drawing any conclusion from an empty ' +
-  'risk_flags: it reports whether each check ran (ok / partial / unavailable / not_applicable), ' +
+  'risk_flags: it reports whether each check ran (ok / partial / unavailable / inconclusive / not_applicable), ' +
   'and no flags alongside a non-ok status means not checked, not clean. ' +
   'Deterministic onchain decode - no LLM in the response path. Base mainnet (chain id 8453) only.';
 

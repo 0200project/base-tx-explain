@@ -460,7 +460,7 @@ npm run dev</code></pre>
       </div>
 
       <h3 id="checks"><code>checks</code></h3>
-      <p>Because a failed lookup never produces a flag, an empty <code class="inline">risk_flags</code> has two possible meanings: nothing was found, or nothing was looked at. <code class="inline">checks</code> tells you which one you are holding. Each check reports one of four values:</p>
+      <p>Because a failed lookup never produces a flag, an empty <code class="inline">risk_flags</code> has two possible meanings: nothing was found, or nothing was looked at. <code class="inline">checks</code> tells you which one you are holding. Each check reports one of five values:</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -469,14 +469,15 @@ npm run dev</code></pre>
           <tbody>
             <tr><td><code class="inline">ok</code></td><td>The check ran against every address that warranted it.</td></tr>
             <tr><td><code class="inline">partial</code></td><td>It ran against some but not all of them.</td></tr>
-            <tr><td><code class="inline">unavailable</code></td><td>It could not run at all — the upstream source was unreachable, or the answer was indeterminate.</td></tr>
+            <tr><td><code class="inline">unavailable</code></td><td>It could not run at all — the upstream sources it depends on were unreachable. Transient: a retry may get an answer.</td></tr>
+            <tr><td><code class="inline">inconclusive</code></td><td>It ran and nothing failed, but its method cannot answer for this input, and a retry will not change that. Today this is <code class="inline">first_interaction</code> for a sender with more transaction history than the lookup reads.</td></tr>
             <tr><td><code class="inline">not_applicable</code></td><td>There was nothing for this check to look at.</td></tr>
           </tbody>
         </table>
       </div>
       <p>The keys are <code class="inline">contract_verification</code> (Sourcify, then Basescan), <code class="inline">first_interaction</code> (Blockscout, then Basescan) and <code class="inline">drainer_blacklist</code>, plus a <code class="inline">note</code> naming anything that did not fully run — <code class="inline">null</code> when everything did.</p>
       <p><code class="inline">unchecked_addresses</code> names addresses that warranted a lookup but did not receive one, because the transaction involved more of them than the per-transaction cap. Which addresses get the scarce lookups is influenced by the order events appear in, and that order is chosen by whoever wrote the transaction, so the address described in <code class="inline">risk_flags</code> is not necessarily the one that went unexamined.</p>
-      <p>An empty <code class="inline">risk_flags</code> alongside any status other than <code class="inline">ok</code> means <em>not checked</em>, not <em>clean</em>. Two cases produce <code class="inline">partial</code> rather than <code class="inline">ok</code> even when every lookup succeeds: a transaction touching more unfamiliar addresses than the per-transaction lookup cap, and a sender whose history is longer than one page, where first-time interaction cannot be honestly asserted.</p>
+      <p>An empty <code class="inline">risk_flags</code> alongside any status other than <code class="inline">ok</code> means <em>not checked</em>, not <em>clean</em>. Two cases fall short of <code class="inline">ok</code> even when every lookup succeeds. A transaction touching more unfamiliar addresses than the per-transaction lookup cap reports <code class="inline">partial</code>. A sender whose history is longer than the one page the lookup reads reports <code class="inline">inconclusive</code> for <code class="inline">first_interaction</code>, because first-time interaction cannot be honestly asserted for them — that is a limit of the method, not a failure, which is why it is not reported as <code class="inline">unavailable</code>, and why retrying it will return the same answer.</p>
       <p>Absence of a flag is never a safety guarantee. These are observations about a transaction that has already been mined, not a verdict on it, and not advice about whether to act.</p>
 
       <h2 id="error-handling">Error handling</h2>

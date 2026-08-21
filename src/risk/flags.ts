@@ -33,15 +33,30 @@ export interface RiskAssessment {
  * `total` counts every address that warranted this check, including any dropped
  * by CHECK_CAP — so a transaction that fans out past the cap reports `partial`
  * rather than claiming full coverage.
+ *
+ * `permanent` counts the subset of `indeterminate` answers that no retry can
+ * improve, because the method cannot answer for this input rather than because a
+ * lookup failed. When every answer we got is of that kind the honest status is
+ * `inconclusive`: nothing upstream was down, so saying `unavailable` would blame
+ * infrastructure for a limit of the method.
  */
-function rollUp(total: number, attempted: number, indeterminate: number): CheckStatus {
+function rollUp(
+  total: number,
+  attempted: number,
+  indeterminate: number,
+  permanent = 0,
+): CheckStatus {
   if (total === 0) return 'not_applicable';
   // Zero usable answers is `unavailable` however many addresses we tried. This
   // condition previously also required `attempted === total`, which meant an
   // address dropped by CHECK_CAP upgraded an all-indeterminate result from
   // `unavailable` to `partial`: more unchecked addresses improved the reported
   // status, which is exactly backwards.
-  if (indeterminate >= attempted) return 'unavailable';
+  if (indeterminate >= attempted) {
+    // A single failed lookup among the permanent ones still means a retry might
+    // learn something, so the transient reading wins any mix.
+    return indeterminate > 0 && permanent >= indeterminate ? 'inconclusive' : 'unavailable';
+  }
   if (indeterminate > 0 || attempted < total) return 'partial';
   return 'ok';
 }
@@ -219,7 +234,7 @@ export async function buildRiskFlags(ctx: FlagContext): Promise<RiskAssessment> 
         detail: `${noun} ${shortAddress(addr)} has no verified source code on Sourcify${process.env.ETHERSCAN_API_KEY ? ' or Basescan' : ''}.`,
       });
     }
-    if (first === true) {
+    if (first.kind === 'first') {
       const what = role === 'spender' ? 'approved spender' : 'counterparty';
       flags.push({
         flag: 'first_time_counterparty',
@@ -234,7 +249,11 @@ export async function buildRiskFlags(ctx: FlagContext): Promise<RiskAssessment> 
   // addresses would report full coverage of the three we happened to look at,
   // which is exactly the reassurance an attacker would want to manufacture.
   const verifyIndeterminate = trustResults.filter((r) => r.status === 'unknown').length;
-  const firstIndeterminate = trustResults.filter((r) => r.first === null).length;
+  // Truncated histories are counted separately from unreachable ones: both leave
+  // us without an answer, but only the second is worth retrying.
+  const firstTruncated = trustResults.filter((r) => r.first.kind === 'truncated').length;
+  const firstIndeterminate =
+    trustResults.filter((r) => r.first.kind === 'unreachable').length + firstTruncated;
 
   // A list older than its own refresh interval is answering from data we can no
   // longer vouch for. Reporting that as `ok` is the precise over-claim this
@@ -251,7 +270,7 @@ export async function buildRiskFlags(ctx: FlagContext): Promise<RiskAssessment> 
 
   const checks: ChecksPerformed = {
     contract_verification: rollUp(eligible.length, trustResults.length, verifyIndeterminate),
-    first_interaction: rollUp(eligible.length, trustResults.length, firstIndeterminate),
+    first_interaction: rollUp(eligible.length, trustResults.length, firstIndeterminate, firstTruncated),
     drainer_blacklist: drainerStatus,
     unchecked_addresses: uncheckedAddresses,
     note: null,
@@ -265,6 +284,14 @@ export async function buildRiskFlags(ctx: FlagContext): Promise<RiskAssessment> 
   }
   if (checks.first_interaction === 'unavailable') {
     degraded.push('counterparty history could not be checked');
+  } else if (checks.first_interaction === 'inconclusive') {
+    // Deliberately does not say anything "failed": nothing did. Saying so would
+    // both misdescribe the result and invite a pointless retry.
+    degraded.push(
+      'the sender has more transaction history than this check reads, so whether this was a ' +
+        'first interaction cannot be established for them — no lookup failed, and a retry would ' +
+        'return the same',
+    );
   } else if (checks.first_interaction === 'partial') {
     degraded.push('counterparty history ran on only some addresses');
   }

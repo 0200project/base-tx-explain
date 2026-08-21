@@ -67,12 +67,24 @@ export interface RiskFlag {
  *
  *  - `ok`             — the check ran against every address it needed to.
  *  - `partial`        — it ran against some but not all of them.
- *  - `unavailable`    — it could not run at all (upstream unreachable, or the
- *                       answer was indeterminate). No flag was emitted, and that
- *                       absence carries no information.
+ *  - `unavailable`    — it could not run at all: the upstream sources it depends on
+ *                       were unreachable. Transient — a retry may get an answer.
+ *  - `inconclusive`   — the check ran and nothing failed, but its method cannot
+ *                       answer for this input, and a retry will not change that.
+ *                       Today: `first_interaction` for a sender whose history is
+ *                       longer than the single page the lookup reads.
  *  - `not_applicable` — there was nothing for this check to look at.
+ *
+ * `unavailable` and `inconclusive` are kept apart because they call for opposite
+ * responses. Reporting a limit of the method as `unavailable` would claim an
+ * infrastructure failure that did not happen, and would send callers back to retry
+ * a question that cannot be answered this way — on exactly the high-activity
+ * wallets an agent asks about most.
+ *
+ * None of the four non-`ok` values is a clean result: no flag was emitted, and that
+ * absence carries no information.
  */
-export type CheckStatus = 'ok' | 'partial' | 'unavailable' | 'not_applicable';
+export type CheckStatus = 'ok' | 'partial' | 'unavailable' | 'inconclusive' | 'not_applicable';
 
 /**
  * Which risk checks ran on this transaction.

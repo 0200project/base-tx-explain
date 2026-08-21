@@ -1,7 +1,30 @@
 import type { Address } from 'viem';
 import { DAY, NEGATIVE_TTL, TtlCache } from '../cache.js';
 
-const cache = new TtlCache<boolean | null>(5_000, DAY);
+/**
+ * The outcome of a first-interaction lookup.
+ *
+ *  - `first`       — verifiably the sender's first transaction with this counterparty.
+ *  - `seen`        — a prior interaction was found.
+ *  - `unreachable` — every upstream failed. Transient: a retry may get an answer.
+ *  - `truncated`   — the sender's history is longer than the single page this method
+ *                    reads (PAGE_CAP), so "first time" cannot be honestly asserted.
+ *
+ * `unreachable` and `truncated` are both "no answer", but they are not the same
+ * kind of no. The first is our lookup failing; the second is the method meeting an
+ * honest limit, permanently for this sender — a retry reads the same capped page.
+ * The distinction also carries information that collapsing them discards: a sender
+ * with more than PAGE_CAP transactions is high-activity, for whom "first
+ * interaction" is a weak signal in the first place, where the same answer about a
+ * days-old wallet would be a strong one.
+ */
+export type FirstInteractionResult =
+  | { kind: 'first' }
+  | { kind: 'seen' }
+  | { kind: 'unreachable' }
+  | { kind: 'truncated' };
+
+const cache = new TtlCache<FirstInteractionResult>(5_000, DAY);
 const PAGE_CAP = 1_000;
 
 /**
@@ -9,16 +32,15 @@ const PAGE_CAP = 1_000;
  * Primary source: Blockscout's public Base API (keyless). Fallback: Etherscan
  * v2 when a key is configured (note: Base account endpoints need a paid
  * Etherscan tier; the call degrades silently on a free key).
- * Returns:
- *   true  → verifiably the first interaction
- *   false → prior interaction found
- *   null  → cannot be determined (history truncated or APIs unreachable) — no flag.
+ *
+ * Never throws: anything other than `first` means no flag is emitted, and the
+ * caller reports which kind of no-answer it was.
  */
 export async function isFirstInteraction(
   sender: Address,
   counterparty: Address,
   beforeBlock: bigint,
-): Promise<boolean | null> {
+): Promise<FirstInteractionResult> {
   const cacheKey = `${sender.toLowerCase()}:${counterparty.toLowerCase()}:${beforeBlock}`;
   const cached = cache.get(cacheKey);
   if (cached !== undefined) return cached;
@@ -27,20 +49,21 @@ export async function isFirstInteraction(
     (await fetchTxList(blockscoutUrl(sender, beforeBlock))) ??
     (await fetchEtherscan(sender, beforeBlock));
 
-  let verdict: boolean | null = null;
-  if (history !== null) {
-    if (history.length >= PAGE_CAP) {
-      // History truncated at the page cap: cannot honestly assert "first time".
-      verdict = null;
-    } else {
-      const target = counterparty.toLowerCase();
-      verdict = !history.some((tx) => tx.to?.toLowerCase() === target);
-    }
+  let verdict: FirstInteractionResult;
+  if (history === null) {
+    verdict = { kind: 'unreachable' };
+  } else if (history.length >= PAGE_CAP) {
+    // History truncated at the page cap: cannot honestly assert "first time".
+    verdict = { kind: 'truncated' };
+  } else {
+    const target = counterparty.toLowerCase();
+    verdict = history.some((tx) => tx.to?.toLowerCase() === target) ? { kind: 'seen' } : { kind: 'first' };
   }
-  // A null verdict means the lookup failed or the history was truncated, not
-  // that the answer is null. Caching it for a day would keep answering from a
-  // transient outage long after the source recovered.
-  cache.set(cacheKey, verdict, verdict === null ? NEGATIVE_TTL : DAY);
+  // Only `unreachable` is transient. Caching it for a day would keep answering
+  // from a momentary outage long after the source recovered. Everything else,
+  // `truncated` included, is fixed for this key: the history before an already
+  // mined block does not change, so re-reading it would return the same page.
+  cache.set(cacheKey, verdict, verdict.kind === 'unreachable' ? NEGATIVE_TTL : DAY);
   return verdict;
 }
 

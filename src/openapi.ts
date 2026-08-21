@@ -50,11 +50,11 @@ const EXPLAIN_RESULT_SCHEMA = {
     checks: {
       type: 'object',
       description:
-        'Which risk checks actually ran. Every check fails open: when an upstream source is unreachable no flag is emitted, which is indistinguishable in risk_flags from having looked and found nothing. An empty risk_flags is only meaningful when the relevant check is "ok" — alongside "unavailable" or "partial" it means not checked, NOT clean. Absence of a flag is never a safety guarantee.',
+        'Which risk checks actually ran. Every check fails open: when an upstream source is unreachable no flag is emitted, which is indistinguishable in risk_flags from having looked and found nothing. An empty risk_flags is only meaningful when the relevant check is "ok" — alongside "partial", "unavailable" or "inconclusive" it means not checked, NOT clean. "unavailable" means the upstream sources were unreachable and a retry may get an answer; "inconclusive" means nothing failed but the check\'s method cannot answer for this input, so a retry will not help (today: first_interaction for a sender with more history than the lookup reads). Absence of a flag is never a safety guarantee.',
       properties: {
-        contract_verification: { type: 'string', enum: ['ok', 'partial', 'unavailable', 'not_applicable'] },
-        first_interaction: { type: 'string', enum: ['ok', 'partial', 'unavailable', 'not_applicable'] },
-        drainer_blacklist: { type: 'string', enum: ['ok', 'partial', 'unavailable', 'not_applicable'] },
+        contract_verification: { type: 'string', enum: ['ok', 'partial', 'unavailable', 'inconclusive', 'not_applicable'] },
+        first_interaction: { type: 'string', enum: ['ok', 'partial', 'unavailable', 'inconclusive', 'not_applicable'] },
+        drainer_blacklist: { type: 'string', enum: ['ok', 'partial', 'unavailable', 'inconclusive', 'not_applicable'] },
         unchecked_addresses: {
           type: 'array',
           items: { type: 'string' },
