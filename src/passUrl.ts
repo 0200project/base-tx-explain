@@ -28,8 +28,12 @@
  *  - The server stores only a hash of each token, so logs are the exposure, not
  *    the store.
  *  - Tokens are per-purchase and revocable.
- *  - `redactPassPath` below keeps the token out of OUR logs, which is the one
- *    leak surface we control.
+ *  - We do not log request paths at all today, so the token does not reach our
+ *    own logs. Note precisely what that is: an ABSENCE, not a control. Nothing
+ *    stops the next request logger from writing tokens in plaintext, which is
+ *    why `redactPassPath` exists below and why any code that logs a path MUST
+ *    route through it. It is not wired to anything yet, because there is
+ *    nothing to wire it to.
  *  - The header and `_meta` forms still work, so a client that CAN send a header
  *    never has to put the token in a URL.
  *
@@ -66,6 +70,15 @@ export function passFromPath(path: string): string | null {
  * exposure into a permanent one in the one place we control. The marker keeps
  * the line useful (you can still see a pass call happened) without recording
  * which pass.
+ *
+ * DELIBERATELY UNCALLED. Nothing logs a request path today, so there is no call
+ * site; this is here so that whoever adds one has the correct thing to reach for
+ * rather than inventing it under time pressure. If you are adding request
+ * logging, access logging, error reporting that includes a URL, or anything that
+ * forwards a path to a third party, run it through this first. Adding such a
+ * logger without it silently turns every pass URL into a plaintext credential in
+ * the log store — see the rationale at the top of this file, which depends on
+ * that not happening.
  */
 export function redactPassPath(path: string): string {
   return path.replace(/\/mcp\/btxp_[0-9a-f]{48}/g, '/mcp/btxp_<redacted>');

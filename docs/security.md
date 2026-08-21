@@ -293,6 +293,15 @@ a change touches any of:
   activated on ambiguous settlement (`listUnconfirmed()`) is service delivered
   without confirmed payment, on purpose, because withholding from someone whose
   money probably moved is the worse error.
+- **Any new request logging, access logging, or error reporting that includes a
+  URL.** Pass tokens are carried in the MCP URL path (`/mcp/btxp_<48hex>`), a
+  deliberate and documented weakening justified only because the worst case is
+  metered calls. Today nothing logs a request path, so no token reaches our
+  logs — that is an ABSENCE, not a control. Any code that logs a path must route
+  it through `redactPassPath` (src/passUrl.ts), or every pass URL becomes a
+  plaintext credential sitting in the log store for as long as logs are kept.
+  Unverified and worth one check: whether Fly's edge logs request paths
+  independently of the app, which no redaction of ours can reach.
 - **A new upstream dependency** or a change to how an existing one's response is
   parsed.
 - **`src/labels.ts` additions are trust assertions, not just display.** A labeled
