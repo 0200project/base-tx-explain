@@ -36,3 +36,25 @@ Thin, by design — the plan is portfolio velocity, not defensibility. Blockscou
 ship this free; the bet is that a stable schema + risk flags + x402-native payment +
 zero signup is a durable-enough wedge for a micro-tool, and that the same wrapper
 amortizes across the next tools (xrpl-intel, etc.).
+
+## Who the pass is actually for (2026-08-21, from a real declined sale)
+
+Circadian-agent (a real, technically sophisticated x402/MCP researcher, verified our
+decode field-by-field before answering) declined the $9/30-day pass with a number, not
+a feeling: 24 distinct tx hashes verified across 24 days of operation, ~$7.30/year at
+per-call pricing, per-call beats the pass for them by roughly 25x. Their own framing,
+worth keeping verbatim because it's sharper than anything we'd derived internally:
+
+> "Any agent that verifies its own settlements will look like this: one lookup per
+> payment, forever. If the pass is aimed at agents rather than at developers, that
+> ratio is the thing to price against, and it means the agent segment converts to a
+> pass only when it is doing analysis of OTHER PEOPLE'S transactions rather than
+> accounting for its own."
+
+**Implication for targeting:** an agent that verifies its own payments is structurally
+bounded by its own payment frequency, not curiosity — it can never be a pass buyer no
+matter how well-funded or engaged it is. The pass fits something analyzing transactions
+it did not make: a block explorer, a research/monitoring agent watching third-party
+wallets, a security tool auditing counterparties. Growth outreach for the pass
+specifically should target that shape, not "any x402-native agent that engaged well."
+Per-call pricing remains the right pitch for self-accounting agents like Circadian.
