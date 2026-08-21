@@ -33,6 +33,13 @@ returns (as both `structuredContent` and stringified JSON in `content[0].text`):
   "risk_flags": [
     { "flag": "unverified_contract", "detail": "The target contract 0xd0a4...e4bf has no verified source code on Sourcify." }
   ],
+  "checks": {
+    "contract_verification": "ok",
+    "first_interaction": "ok",
+    "drainer_blacklist": "ok",
+    "unchecked_addresses": [],
+    "note": null
+  },
   "gas_paid_usd": 0.020562,
   "timestamp": "2026-08-20T03:54:19.000Z",
   "block_number": 50204356,
@@ -46,6 +53,7 @@ returns (as both `structuredContent` and stringified JSON in `content[0].text`):
 
 - `action_type` — one of: `eth_transfer`, `erc20_transfer`, `erc20_approval`, `approval_revoked`, `approval_for_all`, `swap`, `add_liquidity`, `remove_liquidity`, `wrap`, `unwrap`, `nft_mint`, `nft_transfer`, `nft_sale`, `token_mint`, `bridge_in`, `bridge_out`, `lending_supply`, `lending_withdraw`, `lending_borrow`, `lending_repay`, `stake`, `unstake`, `claim`, `batch_transfer`, `account_abstraction_bundle`, `attestation`, `name_registration`, `contract_deployment`, `contract_interaction`, `unknown`.
 - `risk_flags[].flag` — one of: `unverified_contract`, `first_time_counterparty`, `approval_for_all`, `unlimited_approval`, `known_drainer`, `nonstandard_token_symbol`, `impersonated_token`, `transaction_reverted`. A flag always means evidence was found; a failed lookup never produces a flag.
+- `checks` — **read this before drawing any conclusion from an empty `risk_flags`.** Because a failed lookup never produces a flag, an empty `risk_flags` means either "nothing was found" or "nothing was looked at", and those are opposite. Each of `contract_verification`, `first_interaction` and `drainer_blacklist` reports `ok` (ran against every address that warranted it), `partial` (ran against some), `unavailable` (could not run, or the answer was indeterminate), or `not_applicable` (nothing to look at). `unchecked_addresses` names addresses that warranted a lookup but did not get one, because the transaction involved more of them than the per-transaction cap — so the address described in `risk_flags` is not necessarily the one that went unexamined. `note` says in plain language what did not run, and is `null` when everything did. An empty `risk_flags` alongside any status other than `ok` means *not checked*, not *clean*, and `summary` says so too. Absence of a flag is never a safety guarantee: these are observations about a transaction that has already been mined, not a verdict on it and not advice.
 - `status` — `success` or `reverted`. Reverted transactions are classified by intent (what was attempted) and carry a `transaction_reverted` risk flag.
 - `partial: true` — the transaction's full meaning could not be established; `summary` states exactly what is and is not known. On errors the tool returns `isError: true` with `{ "error": "...", "code": "invalid_hash" | "not_found" | "pending" | "upstream_error" }`.
 - Amounts are decimal strings (not floats). Addresses are as emitted onchain; compare case-insensitively.

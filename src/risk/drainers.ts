@@ -28,6 +28,12 @@ const REFRESH_MS = 12 * HOUR;
 
 let drainerSet: Set<string> = new Set();
 let lastRefresh = 0;
+/**
+ * When the list was last actually rebuilt from its sources, as opposed to when
+ * a refresh was last attempted. `lastRefresh` is stamped even when every source
+ * failed, so on its own it cannot tell a fresh list from a stale one.
+ */
+let lastSuccessfulRefresh = 0;
 let refreshing: Promise<void> | null = null;
 
 async function refresh(): Promise<void> {
@@ -44,7 +50,10 @@ async function refresh(): Promise<void> {
       if (r.status === 'fulfilled') for (const a of r.value) merged.add(a.toLowerCase());
     }
     // Keep the previous set if every source failed; a stale list beats an empty one.
-    if (merged.size > 0) drainerSet = merged;
+    if (merged.size > 0) {
+      drainerSet = merged;
+      lastSuccessfulRefresh = Date.now();
+    }
   } finally {
     lastRefresh = Date.now();
     refreshing = null;
@@ -62,6 +71,23 @@ async function refresh(): Promise<void> {
 export function drainerListLoaded(): boolean {
   return drainerSet.size > 0;
 }
+
+/**
+ * How stale the list is, in ms, or null when it has never loaded.
+ *
+ * A blacklist's whole value is recency, so "loaded" is not enough to report the
+ * check as having run properly. A total refresh failure still stamps the
+ * attempt timestamp, which suppresses retries for the full refresh interval
+ * while the old set stays in place — so the list can be arbitrarily old while
+ * still answering lookups.
+ */
+export function drainerListAgeMs(): number | null {
+  if (lastSuccessfulRefresh === 0) return null;
+  return Date.now() - lastSuccessfulRefresh;
+}
+
+/** Refresh interval, exported so callers can judge staleness against it. */
+export const DRAINER_REFRESH_MS = REFRESH_MS;
 
 /** Membership check against the merged drainer lists. Never throws. */
 export async function isKnownDrainer(address: string): Promise<boolean> {

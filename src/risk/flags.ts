@@ -5,11 +5,12 @@ import type { DecodedEvent } from '../decode/events.js';
 import { getTokenSupply, shortAddress } from '../decode/tokens.js';
 import { getLabel } from '../labels.js';
 import type { AssetMovement, CheckStatus, ChecksPerformed, RiskFlag } from '../types.js';
-import { drainerListLoaded, isKnownDrainer } from './drainers.js';
+import { DRAINER_REFRESH_MS, drainerListAgeMs, drainerListLoaded, isKnownDrainer } from './drainers.js';
 import { isFirstInteraction } from './firstTime.js';
 import { verificationStatus } from './verification.js';
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+const HOUR_MS = 60 * 60 * 1000;
 
 interface FlagContext {
   from: Address;
@@ -35,8 +36,12 @@ export interface RiskAssessment {
  */
 function rollUp(total: number, attempted: number, indeterminate: number): CheckStatus {
   if (total === 0) return 'not_applicable';
-  if (attempted === 0) return 'unavailable';
-  if (indeterminate >= attempted && attempted === total) return 'unavailable';
+  // Zero usable answers is `unavailable` however many addresses we tried. This
+  // condition previously also required `attempted === total`, which meant an
+  // address dropped by CHECK_CAP upgraded an all-indeterminate result from
+  // `unavailable` to `partial`: more unchecked addresses improved the reported
+  // status, which is exactly backwards.
+  if (indeterminate >= attempted) return 'unavailable';
   if (indeterminate > 0 || attempted < total) return 'partial';
   return 'ok';
 }
@@ -93,10 +98,18 @@ export async function buildRiskFlags(ctx: FlagContext): Promise<RiskAssessment> 
         return {
           flag: 'unlimited_approval' as const,
           detail: `Approved ${spenderLabel ?? shortAddress(spender)} to spend ${scope}.`,
+          spender: spender.toLowerCase(),
         };
       }),
   );
-  for (const f of unlimitedFlags) if (f) flags.push(f);
+  // Spenders granted an unbounded allowance. These are the addresses most worth
+  // spending a scarce network lookup on, so they sort to the front of the queue.
+  const unlimitedSpenders = new Set<string>();
+  for (const f of unlimitedFlags) {
+    if (!f) continue;
+    unlimitedSpenders.add(f.spender);
+    flags.push({ flag: f.flag, detail: f.detail });
+  }
 
   // Addresses that gained power or received the sender's assets in this tx.
   const exposedAddresses = new Set<string>();
@@ -111,12 +124,15 @@ export async function buildRiskFlags(ctx: FlagContext): Promise<RiskAssessment> 
     if (m.from.toLowerCase() === sender) exposedAddresses.add(m.to.toLowerCase());
   }
 
-  // Read once, before the lookups: a background refresh could populate the list
-  // mid-assessment, which would report coverage the answers below did not have.
-  const drainerListReady = drainerListLoaded();
   const drainerChecks = await Promise.all(
     [...exposedAddresses].map(async (a) => ((await isKnownDrainer(a)) ? a : null)),
   );
+  // Read AFTER the lookups. On the first request after a deploy the list is
+  // still empty when the lookups start, but isKnownDrainer awaits the initial
+  // load before answering — so reading first reported `unavailable` on answers
+  // that were in fact good, on every cold start. Reading after is safe because
+  // the set is only ever replaced wholesale with a non-empty one, never emptied.
+  const drainerAge = drainerListLoaded() ? drainerListAgeMs() : null;
   for (const hit of drainerChecks) {
     if (hit) {
       flags.push({
@@ -164,7 +180,24 @@ export async function buildRiskFlags(ctx: FlagContext): Promise<RiskAssessment> 
   const eligible = targets.filter(
     (t) => t.addr !== sender && t.addr !== ZERO_ADDRESS && !getLabel(t.addr),
   );
-  const toCheck = eligible.slice(0, CHECK_CAP);
+
+  // Order the queue by how much damage the address could do, not by the order
+  // its event happened to appear in. `erc20_approval` is matched on topic
+  // signature alone and cannot be emitter-gated (a genuine approval legitimately
+  // comes from whichever token contract), so any contract can emit counterfeit
+  // Approval events naming junk spenders. Left in event order, three such logs
+  // push a real drain-enabling spender past the cap for the price of three log
+  // emissions. Sorting unbounded approvals first means padding only displaces
+  // the real target if the padding is itself unlimited, which is both more
+  // expensive and independently flagged.
+  const priority = (t: { addr: string; role: 'spender' | 'contract' }): number => {
+    if (t.role === 'spender' && unlimitedSpenders.has(t.addr)) return 0;
+    if (t.role === 'spender') return 1;
+    return 2;
+  };
+  const queue = [...eligible].sort((a, b) => priority(a) - priority(b));
+  const toCheck = queue.slice(0, CHECK_CAP);
+  const uncheckedAddresses = queue.slice(CHECK_CAP).map((t) => t.addr);
 
   // Run the lookups concurrently but emit flags in a deterministic order
   // (toCheck order, unverified before first_time per address).
@@ -203,11 +236,24 @@ export async function buildRiskFlags(ctx: FlagContext): Promise<RiskAssessment> 
   const verifyIndeterminate = trustResults.filter((r) => r.status === 'unknown').length;
   const firstIndeterminate = trustResults.filter((r) => r.first === null).length;
 
+  // A list older than its own refresh interval is answering from data we can no
+  // longer vouch for. Reporting that as `ok` is the precise over-claim this
+  // whole field exists to prevent, so age degrades the status.
+  const drainerStale = drainerAge !== null && drainerAge > DRAINER_REFRESH_MS;
+  const drainerStatus: CheckStatus =
+    exposedAddresses.size === 0
+      ? 'not_applicable'
+      : drainerAge === null
+        ? 'unavailable'
+        : drainerStale
+          ? 'partial'
+          : 'ok';
+
   const checks: ChecksPerformed = {
     contract_verification: rollUp(eligible.length, trustResults.length, verifyIndeterminate),
     first_interaction: rollUp(eligible.length, trustResults.length, firstIndeterminate),
-    drainer_blacklist:
-      exposedAddresses.size === 0 ? 'not_applicable' : drainerListReady ? 'ok' : 'unavailable',
+    drainer_blacklist: drainerStatus,
+    unchecked_addresses: uncheckedAddresses,
     note: null,
   };
 
@@ -224,6 +270,16 @@ export async function buildRiskFlags(ctx: FlagContext): Promise<RiskAssessment> 
   }
   if (checks.drainer_blacklist === 'unavailable') {
     degraded.push('the scam/drainer blacklist was unavailable');
+  } else if (drainerStale && drainerAge !== null) {
+    degraded.push(
+      `the scam/drainer blacklist has not refreshed in ${Math.floor(drainerAge / HOUR_MS)} hours`,
+    );
+  }
+  if (uncheckedAddresses.length > 0) {
+    degraded.push(
+      `${uncheckedAddresses.length} address(es) involved in this transaction were not looked up ` +
+        `at all and are listed in unchecked_addresses`,
+    );
   }
   if (degraded.length > 0) {
     checks.note =

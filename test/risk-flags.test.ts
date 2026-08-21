@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
   verificationDown: false, // Sourcify/Basescan unreachable -> 'unknown'
   historyDown: false, // Blockscout/Basescan unreachable -> null
   drainerListDown: false, // blacklist never loaded
+  drainerAgeMs: 0, // how long since the blacklist last actually rebuilt
 }));
 
 vi.mock('../src/risk/verification.js', () => ({
@@ -28,6 +29,8 @@ vi.mock('../src/risk/drainers.js', () => ({
   isKnownDrainer: async (addr: string) =>
     !state.drainerListDown && state.drainers.has(addr.toLowerCase()),
   drainerListLoaded: () => !state.drainerListDown,
+  drainerListAgeMs: () => (state.drainerListDown ? null : state.drainerAgeMs),
+  DRAINER_REFRESH_MS: 12 * 60 * 60 * 1000,
 }));
 // Partial mock: keep the real shortAddress/sanitizeSymbol, stub the network read.
 vi.mock('../src/decode/tokens.js', async (importActual) => {
@@ -72,6 +75,7 @@ beforeEach(() => {
   state.verificationDown = false;
   state.historyDown = false;
   state.drainerListDown = false;
+  state.drainerAgeMs = 0;
 });
 
 describe('buildRiskFlags — approval trust target resolution', () => {
@@ -301,5 +305,100 @@ describe('buildRiskFlags — check coverage (D-003)', () => {
     expect(res.checks.first_interaction).toBe('not_applicable');
     expect(res.checks.drainer_blacklist).toBe('not_applicable');
     expect(res.checks.note).toBeNull();
+  });
+});
+
+describe('buildRiskFlags — coverage cannot be gamed', () => {
+  const junkSpenders = [
+    '0xaaaa000000000000000000000000000000000001',
+    '0xbbbb000000000000000000000000000000000002',
+    '0xcccc000000000000000000000000000000000003',
+  ] as Address[];
+
+  it('does not upgrade an all-indeterminate result to partial when addresses were dropped', async () => {
+    // Four unfamiliar spenders, three looked at, all three indeterminate: we
+    // learned nothing. Reporting `partial` here — better than the `unavailable`
+    // the same outcome earns with three spenders — would mean adding an
+    // unchecked address improves the reported status.
+    state.verificationDown = true;
+    state.historyDown = true;
+    const spenders = [...junkSpenders, ATTACKER];
+
+    const res = await buildRiskFlags({
+      from: SENDER,
+      to: USDC,
+      blockNumber: 1000n,
+      reverted: false,
+      classification: { action: 'erc20_approval', detail: {} },
+      events: spenders.map((s, i) => ({ ...approvalEvent(s), logIndex: i })),
+      movements: [],
+    });
+
+    expect(res.checks.contract_verification).toBe('unavailable');
+    expect(res.checks.first_interaction).toBe('unavailable');
+  });
+
+  it('names the addresses that were never looked at', async () => {
+    const spenders = [...junkSpenders, ATTACKER];
+    for (const s of spenders) state.verified.add(s.toLowerCase());
+
+    const res = await buildRiskFlags({
+      from: SENDER,
+      to: USDC,
+      blockNumber: 1000n,
+      reverted: false,
+      classification: { action: 'erc20_approval', detail: {} },
+      events: spenders.map((s, i) => ({ ...approvalEvent(s), logIndex: i })),
+      movements: [],
+    });
+
+    expect(res.checks.unchecked_addresses).toHaveLength(1);
+    expect(res.checks.note).toContain('unchecked_addresses');
+  });
+
+  it('an unlimited approval outranks junk approvals padded ahead of it', async () => {
+    // The padding attack: three counterfeit Approval events naming junk
+    // spenders, emitted before the real drain-enabling one. In event order the
+    // real spender falls past CHECK_CAP and is never verified. Sorting unbounded
+    // approvals first keeps it in the checked set.
+    state.supply.set(USDC.toLowerCase(), 1_000_000n);
+    state.firstTime.add(ATTACKER.toLowerCase());
+
+    const events: DecodedEvent[] = [
+      ...junkSpenders.map((s, i) => ({ ...approvalEvent(s, 1n), logIndex: i })),
+      { ...approvalEvent(ATTACKER, 2n ** 200n), logIndex: 3 },
+    ];
+
+    const res = await buildRiskFlags({
+      from: SENDER,
+      to: USDC,
+      blockNumber: 1000n,
+      reverted: false,
+      classification: { action: 'erc20_approval', detail: {} },
+      events,
+      movements: [],
+    });
+
+    expect(flagCodes(res)).toContain('unverified_contract');
+    expect(detailFor(res, 'unverified_contract')).toContain(short(ATTACKER));
+    expect(res.checks.unchecked_addresses).not.toContain(ATTACKER.toLowerCase());
+  });
+
+  it('a blacklist older than its refresh interval is not reported as ok', async () => {
+    state.drainerAgeMs = 30 * 60 * 60 * 1000; // 30 hours
+    state.verified.add(ATTACKER.toLowerCase());
+
+    const res = await buildRiskFlags({
+      from: SENDER,
+      to: USDC,
+      blockNumber: 1000n,
+      reverted: false,
+      classification: { action: 'erc20_approval', detail: {} },
+      events: [approvalEvent(ATTACKER)],
+      movements: [],
+    });
+
+    expect(res.checks.drainer_blacklist).toBe('partial');
+    expect(res.checks.note).toContain('30 hours');
   });
 });

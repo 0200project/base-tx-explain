@@ -247,6 +247,25 @@ export async function explainTransaction(txHashRaw: string): Promise<ExplainResu
     summary += ' Some emitted events use formats this decoder does not recognize.';
   }
 
+  // The structured `checks` field is useless to a consumer that acts on the
+  // prose, and an LLM acts on the prose. Without this, a caller reading only
+  // `summary` gets the fully reassuring version of a transaction whose risk
+  // checks never ran.
+  if (
+    checks.contract_verification !== 'ok' ||
+    checks.first_interaction !== 'ok' ||
+    checks.drainer_blacklist !== 'ok'
+  ) {
+    const unranAll =
+      checks.contract_verification === 'not_applicable' &&
+      checks.first_interaction === 'not_applicable' &&
+      checks.drainer_blacklist === 'not_applicable';
+    if (!unranAll) {
+      summary +=
+        ' Not all risk checks completed for this transaction; see checks. Absence of a risk flag here does not mean none exists.';
+    }
+  }
+
   return {
     summary,
     action_type: classification.action,

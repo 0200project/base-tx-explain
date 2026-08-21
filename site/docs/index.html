@@ -474,6 +474,7 @@ npm run dev</code></pre>
         </table>
       </div>
       <p>The keys are <code class="inline">contract_verification</code> (Sourcify, then Basescan), <code class="inline">first_interaction</code> (Blockscout, then Basescan) and <code class="inline">drainer_blacklist</code>, plus a <code class="inline">note</code> naming anything that did not fully run — <code class="inline">null</code> when everything did.</p>
+      <p><code class="inline">unchecked_addresses</code> names addresses that warranted a lookup but did not receive one, because the transaction involved more of them than the per-transaction cap. Which addresses get the scarce lookups is influenced by the order events appear in, and that order is chosen by whoever wrote the transaction, so the address described in <code class="inline">risk_flags</code> is not necessarily the one that went unexamined.</p>
       <p>An empty <code class="inline">risk_flags</code> alongside any status other than <code class="inline">ok</code> means <em>not checked</em>, not <em>clean</em>. Two cases produce <code class="inline">partial</code> rather than <code class="inline">ok</code> even when every lookup succeeds: a transaction touching more unfamiliar addresses than the per-transaction lookup cap, and a sender whose history is longer than one page, where first-time interaction cannot be honestly asserted.</p>
       <p>Absence of a flag is never a safety guarantee. These are observations about a transaction that has already been mined, not a verdict on it, and not advice about whether to act.</p>
 
@@ -536,6 +537,7 @@ npm run dev</code></pre>
     <span class="tok-key">"contract_verification"</span><span class="tok-punc">:</span> <span class="tok-str">"ok"</span><span class="tok-punc">,</span>
     <span class="tok-key">"first_interaction"</span><span class="tok-punc">:</span> <span class="tok-str">"ok"</span><span class="tok-punc">,</span>
     <span class="tok-key">"drainer_blacklist"</span><span class="tok-punc">:</span> <span class="tok-str">"ok"</span><span class="tok-punc">,</span>
+    <span class="tok-key">"unchecked_addresses"</span><span class="tok-punc">: [],</span>
     <span class="tok-key">"note"</span><span class="tok-punc">:</span> <span class="tok-flag">null</span>
   <span class="tok-punc">},</span>
   <span class="tok-key">"gas_paid_usd"</span><span class="tok-punc">:</span> <span class="tok-num">0.020562</span><span class="tok-punc">,</span>

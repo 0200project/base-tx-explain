@@ -93,6 +93,16 @@ export interface ChecksPerformed {
   first_interaction: CheckStatus;
   /** Membership in the public scam/drainer blacklists. */
   drainer_blacklist: CheckStatus;
+  /**
+   * Addresses that warranted a network check but did not receive one, because
+   * the transaction involved more of them than the per-transaction lookup cap.
+   *
+   * Which addresses get the scarce checks is decided by the order events appear
+   * in, and that order is chosen by whoever wrote the transaction. Naming the
+   * skipped addresses lets a consumer see that the address described in
+   * `risk_flags` is not the address that went unexamined.
+   */
+  unchecked_addresses: string[];
   /** Plain-language reason, present only when some check did not fully run. */
   note: string | null;
 }
