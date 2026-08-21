@@ -101,3 +101,70 @@ Runners-up, clearly subordinate: send **three messages, one question each, no pi
 - **DAO treasury monitors** rest entirely on secondary sources — no primary fetches. Do not act on that segment.
 - **Immunefi's Q1 2026 figures** come via secondary write-ups of their report, not the report. **Blockaid's API schema** is behind a login wall (docs.blockscout aside, `docs.blockaid.io` 307s to auth) so their input shape is asserted from marketing, and the 114M/5mo figure is Blockaid-sourced — trust the order of magnitude only.
 - **Your own free-tier traffic**, which I have no access to and which is the single most decision-relevant number in this entire report.
+---
+
+# §5 answered, in part — Platform, 2026-08-21
+
+The research named one cheap next test and called it the most decision-relevant
+number we have. Half of it ran. **The other half cannot run, and that is itself
+the finding.**
+
+## What we cannot measure, and why
+
+§5 asked, for each hash, whether its `from` address belongs to the client who
+asked — the self-verification ratio, generalising Circadian's finding past n=1.
+
+**We do not log which hash was requested.** `UsageEvent` carries
+`client`, `charge`, `paid`, `pass`, `ok`, `internal` — no `tx_hash`, verified
+against all 128 ledger lines. Even with hashes it would only resolve for clients
+whose on-chain address we know, and we know exactly one: the single settlement,
+which is Circadian's probe. The ratio is unanswerable at n=1 by construction.
+
+**Recommendation: do not start logging hashes.** It would retain a record of
+which addresses each client is curious about — a real privacy liability, on a
+service whose pitch includes having no account — to buy an answer the traffic
+below already makes moot. Revisit if free-tier volume ever reaches a scale where
+the ratio could say something. This is a deliberate decision not to collect, not
+an oversight; the oversight was only that nobody had written it down.
+
+## What we can measure, and what it says
+
+Whole ledger, 126 calls over two days:
+
+| client | calls | share | window |
+|---|---:|---:|---|
+| `3f4d2c03` | 94 | 75% | 08-20 17:45 → 08-21 05:22 |
+| `8f92f999` | 23 | 18% | 08-20 23:06 → 08-21 17:14 |
+| `53d7ceaf` | 4 | 3% | 08-21 16:18 → 08-21 17:26 |
+| `56cb6309` | 3 | 2% | 08-20 20:00 → 08-21 05:09 |
+| `c63f048f` | 1 | <1% | 08-20 17:55 |
+| `1b624776` | 1 | <1% | 08-21 00:00 |
+
+**Two clients are 93% of all traffic.** The largest begins at
+`2026-08-20T17:45:29`, the same second as the ledger's first event — the
+signature of our own testing, not of a user. `53d7ceaf` carries the internal
+marker and is definitely us. The internal marker only shipped 08-21 12:26, so
+everything before it is unattributed by construction and the "6 external
+clients" figure is an overcount that cannot be corrected retroactively.
+
+**Strip the plausible self-traffic and the real external signal is three or four
+clients, three of which made between one and three calls and never came back.**
+Nobody has returned. Nobody has paid.
+
+## The decision this triggers
+
+§5 set the rule in advance, which is the only reason this is a finding rather
+than a rationalisation: *"If free-tier traffic is near zero, your problem is
+distribution and none of §4 matters yet."*
+
+Four external clients in two days is near zero. **The rule fires: this is a
+distribution problem, and segment or pricing work is premature.** The bimodal
+argument in §1 stands unrefuted, but it is not what is stopping us today —
+nothing has been given the chance to refuse us. Two days of zero paying
+strangers is consistent with the null hypothesis AND with nobody having arrived;
+the traffic cannot distinguish those, and the second is cheaper to fix.
+
+Concretely: **do not spend the $20 on acquisition tests against a funnel four
+strangers have entered.** Spend nothing until the top of the funnel is non-zero.
+The listings already in flight (registry, Apify, Glama, the two open PRs) are
+the correct work and cost nothing.
