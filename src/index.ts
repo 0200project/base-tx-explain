@@ -22,6 +22,7 @@ import { passFromHeaders, passFromPath, passUrl } from './passUrl.js';
 import { isInternalRequest } from './internal.js';
 import { attribute, attributionSnapshot, initAttribution, unattribute } from './attribution.js';
 import { channelOf, logChannelConfig } from './channel.js';
+import { clientKind } from './clientKind.js';
 import { clientKey } from './clientKey.js';
 import { normalizeMcpPayments } from './mcpPayment.js';
 import { checkWallets, initWalletMonitor } from './walletMonitor.js';
@@ -1309,6 +1310,9 @@ app.post(['/mcp', '/mcp/:token'], async (req, res) => {
     // first and excluded second, any later reader of the pre-filter value would
     // resurrect our own testing as acquisition.
     const channel = isOurs ? undefined : channelOf(req.query, req.headers as Record<string, unknown>);
+    // Resolved only for external traffic, and BEFORE any use, so a marked call
+    // can never contribute to what kind of stranger has been arriving.
+    const callerKind = isOurs ? undefined : clientKind(req.headers['user-agent']);
     console.log(`[call] ${new Date().toISOString()} ${kind} client=${ipTag}${channel ? ` via=${channel}` : ''}`);
     recordEvent({
       t: new Date().toISOString(),
@@ -1320,6 +1324,7 @@ app.post(['/mcp', '/mcp/:token'], async (req, res) => {
       internal: isOurs,
       ...(degradedByOutage ? { degraded: true } : {}),
       ...(channel ? { channel } : {}),
+      ...(callerKind ? { kind: callerKind } : {}),
     });
   }
 
@@ -1593,7 +1598,12 @@ function registerPaidRoutes(): void {
           recordEvent({
             t: new Date().toISOString(), e: 'call', charge: charged, paid: charged, pass: viaPass,
             client: tag, ok, internal: restIsOurs,
-            ...(restIsOurs ? {} : { channel: channelOf(req.query, req.headers as Record<string, unknown>) }),
+            ...(restIsOurs
+              ? {}
+              : {
+                  channel: channelOf(req.query, req.headers as Record<string, unknown>),
+                  kind: clientKind(req.headers['user-agent']),
+                }),
           });
         },
       });

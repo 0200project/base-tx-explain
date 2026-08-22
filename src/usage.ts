@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { absorbCheckHealthEvent, takeCheckHealthEvents, type CheckHealthEvent } from './checkHealth.js';
 import { CHANNEL_CAVEAT, DIRECT, OTHER, PRE_ATTRIBUTION, knownChannels } from './channel.js';
 import { isAttributed } from './attribution.js';
+import { CLIENT_KINDS, CLIENT_KIND_CAVEAT, type ClientKind } from './clientKind.js';
 
 /**
  * Append-only usage ledger. One JSONL file on disk (a Fly volume in
@@ -15,7 +16,7 @@ import { isAttributed } from './attribution.js';
  */
 
 export type UsageEvent =
-  | { t: string; e: 'call'; charge: boolean; paid?: boolean; pass?: boolean; client: string; ok?: boolean; internal?: boolean; degraded?: boolean; channel?: string }
+  | { t: string; e: 'call'; charge: boolean; paid?: boolean; pass?: boolean; client: string; ok?: boolean; internal?: boolean; degraded?: boolean; channel?: string; kind?: string }
   | {
       t: string;
       e: 'settled';
@@ -116,6 +117,13 @@ const lifetimeClients = new Set<string>();
 /** External calls per channel, lifetime. */
 const lifetimeChannelCalls = new Map<string, number>();
 /**
+ * The KIND each external client was first seen as, never overwritten.
+ *
+ * First-touch for the same reason as the channel: the question is what kind of
+ * thing arrived, and a chatty caller must not outweigh many separate ones.
+ */
+const clientFirstKind = new Map<string, string>();
+/**
  * The channel each external client was FIRST seen with, never overwritten.
  *
  * First-touch, not per-call, and the distinction decides what the number means.
@@ -201,6 +209,12 @@ function absorb(ev: LedgerEvent): void {
       // First touch wins and is never overwritten: a client who arrives via a
       // listing and later calls without the ref still belongs to that listing.
       if (!clientFirstChannel.has(ev.client)) clientFirstChannel.set(ev.client, ch);
+      // Same rule, same reason. Absent on events written before this shipped,
+      // which is why `pre_attribution` exists as a bucket rather than those
+      // rows being folded into `unknown` and read as unclassifiable callers.
+      if (!clientFirstKind.has(ev.client)) {
+        clientFirstKind.set(ev.client, ev.kind ?? 'pre_attribution');
+      }
     }
   } else if (ev.e === 'settled') {
     agg.settlements++;
@@ -312,6 +326,20 @@ function unattributedHandles(): Array<{ handle: string; amount_usd: number; at: 
   return out;
 }
 
+/**
+ * What kind of thing has been arriving — person, script, or crawler.
+ *
+ * Distinct external CLIENTS, not calls, and first-touch: the question is how
+ * many of each kind showed up, so a caller making forty requests is one
+ * arrival. Same shape as the channel breakdown for the same reason.
+ */
+function clientKindSnapshot(): Record<string, unknown> {
+  const counts: Record<string, number> = {};
+  for (const k of [...CLIENT_KINDS, 'pre_attribution']) counts[k] = 0;
+  for (const k of clientFirstKind.values()) counts[k] = (counts[k] ?? 0) + 1;
+  return { self_reported: true, caveat: CLIENT_KIND_CAVEAT, arrivals: counts };
+}
+
 /** How often to look for check-health buckets due to be persisted. */
 const CHECK_HEALTH_FLUSH_MS = 60_000;
 let checkHealthTimer: NodeJS.Timeout | null = null;
@@ -406,6 +434,7 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
     persisted: ledgerReady,
     first_event_at: firstEventAt,
     channels: channelSnapshot(),
+    client_kinds: clientKindSnapshot(),
     unattributed: unattributedHandles(),
     lifetime: {
       ...lifetime,
