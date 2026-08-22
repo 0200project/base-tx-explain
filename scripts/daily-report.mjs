@@ -235,6 +235,17 @@ if (stats) {
     for (const [k, v] of live) say(`- ${k}: ${v.arrivals} arrival(s), ${v.calls} call(s)`);
     say(`_${ch.caveat ?? ''}_`);
   }
+  const ck = stats.client_kinds;
+  if (ck && ck.arrivals) {
+    const live = Object.entries(ck.arrivals).filter(([, v]) => v);
+    if (live.length) {
+      say(`\n**What KIND of thing arrived** (${ck.self_reported ? 'self-reported, unverified' : 'unverified'}):`);
+      for (const [k, v] of live) say(`- ${k}: ${v} client(s)`);
+      say(`_${ck.caveat ?? ''}_`);
+      say(`\`pre_attribution\` are clients first seen before this classifier existed; they cannot be classified retroactively.`);
+      say(`\`http_library\` is the shape a real integration has. \`bot_declared\` is a crawler saying so.`);
+    }
+  }
 }
 
 say(`\n## Revenue (source: Base chain - x402/USDC rail only, excludes Stripe)\n`);
