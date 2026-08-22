@@ -64,10 +64,26 @@ kill_timeout = '30s'
 # and no third party can restart our machine by having a bad day. It fails only
 # if the process is wedged or dead, which is exactly what it is for.
 #
-# NUMBERS CHOSEN AGAINST A MEASUREMENT, not a guess. Boot to /healthz answering
-# is 0.43–0.93s across three runs with the real ledger replayed, so a 30s grace
-# is roughly 30x the slowest observed — room for a cold image pull without ever
-# shooting a machine that is merely still starting.
+# NUMBERS CHOSEN AGAINST A PRODUCTION MEASUREMENT — and the first version of
+# this comment was wrong in a way worth recording. It said "30x the slowest",
+# based on 0.43-0.93s measured LOCALLY. Production is roughly TEN TIMES that:
+#
+#   18:53:35  init, /data mounted, first check FAILS
+#   18:53:44  listening, check PASSING          -> ~10s machine-start to healthy
+#
+# Local timing started an already-warm node against a warm module cache. It did
+# not include Firecracker start, the filesystem check, the volume mount, or a
+# cold module load on a shared-CPU 256MB box. So the real margin at 30s was 3x,
+# not 30x — safe, but nothing like the headroom the justification claimed. A
+# measurement taken in one environment quoted as the basis for a config
+# governing another is the trap; the setting was fine and the REASONING was
+# false, which is what bites when someone later reads "30x" and tightens it.
+#
+# Raised to 60s (~6x observed) because grace_period applies ONLY at startup:
+# after it, checks run normally, so a longer grace delays nothing in steady
+# state and does not slow hang detection at all. With a single production
+# data point, unknown variance, and a restart loop as the failure mode, more
+# margin here is close to free.
 #
 # DELIBERATELY LENIENT, because the two failure directions are not symmetric. Too
 # aggressive means restart loops, and every restart kills whatever paid request
@@ -80,7 +96,7 @@ kill_timeout = '30s'
 # A check-driven restart goes through the normal stop path, so `kill_signal` and
 # `kill_timeout` above apply and in-flight requests still drain.
 [[http_service.checks]]
-  grace_period = '30s'
+  grace_period = '60s'
   interval = '15s'
   timeout = '10s'
   method = 'GET'
