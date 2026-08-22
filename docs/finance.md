@@ -924,6 +924,49 @@ Free $0 (10 calls/client) · x402 $0.02/call · 0200 Pass $9 one-time (30 days,
 
 ---
 
+## Overnight close — 2026-08-21 into 2026-08-22, Founder unreachable
+
+Verified against `/stats` directly by Finance before logging, matches
+platform's report exactly: `revenue_from_customers_usd: 0`,
+`unattributed_revenue_usd: 0` (empty list), `settlements: 1` (Circadian,
+still correctly known-non-revenue), `reconciliation.status: reconciled`,
+`webhook.status: never_exercised`. Last traffic 06:10Z — roughly eight quiet
+hours.
+
+**Nothing settled overnight, so the overnight operating mode was never
+actually tested.** Worth stating plainly rather than claiming credit for
+restraint nobody had to exercise: no real sale arrived, so nobody had to
+leave one correctly unpromoted. The rules held because they were never
+pressed, not because they were proven under load.
+
+**Two things confirmed overnight, recorded for what they actually establish:**
+
+1. **The deploy-drain fix is proven in production, not just tested.**
+   Security verified from the raw logs rather than a test run: 22:36Z shows a
+   SIGINT killing the process outright (the old behavior); 04:10Z shows the
+   same signal draining cleanly inside a second (the fix). The
+   paid-request-lost-mid-deploy risk is closed for orderly stops. An
+   unexpected machine death still strands things — unchanged, still open.
+
+2. **A monitoring gap, worth internalizing rather than filing away:** security's
+   own watcher reported "10 hours, no change" straight through that restart —
+   it checks whether the service answers, never reads `booted_at`, so it would
+   have said the identical thing after an OOM kill that dropped a paid
+   request mid-flight. **"The watch was quiet" is not, by itself, evidence
+   that nothing happened.** Finance's own independent reads against `/stats`
+   and the chain are the actual check on that, not a monitor's silence — the
+   exact discipline this ledger has run on since it opened, now with a
+   concrete case of why it can't be relaxed even when nothing seems wrong.
+
+**Client count caveat — 18 unique clients is not 18 interested parties, and
+should never be quoted unqualified.** One (`56cb6309`) is a confirmed
+scheduled job, returning at exactly 2.00h and 24.00h intervals to the second
+— not a visitor. Several more show burst-pattern scanner behavior. Two are
+us. Exactly one has returned irregularly, the only pattern that looks
+plausibly human and repeat. Full breakdown not yet automated — see
+`docs/NEXT-STEPS.md`. **The raw `unique_clients` figure should not be
+reported to the Founder or anyone else without this qualification attached.**
+
 ## Daily close — 2026-08-21
 
 Verified at source (wallet balances via RPC, `/stats` re-read after the earlier
