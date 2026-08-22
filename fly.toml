@@ -50,6 +50,42 @@ kill_timeout = '30s'
   auto_start_machines = true
   min_machines_running = 1
 
+# HEALTH CHECK. There was none until 2026-08-22, which left one failure mode
+# entirely uncovered: a CRASH gets restarted by Fly, but a HANG — process alive,
+# not answering — was never noticed and never restarted. `auto_start_machines`
+# only revives a stopped machine, not a wedged one, so a hung process stayed
+# hung until a human happened to look. The only watch was an agent remembering
+# to run a loop.
+#
+# WHY /healthz IS SAFE TO CHECK, which is the load-bearing property: it returns
+# a hardcoded 200 and makes NO network calls — no RPC, no Blockscout, no Stripe,
+# no facilitator. A degraded payment path is reported as `payments_ready: false`
+# in the BODY, never as a non-200. So no upstream outage can fail this check,
+# and no third party can restart our machine by having a bad day. It fails only
+# if the process is wedged or dead, which is exactly what it is for.
+#
+# NUMBERS CHOSEN AGAINST A MEASUREMENT, not a guess. Boot to /healthz answering
+# is 0.43–0.93s across three runs with the real ledger replayed, so a 30s grace
+# is roughly 30x the slowest observed — room for a cold image pull without ever
+# shooting a machine that is merely still starting.
+#
+# DELIBERATELY LENIENT, because the two failure directions are not symmetric. Too
+# aggressive means restart loops, and every restart kills whatever paid request
+# is in flight — the exact loss the drain was built to prevent, inflicted
+# repeatedly by our own monitoring. Too lenient only means a hang is noticed a
+# little later. A 10s timeout on an endpoint that answers in milliseconds is
+# generous on purpose: it tolerates a GC pause on a 256MB box rather than
+# calling it death.
+#
+# A check-driven restart goes through the normal stop path, so `kill_signal` and
+# `kill_timeout` above apply and in-flight requests still drain.
+[[http_service.checks]]
+  grace_period = '30s'
+  interval = '15s'
+  timeout = '10s'
+  method = 'GET'
+  path = '/healthz'
+
 [[vm]]
   memory = '256mb'
   cpu_kind = 'shared'
