@@ -29,6 +29,13 @@ const USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
  * which stays permanently overcounted for clients first seen before the fix.
  */
 const PRE_MARKER_CLIENTS = 6;
+/**
+ * DUPLICATE — `src/knownNonRevenue.ts` is authoritative and the server computes
+ * `known_non_revenue_usd` from it. These local copies predate that and are used
+ * only by the on-chain section below. Two copies of one fact drift, and the one
+ * that drifts is the one somebody is reading; consolidate when someone is fresh.
+ * If they ever disagree, believe the server.
+ */
 /** Our own test payments: never count these as customer revenue. */
 const KNOWN_PAYMENT_TXS = new Set([
   '0x2a2aaa3a79c3a394081df1a642046c88349a1397b27d97d8cb2292d71e61939f', // founder's $0.02 PayAI test, 2026-08-20 17:08 (pre-ledger)
@@ -81,6 +88,45 @@ try {
 } catch (e) {
   say(`## Usage\n\nCould not read /stats (${e.message}). Server may be down or the token rotated.`);
 }
+// --- 0. What needs a HUMAN, stated before anything he might read as a result ---
+//
+// Added 2026-08-21. Everything built that night fails toward UNDER-reporting: a
+// real sale reads $0 until a person says it was one, a stranded pass reports
+// not_activated rather than vanishing, an unproven card rail says
+// `never_exercised` rather than healthy. Every one of those is correct and every
+// one presents as breakage — or worse, as nothing at all — to whoever opens this
+// file first. So the things awaiting a human come FIRST, before any figure that
+// could be mistaken for a conclusion.
+if (stats) {
+  const lt0 = stats.lifetime ?? {};
+  const pending = Array.isArray(stats.unattributed) ? stats.unattributed : [];
+  const wh = stats.webhook ?? {};
+  say(`## NEEDS YOU\n`);
+
+  if (pending.length > 0) {
+    const total = pending.reduce((t, p) => t + (p.amount_usd ?? 0), 0);
+    say(`**${pending.length} settlement(s) awaiting your judgement — $${total.toFixed(2)} arrived and nobody has said whose it is.**`);
+    say(`Revenue does not promote itself; only you can say a stranger's money was a sale. Until you do, \`revenue_from_customers_usd\` reads $${(lt0.revenue_from_customers_usd ?? 0).toFixed(2)} BY DESIGN.`);
+    for (const p of pending) {
+      say(`- $${p.amount_usd} at ${p.at} — promote with: \`curl -X POST -H "x-stats-token: <token>" "${SERVER}/revenue/attribute?id=${p.handle}"\``);
+    }
+    say(`(\`&undo=1\` reverses it. A written-off arrival is refused with 409 and its reason.)`);
+  } else {
+    say(`- No settlement awaiting judgement.`);
+  }
+
+  if (wh.needs_attention) {
+    say(`- **CARD RAIL: ${wh.status}.** ${wh.note ?? ''}`);
+  } else if (wh.status === 'never_exercised') {
+    say(`- **Card rail UNPROVEN** (\`never_exercised\`): no Stripe delivery has ever verified against the current secret. Not broken, not working — untested. Subscribing the endpoint to \`customer.created\` and creating a live-mode customer proves it for $0.`);
+  }
+
+  if (stats.payments_ready === false) {
+    say(`- **Payments are DOWN** (facilitator unreachable). Free tier still serving; calls that would have been charged are counted as \`degraded\`, not as paywall hits.`);
+  }
+  say('');
+}
+
 if (stats) {
   const lt = stats.lifetime;
   const yesterday = stats.daily.at(-2);
@@ -173,6 +219,24 @@ if (stats?.check_health) {
 // wallet - the two rails are genuinely separate, not a reconciliation bug.
 // A real Stripe sale will never move this balance, so treat this section as
 // "on-chain revenue," not "total revenue," once Stripe is live.
+if (stats) {
+  const lt = stats.lifetime ?? {};
+  say(`\n## Money (source: server ledger; four buckets that sum to what settled)\n`);
+  say(`- **From customers: $${(lt.revenue_from_customers_usd ?? 0).toFixed(2)}** — the only figure that means a sale.`);
+  say(`- Awaiting judgement: $${(lt.unattributed_revenue_usd ?? 0).toFixed(2)} (see NEEDS YOU above)`);
+  say(`- Written off with a reason: $${(lt.known_non_revenue_usd ?? 0).toFixed(2)}`);
+  say(`- Our own purchases: $${(lt.self_revenue_usd ?? 0).toFixed(2)}`);
+  say(`- Raw settled on chain: $${(lt.revenue_usd ?? 0).toFixed(2)}`);
+  if (lt.revenue_note) say(`\n${lt.revenue_note}`);
+  const ch = stats.channels;
+  if (ch && ch.buckets) {
+    const live = Object.entries(ch.buckets).filter(([, v]) => v.arrivals || v.calls);
+    say(`\n**Which channel brought them** (${ch.self_reported ? 'self-reported, unverified' : 'unverified'}):`);
+    for (const [k, v] of live) say(`- ${k}: ${v.arrivals} arrival(s), ${v.calls} call(s)`);
+    say(`_${ch.caveat ?? ''}_`);
+  }
+}
+
 say(`\n## Revenue (source: Base chain - x402/USDC rail only, excludes Stripe)\n`);
 try {
   const bal = await jsonFetch('https://mainnet.base.org', {
