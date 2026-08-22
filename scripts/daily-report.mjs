@@ -243,7 +243,9 @@ if (stats) {
       for (const [k, v] of live) say(`- ${k}: ${v} client(s)`);
       say(`_${ck.caveat ?? ''}_`);
       say(`\`pre_attribution\` are clients first seen before this classifier existed; they cannot be classified retroactively.`);
-      say(`\`http_library\` is the shape a real integration has. \`bot_declared\` is a crawler saying so.`);
+      say(`\`http_library\` means a script, which INCLUDES cron jobs and monitors — it narrows the field, it does not identify a buyer.`);
+      say(`\`browser\` is trivially spoofed and is the standard disguise for scanning infrastructure; treat it as weak.`);
+      say(`Stronger than any of these: REGULARITY. Gaps of exactly 2.00h or 24.00h to the second are scheduled jobs; a person returns on irregular intervals.`);
     }
   }
 }
