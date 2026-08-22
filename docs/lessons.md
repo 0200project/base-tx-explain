@@ -504,6 +504,29 @@ path and into the explanation. If you fail safe five times and write nothing dow
 you have built something that behaves correctly and reads as broken, and the
 person who meets it first will be the one with the least context.
 
+### A watcher only sees the failures its author imagined
+
+I ran an overnight watch on a single-machine service. It checked liveness, the
+settlement count and webhook status, and reported "10h, no change." The machine
+had restarted at 04:10 — visible the whole time in `booted_at`, which the watcher
+never read. It was reachable at every poll, so a restart between polls was
+invisible by construction.
+
+Nothing was lost (the restart was an orderly deploy, and the drain worked), but
+the instrument would have said exactly the same thing if it had been an OOM kill
+that dropped a paid request — the one failure on this box that graceful shutdown
+cannot cover, and therefore the one most worth watching for.
+
+**Liveness is not continuity.** "It answers" and "it is the same process that was
+answering before" are different questions, and a monitor that only asks the first
+cannot distinguish a quiet night from a service that died and came back. The cheap
+fix is to watch an identity field — boot time, version, PID — alongside the health
+check, because a change there is the event, and a poll that happens to land after
+recovery sees nothing.
+
+Same shape as everything else here: I picked the failure modes, and I picked the
+ones I had been thinking about that evening.
+
 ### A stated plan is testable, and worth testing
 
 The accountant said "I'll be the one promoting a real sale." That is not a

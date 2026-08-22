@@ -279,8 +279,23 @@ data. Keep that list honest as fields change.
    answers `not_activated`, `listUnconfirmed()` returns the entry WITH its
    nonce, and boot shouts the count and the action. Verified by booting the real
    module twice — the promise `docs/try-it.md` makes to a 3am debugger holds.
+   **_Prevention half CLOSED and VERIFIED IN PRODUCTION 2026-08-22._** Graceful
+   shutdown shipped (`9a95afc`, `2b0cc74`, `537ea7d`): both signals handled,
+   `kill_timeout` raised to 30s with the drain grace derived from it, idle
+   keep-alives released so ordinary deploys stay fast, and `predeploy.sh` gates
+   both the mirror agreement and a 10s floor. The running artifact was confirmed
+   by `fly ssh`, not by the release log. Its first real exercise is in the
+   production log with the old behaviour visible above it for contrast:
+   - `2026-08-21T22:36:11Z` — `Sending signal SIGINT` → `Main child exited with
+     signal` (killed outright, no handler; this is the bug)
+   - `2026-08-22T04:10:31Z` — `Sending signal SIGINT` → `[shutdown] SIGINT:
+     refusing new connections, draining in-flight requests` → `[shutdown] every
+     in-flight request finished; exiting cleanly` (no exited-with-signal line),
+     and the whole drain inside one second, so deploys did not slow down.
    **_What is still open, and it is the part that costs money:_ a stranded pass
-   still cannot be activated.** The settlement hook died with the process, so
+   still cannot be activated.** Shutdown covers an ORDERLY stop only — an
+   unexpected death (OOM on the 256 MB box, host failure) still strands whatever
+   was in flight, and nothing here helps with that. The settlement hook died with the process, so
    nothing re-applies it. The payer's funds may have moved on chain with no pass
    issued, and recovery is currently a human comparing the payout wallet against
    `listUnconfirmed()` by hand. Until `authorizationState(payer, nonce)`
