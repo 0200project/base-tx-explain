@@ -246,6 +246,7 @@ if (stats) {
       say(`\`http_library\` means a script, which INCLUDES cron jobs and monitors — it narrows the field, it does not identify a buyer.`);
       say(`\`browser\` is trivially spoofed and is the standard disguise for scanning infrastructure; treat it as weak.`);
       say(`Stronger than any of these: REGULARITY. Gaps of exactly 2.00h or 24.00h to the second are scheduled jobs; a person returns on irregular intervals.`);
+      say(`**This report does not compute regularity yet — it is not in \`/stats\`.** Run it by hand against the ledger before trusting the client count (method + the standing finding: docs/NEXT-STEPS.md).`);
     }
   }
 }

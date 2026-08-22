@@ -257,3 +257,47 @@ purpose has been engineered away.
   That is correct — an arrival nobody can name is one nobody can vouch for — and
   it now resolves into `known_non_revenue` rather than sitting in `unattributed`
   forever. Nothing to do; recorded so nobody re-discovers it as a bug.
+
+---
+
+## Automate the regularity check — it is the best discriminator we have and it runs on nobody's schedule
+
+_Written 2026-08-22 ~06:15 UTC. Found by hand; deliberately NOT built at that
+hour, because it needs a server change and enough had been shipped unsupervised
+already._
+
+**The question this answers:** how many of our "unique clients" are people, and
+how many are scheduled jobs? It is the number underneath every conclusion about
+whether anyone wants this.
+
+**The method, which needs no new data — the timestamps are already in the
+ledger.** For each external client with two or more calls, compute the gaps
+between consecutive calls. A gap landing within a few seconds of a round
+interval is a scheduled job; humans return irregularly.
+
+**The standing finding as of 2026-08-22 06:15Z, which will decay — re-run it
+rather than quoting it:**
+
+```
+56cb6309   2.00h (±6s), 7.16h, 24.00h (±7s)   -> SCHEDULED JOB, confirmed
+81238a28   8.43h                              -> irregular, the only one
+browser cluster (3 clients)                   -> never returned
+```
+
+**Why it beats the user-agent classifier**, which was built first and is the
+weaker tool: `browser` is trivially spoofed and is the standard disguise for
+scanning infrastructure; `http_library` includes cron jobs, and the first
+`http_library` client we ever classified turned out to be one. The classifier
+narrows; regularity discriminates.
+
+**Where it should live:** `/stats` should expose per-client gap regularity — the
+server already holds every timestamp — so the daily report can print "N clients,
+M of them on a schedule" without anyone remembering to check. Right now the
+better tool exists only as something someone ran once by hand, which is the
+exact failure mode this repo spent 2026-08-21 cataloguing: **a rule that lives
+in memory is not a rule.**
+
+**Do NOT let the raw client count stand unqualified in the meantime.** Eighteen
+unique clients currently means: one confirmed scheduled monitor, several
+burst-pattern scanners, two of us, and exactly one that has returned on an
+irregular interval.
