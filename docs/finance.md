@@ -2,6 +2,42 @@
 
 Owner: Accountant / Controller. Opened 2026-08-21.
 
+## Overnight operating mode — Founder out, relayed via platform, verified live
+
+**In effect while the Founder is unreachable tonight.** Verified against
+`/stats` before logging: `revenue_from_customers_usd: 0`,
+`unattributed_revenue_usd: 0`, `settlements: 1` (Circadian, resolved
+non-revenue), `webhook.status: never_exercised` — matches platform's report
+exactly.
+
+**Three hard rules for tonight, no exceptions, no improvising:**
+
+1. **No card spend approved tonight, under any framing.** Card spend requires
+   the Founder's own hands on the entry — he cannot give that approval while
+   out. Any proposal gets held, not pre-approved against the standing rule.
+2. **If a real sale arrives, Finance does NOT promote it.** `POST
+   /revenue/attribute` records a human's *judgement* that a stranger's money
+   was a sale — that judgement is the Founder's to make, not Finance's to
+   make on his behalf in his absence. If money settles, `revenue_from_customers_usd`
+   correctly reads $0.00 and the amount sits in `unattributed_revenue_usd`
+   with its handle in `/stats` → `unattributed[]`. **This is correct behavior,
+   not a bug to route around.** Finance's job tonight is to record what
+   arrived — amount, handle, timestamp — not to close the loop.
+3. **Two signals to record, never to act on unilaterally:** `webhook.status`
+   flipping to `REJECTING_SIGNED_DELIVERIES` means a card customer was
+   charged and got nothing — Stripe retries ~3 days, so it's recoverable;
+   record it, do not rotate secrets without the Founder. Anything appearing
+   in `listUnconfirmed()` is a pass needing a human against the payout wallet
+   — record it, do not settle by hand.
+
+**Also confirmed tonight: deploys no longer risk losing a paid request.**
+In-flight requests now drain before the process exits (verified by platform
+against a real decode with a real SIGINT). Both paid rails settle *after* the
+handler runs, so the previous risk — a deploy killing a request in the exact
+window after money moved and before a response returned — is closed for
+orderly stops. An unexpected machine death still strands things; that's why
+the reconciliation work (D-6-shaped, restart-vs-settlement) stays open.
+
 ## Today's target — set 2026-08-21, relayed via growth
 
 **10 paying customers, $9/mo each, $90 MRR, today.** Distribution and closing,
