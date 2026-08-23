@@ -146,6 +146,20 @@ completely miss that a real person was charged for nothing. Escalated to the
 Founder by platform; Finance's position is unchanged — Stripe settlements
 stay unreconciled until a real delivery verifies against the current secret.
 
+**Update, 2026-08-23T07:05:17Z — the signature path is proven, the money path
+is not, and the difference matters.** `webhook.status` moved from
+`never_exercised` to `secret_verified`: one signed delivery has verified
+against the current secret. Verified by Finance directly against `/stats`.
+**This is not a customer and not revenue** — `verified_count: 1`,
+`delivered_count: 0`, no `checkout.session.completed` has ever been handled.
+Stripe can reach the server and the secret is correct; nobody has bought
+anything. The specific risk flagged above (a stale secret silently eating a
+real charge) is now closed — the secret is confirmed live and correct. The
+separate risk — that the code path minting a pass on a real purchase has
+literally never run in production — is unchanged and still open. **A card
+sale tonight would still be the first time that code has ever executed for
+real**, same as an x402 sale was until Circadian's probe.
+
 
 **Basis of accounting: cash, on verified settlement only.** A payment is booked
 when money has actually arrived and can be seen at its source — a USDC transfer
