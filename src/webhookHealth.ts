@@ -46,9 +46,31 @@ import { join } from 'node:path';
  * as a risk check that emits no flag when it could not run, and as a reconciler
  * that reads `reconciled` because it compared a figure against itself. Silence
  * is not a pass.
+ *
+ * AND A VERIFIED SIGNATURE IS NOT A DELIVERED PASS. The fourth state exists
+ * because the third one's own fix overclaimed. On 2026-08-23 we proved the
+ * secret by creating an empty customer in live mode, which made Stripe sign one
+ * real `customer.created`. It verified, and this file promptly reported "Card
+ * rail proven" — from an event that mints nothing. Two different questions had
+ * been collapsed into one word:
+ *
+ *  - Does Stripe reach us and does our secret match?  (the signature path)
+ *  - Does a live purchase actually mint and deliver a pass?  (the money path)
+ *
+ * The first was proven. The second has never run in live mode: no
+ * `checkout.session.completed` has ever been handled here. Reading "proven" and
+ * concluding the $9 button is safe end-to-end is exactly the wrong inference to
+ * hand someone deciding where to send buyers — and it fails in the flattering
+ * direction, which is the direction this file was written to refuse. So the
+ * verified-but-undelivered state is named, and `healthy` is reserved for a live
+ * purchase that actually minted.
  */
 
-export type WebhookStatus = 'never_exercised' | 'healthy' | 'REJECTING_SIGNED_DELIVERIES';
+export type WebhookStatus =
+  | 'never_exercised'
+  | 'secret_verified'
+  | 'healthy'
+  | 'REJECTING_SIGNED_DELIVERIES';
 
 export interface WebhookHealth {
   status: WebhookStatus;
@@ -57,6 +79,14 @@ export interface WebhookHealth {
   last_rejected_at: string | null;
   last_reject_reason: string | null;
   verified_count: number;
+  /**
+   * Live purchases that actually minted a pass. Separate from `verified_count`
+   * because a signature can verify on an event that delivers nothing — which is
+   * how this instrument first reported "proven" off a `customer.created`.
+   */
+  delivered_count: number;
+  /** Last live purchase that minted. Null means the money path is still untested. */
+  last_delivered_at: string | null;
   /**
    * Well-formed, in-window signatures that did not match ours. The shape of a
    * real delivery being refused — and equally the shape a stranger can forge,
@@ -88,6 +118,8 @@ interface Stored {
   last_rejected_at: string | null;
   last_reject_reason: string | null;
   verified_count: number;
+  delivered_count: number;
+  last_delivered_at: string | null;
   bad_signature_count: number;
   probe_count: number;
   stale_timestamp_count: number;
@@ -103,6 +135,8 @@ const EMPTY: Stored = {
   last_rejected_at: null,
   last_reject_reason: null,
   verified_count: 0,
+  delivered_count: 0,
+  last_delivered_at: null,
   bad_signature_count: 0,
   probe_count: 0,
   stale_timestamp_count: 0,
@@ -147,6 +181,23 @@ function persist(): void {
 export function recordWebhookVerified(now = new Date()): void {
   state.verified_count += 1;
   state.last_verified_at = now.toISOString();
+  persist();
+}
+
+/**
+ * A LIVE purchase that actually minted a pass. The only thing that proves the
+ * money path.
+ *
+ * Live-mode only, on purpose. A test-mode checkout does mint a working pass and
+ * does prove the handler, but it runs against a different endpoint and a
+ * different secret, so it cannot speak for the live rail — and this counter's
+ * whole job is to answer "is the button on /pricing safe", which is a question
+ * about live. Counting test purchases here would restore the exact overclaim
+ * this function was added to remove.
+ */
+export function recordWebhookDelivered(now = new Date()): void {
+  state.delivered_count += 1;
+  state.last_delivered_at = now.toISOString();
   persist();
 }
 
@@ -246,6 +297,8 @@ export function webhookHealth(): WebhookHealth {
     last_rejected_at: state.last_rejected_at,
     last_reject_reason: state.last_reject_reason,
     verified_count: state.verified_count,
+    delivered_count: state.delivered_count,
+    last_delivered_at: state.last_delivered_at,
     bad_signature_count: state.bad_signature_count,
     probe_count: state.probe_count,
     stale_timestamp_count: state.stale_timestamp_count,
@@ -283,11 +336,33 @@ export function webhookHealth(): WebhookHealth {
     };
   }
 
+  if (state.delivered_count === 0) {
+    return {
+      ...base,
+      status: 'secret_verified',
+      // Not an alert — this is good news, just not the whole news. Half the
+      // path is proven and the other half is still untested, and saying so is
+      // the difference between an accurate reading and a reassuring one.
+      needs_attention: false,
+      note:
+        `The SIGNATURE PATH is proven: ${state.verified_count} signed deliver` +
+        `${state.verified_count === 1 ? 'y has' : 'ies have'} verified against the current secret, last at ` +
+        `${state.last_verified_at}. Stripe reaches us and the secret matches. ` +
+        'The MONEY PATH is still untested: no live checkout.session.completed has ever been handled, so no ' +
+        'card purchase has ever minted a pass here. A buyer sent to the card button would be relying on code ' +
+        'that has not run in production. To prove it, complete one real live purchase end-to-end and confirm ' +
+        'a pass comes back.',
+    };
+  }
+
   return {
     ...base,
     status: 'healthy',
     needs_attention: false,
-    note: `Card rail proven: ${state.verified_count} signed deliver${state.verified_count === 1 ? 'y has' : 'ies have'} verified, last at ${state.last_verified_at}.`,
+    note:
+      `Card rail proven end-to-end: ${state.delivered_count} live purchase` +
+      `${state.delivered_count === 1 ? ' has' : 's have'} minted a pass, last at ${state.last_delivered_at}. ` +
+      `${state.verified_count} signed deliver${state.verified_count === 1 ? 'y has' : 'ies have'} verified.`,
   };
 }
 

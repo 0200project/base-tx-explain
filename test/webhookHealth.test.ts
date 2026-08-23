@@ -1,14 +1,24 @@
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
  * The card rail's own health.
  *
- * The property under test is the three-state distinction. Two states are easy;
- * the third — "no delivery has ever verified" — is the one this codebase has
- * got wrong repeatedly under different names: a risk check that emits no flag
- * when it could not run, a reconciler that read `reconciled` because it
+ * The property under test is the four-state distinction. Two states are easy;
+ * the other two are the ones this codebase has got wrong repeatedly under
+ * different names.
+ *
+ * "No delivery has ever verified" was the first: a risk check that emits no
+ * flag when it could not run, a reconciler that read `reconciled` because it
  * compared a figure against itself, a monitor that would have reported calm
  * while blind. Every one of them let silence read as a pass.
+ *
+ * "The secret verified but nothing was ever delivered" was the second, and it
+ * arrived inside the fix for the first — the new state reported "Card rail
+ * proven" off a `customer.created`, an event that mints nothing. Silence read
+ * as a pass; then a partial proof read as a whole one.
  */
 
 async function load() {
@@ -38,11 +48,16 @@ describe('webhookHealth', () => {
     expect(m.webhookHealth().needs_attention).toBe(false);
   });
 
-  it('reports healthy once a delivery has verified', async () => {
+  it('records the verification once a delivery has verified — but stops short of healthy', async () => {
+    // This assertion used to read `healthy`, and that is precisely how the
+    // overclaim shipped: the test agreed with the code because both were
+    // written on the same wrong assumption that a verified signature and a
+    // delivered pass are the same event. They are not. See the
+    // 'signature path vs money path' block below.
     const m = await load();
     m.recordWebhookVerified(new Date('2026-08-21T20:00:00Z'));
     const h = m.webhookHealth();
-    expect(h.status).toBe('healthy');
+    expect(h.status).toBe('secret_verified');
     expect(h.verified_count).toBe(1);
     expect(h.last_verified_at).toBe('2026-08-21T20:00:00.000Z');
     expect(h.needs_attention).toBe(false);
@@ -156,7 +171,107 @@ describe('webhookHealth', () => {
     const m = await import('../src/webhookHealth.js');
     expect(() => m.initWebhookHealth()).not.toThrow();
     expect(() => m.recordWebhookVerified()).not.toThrow();
-    expect(m.webhookHealth().status).toBe('healthy');
+    expect(m.webhookHealth().status).toBe('secret_verified');
+  });
+});
+
+/**
+ * A verified signature is not a delivered pass.
+ *
+ * This split exists because the instrument overclaimed in production. We proved
+ * the secret on 2026-08-23 by creating an empty live customer, which made Stripe
+ * sign one real `customer.created`. It verified — and the status note read "Card
+ * rail proven", off an event that mints nothing. Anyone deciding where to send
+ * buyers would have read that as "the $9 button works end-to-end", which was not
+ * established and still is not.
+ *
+ * The tests below pin the two halves apart, because collapsing them again would
+ * fail in the flattering direction, which is the one that costs a sale.
+ */
+describe('signature path vs money path', () => {
+  it('does NOT call the rail healthy when only the signature has verified', async () => {
+    const m = await load();
+    m.recordWebhookVerified();
+    const h = m.webhookHealth();
+    expect(h.status).toBe('secret_verified');
+    expect(h.status).not.toBe('healthy');
+    expect(h.verified_count).toBe(1);
+    expect(h.delivered_count).toBe(0);
+  });
+
+  it('says plainly which half is proven and which is not', async () => {
+    const m = await load();
+    m.recordWebhookVerified();
+    const note = m.webhookHealth().note;
+    expect(note).toMatch(/SIGNATURE PATH is proven/i);
+    expect(note).toMatch(/MONEY PATH is still untested/i);
+    // The exact phrase that misled, and must not reappear on a bare verify.
+    expect(note).not.toMatch(/^Card rail proven/i);
+  });
+
+  it('is not an alarm — a proven secret is good news, just not the whole news', async () => {
+    const m = await load();
+    m.recordWebhookVerified();
+    expect(m.webhookHealth().needs_attention).toBe(false);
+  });
+
+  it('reaches healthy only once a live purchase has actually minted', async () => {
+    const m = await load();
+    m.recordWebhookVerified();
+    expect(m.webhookHealth().status).toBe('secret_verified');
+    m.recordWebhookDelivered(new Date('2026-08-23T08:00:00Z'));
+    const h = m.webhookHealth();
+    expect(h.status).toBe('healthy');
+    expect(h.delivered_count).toBe(1);
+    expect(h.last_delivered_at).toBe('2026-08-23T08:00:00.000Z');
+    expect(h.note).toMatch(/end-to-end/i);
+  });
+
+  it('still reports a rejection over a delivery, because that is the one that needs a human', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const m = await load();
+    m.recordWebhookDelivered();
+    m.recordWebhookRejected('no_matching_signature');
+    const h = m.webhookHealth();
+    expect(h.status).toBe('REJECTING_SIGNED_DELIVERIES');
+    expect(h.needs_attention).toBe(true);
+  });
+
+  it('carries delivery across a restart, so a proven rail stays proven', async () => {
+    // Explicit DATA_DIR held across both loads, and init() called so writes
+    // actually persist — `load()` alone leaves the module in memory-only mode.
+    vi.resetModules();
+    const dir = mkdtempSync(join(tmpdir(), 'wh-restart-'));
+    process.env.DATA_DIR = dir;
+    const m = await import('../src/webhookHealth.js');
+    m.initWebhookHealth();
+    m.recordWebhookDelivered(new Date('2026-08-23T08:00:00Z'));
+    m.recordWebhookVerified();
+
+    vi.resetModules();
+    const fresh = await import('../src/webhookHealth.js');
+    fresh.initWebhookHealth();
+    const h = fresh.webhookHealth();
+    expect(h.delivered_count).toBe(1);
+    expect(h.status).toBe('healthy');
+  });
+
+  it('reads an older state file that predates the counter as undelivered, not proven', async () => {
+    // Back-compat in the safe direction: a state file written before this split
+    // has no delivered_count, and the absence must not default to "proven".
+    vi.resetModules();
+    const dir = mkdtempSync(join(tmpdir(), 'wh-legacy-'));
+    process.env.DATA_DIR = dir;
+    writeFileSync(
+      join(dir, 'webhook-health.json'),
+      JSON.stringify({ verified_count: 3, last_verified_at: '2026-08-23T07:05:17.060Z' }),
+    );
+    const m = await import('../src/webhookHealth.js');
+    m.initWebhookHealth();
+    const h = m.webhookHealth();
+    expect(h.verified_count).toBe(3);
+    expect(h.delivered_count).toBe(0);
+    expect(h.status).toBe('secret_verified');
   });
 });
 

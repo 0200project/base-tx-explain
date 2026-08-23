@@ -32,6 +32,7 @@ import {
   recordWebhookRejected,
   recordWebhookVerified,
   webhookHealth,
+  recordWebhookDelivered,
 } from './webhookHealth.js';
 import {
   alreadyHandled,
@@ -756,6 +757,13 @@ function handleStripeWebhook(req: express.Request, res: express.Response): void 
         });
         const isSelf = isSelfPurchase(obj);
         if (isLive) {
+          // The money path just ran for real. Recorded separately from the
+          // signature check because a verified signature proves only that
+          // Stripe reached us — this is the half that proves a buyer actually
+          // gets something. Deliberately not gated on `isSelf`: our own live
+          // purchase still exercises the delivery code end-to-end, and unlike
+          // revenue, "the mint works" is true regardless of who paid.
+          recordWebhookDelivered();
           recordEvent({
             t: new Date().toISOString(),
             e: 'settled',

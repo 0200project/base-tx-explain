@@ -88,10 +88,17 @@ isError, which is per spec"** — not "we have a bug here."
 - **Per call:** $0.02 USDC on Base over x402. EIP-3009, so the payer signs and
   the facilitator submits — **no ETH needed for gas.**
 - **Pass:** $9 for 30 days, up to 10,000 calls. `buy_pass` over x402, or card.
-- **Card:** works, but see `webhook.status` on `/stats` first. It currently reads
-  `never_exercised` — the secret was rotated and no delivery has tested it. Prefer
-  x402 for anyone already x402-native; it is the rail with a demonstrated
-  end-to-end settlement.
+- **Card:** half-proven as of 2026-08-23. `webhook.status` on `/stats` now reads
+  `secret_verified`: we created an empty live customer, Stripe signed the
+  resulting `customer.created`, we verified it, and Stripe logged `200 OK`. So
+  **Stripe reaches us and the secret is correct** — that was the open risk and it
+  is closed.
+  What is still untested is the half after that: no live
+  `checkout.session.completed` has ever been handled, so **no card purchase has
+  ever minted a pass here.** The status goes to `healthy` the first time one does.
+  Prefer x402 for anyone already x402-native; it remains the only rail with a
+  demonstrated end-to-end settlement. If someone insists on card, that is fine —
+  stay with them until the pass is in their hands, because they are the first.
 
 ## If they engage technically
 
