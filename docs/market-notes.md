@@ -58,3 +58,46 @@ it did not make: a block explorer, a research/monitoring agent watching third-pa
 wallets, a security tool auditing counterparties. Growth outreach for the pass
 specifically should target that shape, not "any x402-native agent that engaged well."
 Per-call pricing remains the right pitch for self-accounting agents like Circadian.
+
+## Second independent confirmation, and the repricing decision it triggered (2026-08-22/23)
+
+kindrat86/agentmail — a real compliance-tooling maintainer who actually ran the
+decoder, judged the output "a much better integration boundary than parsing a
+narrative response" — landed on the identical conclusion from an integration
+judgment rather than arithmetic: per-call fits an occasional, self-triggered
+verification path (their `dispute_open`), a subscription doesn't. Two independent
+technical evaluators, two different reasoning paths, same answer. That's a pattern,
+not a coincidence, and segment research §4 names the underlying cause directly:
+**the unit of sale was wrong for both of them, not the price.** Cutting the number
+doesn't fix a structural mismatch — Circadian's own math shows even a much cheaper
+pass loses to per-call at their volume.
+
+**The break-even, so this is checkable in a conversation rather than argued about:**
+$9 / $0.02 = **450 calls per 30 days.** Below that, per-call wins, full stop, no
+pass pitch belongs in that conversation. Above it, the pass is the better deal and
+should be led with, not offered as an afterthought.
+
+**Who's above the line, per §4:** continuous third-party analysis — compliance
+tools screening a fixed list of addresses, forensics/investigation work processing
+batches of hashes, portfolio/wallet trackers, block explorers, DAO treasury
+monitors (§4 flags this last one as unverified by primary source — treat as a
+hypothesis, not a qualified lead). The shared shape: volume that scales with
+*something other than the agent's own transaction frequency* — a client list, a
+watchlist, a corpus to process.
+
+**What the pass is honestly NOT, and must not be pitched as:** a standing
+watchlist with alerts. §4 names "per-address watchlist, monthly" as the ideal unit
+of sale, but that describes a **product we have not built** — proactive
+monitoring of a given address with push notifications. What we actually sell today
+is 10,000 calls over 30 days, pull-based, no alerting. That's genuinely valuable to
+anyone already above the 450-call/month line, and should be sold as exactly that —
+not oversold as monitoring infrastructure that doesn't exist. If the founder wants
+the real watchlist product built, that's a platform/engineering decision, distinct
+from this repricing.
+
+**Practical screen for future outreach:** ask (or infer from what they've already
+described building) whether their tool's call volume scales with their own
+payment/dispute frequency (per-call pitch, skip the pass entirely) or with a
+list/corpus size larger than one (lead with the pass, cite the 450-call breakeven
+directly). Getting this right before drafting saves a wrong-tier pitch and the
+correction that follows it.
