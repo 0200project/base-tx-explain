@@ -124,6 +124,7 @@ Revisit if monthly revenue ever exceeds ~$500.
 | Source of that figure | Founder directive, given first-hand to the Accountant |
 | **Funded, verified on chain** | **$20.00 USDC**, SPEND wallet `0x2E31f337…5e3D06FC7` (Base), confirmed 2026-08-21 |
 | Unlocated | **$0.00 — closed.** |
+| **SPEND wallet cleanliness** | **Confirmed directly by the Founder, 2026-08-22: untouched, no personal activity, MetaMask-held.** Raised only because a *different* wallet (the RECEIVE/payout wallet, held in the Coinbase Base app) turned out to have unrelated personal transactions mixed in — see below. The SPEND wallet is not implicated. |
 
 **Open Item 1 is resolved.** The Founder topped up the SPEND wallet to the
 full $20.00 in one transfer (Finance had recommended smaller, deliberate
@@ -519,6 +520,39 @@ now specifically so it cannot be mistaken for the first sale toward tonight's
 10-customer target when it lands.
 
 ## Flagged discrepancies — open
+
+**D-7. RECEIVE/payout wallet retired — personal activity, address change
+in progress.** Raised 2026-08-22 by the Founder directly, first-hand, not
+inferred. The current payout wallet `0xd4ec730a…948a6bc9` (held in the
+Coinbase Base app) has had the Founder's own personal transactions in it,
+unrelated to the company. **The SPEND wallet is explicitly not implicated** —
+confirmed separately and directly, MetaMask-held, untouched.
+
+Consequence: Finance can no longer treat this address as a clean,
+company-only receive point, and it is being retired. **A new payout wallet is
+being created.** This is more consequential than a books correction because
+the address is live infrastructure — it is `X402_PAY_TO`, baked into every
+x402 payment challenge the server currently issues, publicly disclosed (it's
+the address Circadian's own settlement receipt named), and referenced
+wherever the payout address appears in docs or listings.
+
+**Division of work, none of it Finance's to execute:**
+- Platform: swap `X402_PAY_TO` to the new address (Fly secret + redeploy)
+  once the Founder has one. Good timing — zero real revenue exists yet, so no
+  live customer transaction is at risk from the cutover.
+- Security: reassess the *key's* exposure, not the server's capability. The
+  server-side risk model ("no key on the server, so nothing can move funds
+  out") is unaffected and still holds. What's new: the Founder's own key may
+  have signed approvals or connected to other contracts through unrelated
+  personal use, which is a different question from anything the server-side
+  design ever addressed. Worth a fresh look before the same key habits carry
+  into the new wallet.
+- Founder: supply the new address once created; decide whether the old
+  wallet's $0.04 gets swept into the new one or simply abandoned (immaterial
+  either way).
+
+**Old wallet's $0.04 — pending the Founder's call, tracked separately from
+the swap itself.** Not yet resolved as of this entry.
 
 **D-1. `/stats` reconciliation reports `unbooked_revenue` that does not exist.**
 Raised 2026-08-21 by Finance. `src/reconcile.ts` compares wallet balance against
