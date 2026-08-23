@@ -554,6 +554,43 @@ wherever the payout address appears in docs or listings.
 **Old wallet's $0.04 — pending the Founder's call, tracked separately from
 the swap itself.** Not yet resolved as of this entry.
 
+**Security's structural recommendation, given directly to the Founder and
+recorded here for the record: a receive key should never sign anything.**
+Not periodic approval-revocation — a wallet that never connects to a dApp
+never accumulates an approval to revoke, so the maintenance task disappears
+rather than recurs. The reasoning, in order:
+
+- **Custody-only risk vs. custody-plus-every-approval-ever-granted.** An
+  unused key's exposure is stated in one sentence. A key used for general
+  activity carries the union of every contract it has ever approved —
+  approvals don't expire, and a contract benign today can be exploited or
+  upgraded tomorrow while the approval stays live.
+- **The EIP-3009 point is the sharper one, and it's specific to what this
+  wallet holds.** USDC's `transferWithAuthorization` lets a key sign
+  off-chain and anyone submit — so a phished signature moves funds with the
+  wallet's transaction count staying at 0 and nothing showing in an
+  explorer's Transactions tab, only Token Transfers and the balance. Same
+  blind spot as the wallet monitor's nonce-vs-balance lesson, arriving from
+  the opposite direction: it's a stronger argument than the approval risk,
+  because an approval at least leaves *something* on-chain to notice.
+- **Finance independently verified `src/walletMonitor.ts` already does this
+  right** — reads `balanceOf`, not nonce, with the reasoning documented in
+  the code itself. Recorded here as a standing instruction to any future
+  contributor: do not "simplify" that to a transaction check. It would
+  silently restore the exact blindness this was built to fix.
+- **The old wallet's residual risk is about future deposits, not its
+  history.** An empty retired wallet with stray approvals is harmless; the
+  same wallet receiving a stray payment later is not, because approvals
+  outlive the retirement decision. **Drain it, and never let it be a
+  destination again** — not just stop using it, actually zero it out.
+
+**One live operational point, not just hygiene: security flagged the
+transition window directly to the Founder** — retiring a payout address
+is not an instant swap, and the gap between "new address exists" and "old
+address fully stops being live anywhere" needs active handling, not treatment
+as a simple config change. Finance is not the owner of that transition; noted
+here so it isn't lost between sessions.
+
 **D-1. `/stats` reconciliation reports `unbooked_revenue` that does not exist.**
 Raised 2026-08-21 by Finance. `src/reconcile.ts` compares wallet balance against
 booked revenue and labels any positive delta as unbooked revenue. Today it
