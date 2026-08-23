@@ -140,6 +140,12 @@ balance-bounded spend mechanism is live (see Open Item 9).
 
 All rails, lifetime, as of 2026-08-21:
 
+**Wallet note:** the payout wallet referenced below (`0xd4ec730a…948a6bc9`) is
+where these events genuinely occurred at the time and is left as-is —
+history isn't rewritten when infrastructure changes. It was retired
+2026-08-22 for reasons unrelated to any of these transactions (see D-7); the
+live payout wallet as of 2026-08-22 is `0xC41C4FeD450674169AF002b8b3cB47Bd70a1958F`.
+
 | Source | Booked | Verified against |
 |---|---|---|
 | x402 (USDC on Base) | **$0.00** | Inbound USDC at payout wallet `0xd4ec730a…948a6bc9` — 1 arrival lifetime, ours |
@@ -521,45 +527,33 @@ now specifically so it cannot be mistaken for the first sale toward tonight's
 
 ## Flagged discrepancies — open
 
-**D-7. RECEIVE/payout wallet retired — personal activity, address change
-in progress.** Raised 2026-08-22 by the Founder directly, first-hand, not
-inferred. The current payout wallet `0xd4ec730a…948a6bc9` (held in the
-Coinbase Base app) has had the Founder's own personal transactions in it,
-unrelated to the company. **The SPEND wallet is explicitly not implicated** —
-confirmed separately and directly, MetaMask-held, untouched.
+**D-7. RECEIVE/payout wallet retired — RESOLVED 2026-08-22, verified end to
+end.** Raised by the Founder directly: the old payout wallet
+`0xd4ec730a…948a6bc9` (Coinbase Base app) had his own personal transactions
+mixed in, unrelated to the company. **The SPEND wallet was never
+implicated** — confirmed separately, MetaMask-held, untouched throughout.
 
-Consequence: Finance can no longer treat this address as a clean,
-company-only receive point, and it is being retired. **New payout wallet
-supplied by the Founder 2026-08-22: `0xC41C4FeD450674169AF002b8b3cB47Bd70a1958F`.**
-Verified independently by Finance before recording — not taken on his word
-alone: valid checksum address, **$0.00 USDC, 0 ETH, 0 transactions ever**,
-confirmed distinct from both the old payout wallet and the SPEND wallet.
-Genuinely clean, unused, exactly what a receive key should look like on day
-one per security's standing rule above. **Handed to platform to execute the
-actual `X402_PAY_TO` swap and redeploy — not yet live in production as of
-this entry.** This is more consequential than a books correction because
-the address is live infrastructure — it is `X402_PAY_TO`, baked into every
-x402 payment challenge the server currently issues, publicly disclosed (it's
-the address Circadian's own settlement receipt named), and referenced
-wherever the payout address appears in docs or listings.
+**New payout wallet: `0xC41C4FeD450674169AF002b8b3cB47Bd70a1958F`.** Every
+step of the transition verified independently by Finance, not taken on
+anyone's word:
 
-**Division of work, none of it Finance's to execute:**
-- Platform: swap `X402_PAY_TO` to the new address (Fly secret + redeploy)
-  once the Founder has one. Good timing — zero real revenue exists yet, so no
-  live customer transaction is at risk from the cutover.
-- Security: reassess the *key's* exposure, not the server's capability. The
-  server-side risk model ("no key on the server, so nothing can move funds
-  out") is unaffected and still holds. What's new: the Founder's own key may
-  have signed approvals or connected to other contracts through unrelated
-  personal use, which is a different question from anything the server-side
-  design ever addressed. Worth a fresh look before the same key habits carry
-  into the new wallet.
-- Founder: supply the new address once created; decide whether the old
-  wallet's $0.04 gets swept into the new one or simply abandoned (immaterial
-  either way).
+1. **Address vetted before being handed to platform:** valid checksum, $0.00
+   USDC, 0 ETH, 0 transactions ever, confirmed distinct from both other
+   wallets. Genuinely clean.
+2. **Old wallet fully drained, not merely abandoned** — verified $0.00 USDC
+   remaining, per security's standing rule that a retired wallet's real risk
+   is *future* deposits against live approvals, not its history.
+3. **New wallet holds exactly $0.04 USDC** — the swept balance, confirmed on
+   chain directly.
+4. **Production is actually serving the new address**, not just configured
+   to eventually — checked `/stats` directly: both `treasury.wallet` and
+   `reconciliation.wallet` read the new address. `X402_PAY_TO` is live.
 
-**Old wallet's $0.04 — pending the Founder's call, tracked separately from
-the swap itself.** Not yet resolved as of this entry.
+**Funds on hand, updated: $20.00 SPEND (unaffected) + $0.04 RECEIVE (new
+wallet) = $20.04 — unchanged in total, fully migrated.** Still owed: a sweep
+by platform for any place the old address might be hardcoded outside
+`X402_PAY_TO` (docs, listings, the x402 ecosystem PR) — not yet confirmed
+done, tracked as a residual follow-up rather than reopening this item.
 
 **Security's structural recommendation, given directly to the Founder and
 recorded here for the record: a receive key should never sign anything.**
