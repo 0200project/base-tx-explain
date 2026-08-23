@@ -88,11 +88,11 @@ echo "predeploy: shutdown window agrees (kill_timeout ${KT}s = ${KTMS}ms)"
 # -- our alarm fires at the wrong moment, or worse, the buyer is told to shout
 # while nothing on our side has started listening. Neither file's comment can
 # hold that; this can.
-SRV_MS=$(sed -n 's/^const WAITING_STUCK_AFTER_MS = \([0-9_]*\);.*/\1/p' src/index.ts | tr -d '_' | head -1)
+SRV_MS=$(sed -n 's/^export const STUCK_AFTER_MS = \([0-9_]*\);.*/\1/p' src/waitingBuyers.ts | tr -d '_' | head -1)
 PAGE_MS=$(sed -n 's/.*waitedMs > \([0-9]*\).*/\1/p' site/pricing/index.html | head -1)
 if [ -z "$SRV_MS" ] || [ -z "$PAGE_MS" ]; then
   fail "could not read the buyer-stuck threshold from both sides.
-  Expected WAITING_STUCK_AFTER_MS in src/index.ts and a 'waitedMs > <ms>'
+  Expected STUCK_AFTER_MS in src/waitingBuyers.ts and a 'waitedMs > <ms>'
   comparison in site/pricing/index.html. If either moved, update this check --
   do not delete it."
 fi
