@@ -685,6 +685,12 @@ const metrics = {
    */
   buyers_waiting: 0,
   buyers_stuck: 0,
+  /**
+   * Buyers we could not track at all because every slot was full of
+   * threshold-crossed ones. Monotonic. Non-zero is never routine, and it is
+   * published here because the log that reports it is throttled.
+   */
+  buyers_untracked: 0,
   booted_at: new Date().toISOString(),
 };
 
@@ -693,6 +699,7 @@ function refreshWaitingMetrics(): void {
   const snap = waitingSnapshot();
   metrics.buyers_waiting = snap.waiting;
   metrics.buyers_stuck = snap.stuck;
+  metrics.buyers_untracked = snap.untracked;
 }
 
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? '';
@@ -922,17 +929,30 @@ app.get('/paid', (req, res) => {
     // that counts any signed delivery, including a `customer.created` which
     // mints nothing, so it can sit above zero while pass delivery has never
     // happened. It did exactly that tonight.
-    const stuck = noteWaiting(sessionId);
-    if (stuck) {
+    const outcome = noteWaiting(sessionId);
+    if (outcome.kind === 'stuck') {
       const wh = webhookHealth();
       console.error(
         `[paid] BUYER STUCK, still no pass for session ${sessionId.slice(0, 12)}... ` +
-          `after ${Math.round(stuck.waitedMs / 1000)}s of polling ` +
+          `after ${Math.round(outcome.waitedMs / 1000)}s of polling ` +
           `(webhook ${wh.status}, delivered_count=${wh.delivered_count}, distinct buyers waiting=${metrics.buyers_waiting}). ` +
           (wh.delivered_count === 0
             ? 'NO live purchase has EVER minted a pass on this server. If this buyer paid, they are the first, ' +
               'and the mint path is running for the first time. Check the payout wallet and Stripe before assuming they simply arrived early.'
             : 'A delivery may still be in flight, but 45s is past the point where that is the likely explanation.'),
+      );
+    } else if (outcome.kind === 'untracked' && outcome.shout) {
+      // Saturation. There is no routine reading of this: either someone is
+      // holding every slot past the threshold, or that many buyers are
+      // genuinely stuck. Both need a person, and the one thing that must not
+      // happen is silence — going quiet exactly when the system saturates is
+      // the blindness this instrument exists to remove.
+      console.error(
+        `[paid] TRACKING REFUSED — all ${outcome.tracked} slots hold buyers past the threshold, ` +
+          `so a genuine buyer arriving now is NOT being tracked. ` +
+          `${outcome.total} refusals since boot (this line is throttled to once a minute; ` +
+          `since_boot.buyers_untracked on /stats is exact). ` +
+          'Either this is a mass delivery failure or someone is flooding /paid. Both need a human.',
       );
     }
     res.status(404).json({
@@ -961,7 +981,12 @@ app.get('/healthz', (_req, res) => {
   // moment it is failing. They are on token-gated /stats instead. Destructured
   // rather than deleted so the object handed out is a copy and the real counters
   // keep counting.
-  const { buyers_waiting: _bw, buyers_stuck: _bs, ...publicMetrics } = metrics;
+  const {
+    buyers_waiting: _bw,
+    buyers_stuck: _bs,
+    buyers_untracked: _bu,
+    ...publicMetrics
+  } = metrics;
   res
     .status(200)
     .set('Access-Control-Allow-Origin', '*')

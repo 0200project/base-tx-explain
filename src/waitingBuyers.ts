@@ -66,6 +66,23 @@ interface Waiter {
 const waiting = new Map<string, Waiter>();
 
 /**
+ * How often we have been unable to track an arriving buyer at all.
+ *
+ * Monotonic and never reset, because the log line that reports it is throttled
+ * and a throttled log must not be the only record. Reaching this state is never
+ * normal: either someone is holding every slot past the threshold, or that many
+ * buyers are genuinely stuck. Both readings demand attention and neither is
+ * survivable silently — going quiet exactly when the system saturates is the
+ * blindness this module was built to remove, restored by saturation instead of
+ * by absence.
+ */
+let refusedTracking = 0;
+
+/** Throttle for the saturation log only. The counter above is always exact. */
+const REFUSAL_LOG_EVERY_MS = 60_000;
+let lastRefusalLoggedAt = 0;
+
+/**
  * Free a slot by dropping someone who has not waited long enough to matter,
  * newest first. Returns false when every entry has crossed the threshold —
  * the caller's signal to refuse the new id rather than evict a real buyer.
@@ -85,6 +102,19 @@ function evictOneDriveBy(now: number): boolean {
   return true;
 }
 
+export type WaitingOutcome =
+  /** Nothing new to say: a first sighting, still inside the window, or already escalated. */
+  | { kind: 'quiet' }
+  /** This buyer has waited past the point where "still processing" explains it. */
+  | { kind: 'stuck'; waitedMs: number }
+  /**
+   * We could not track them at all — every slot holds a threshold-crossed
+   * buyer. `shout` is the throttle: false means only the counter should move,
+   * because the log has already said this within the last minute. `total` is
+   * exact regardless, so a throttled log never becomes the only record.
+   */
+  | { kind: 'untracked'; tracked: number; total: number; shout: boolean };
+
 /**
  * Record that this session still has no pass.
  *
@@ -94,17 +124,29 @@ function evictOneDriveBy(now: number): boolean {
  * session rather than once per poll is deliberate: the page reloads on a timer,
  * and a log line per reload is how a real incident gets buried in its own noise.
  */
-export function noteWaiting(sessionId: string, now = Date.now()): { waitedMs: number } | null {
+export function noteWaiting(sessionId: string, now = Date.now()): WaitingOutcome {
   let entry = waiting.get(sessionId);
   if (!entry) {
-    if (waiting.size >= MAX_TRACKED && !evictOneDriveBy(now)) return null;
+    if (waiting.size >= MAX_TRACKED && !evictOneDriveBy(now)) {
+      // REFUSED, AND LOUD ABOUT IT. Every slot holds a buyer past the
+      // threshold, so we decline the new id rather than displace a real one —
+      // but declining silently would rebuild the exact blindness this module
+      // removes. A genuine buyer arriving now is not being tracked, and there
+      // is no reading of this state that is routine: either someone is holding
+      // 512 ids past 45s, or 512 people are genuinely stuck. Security caught
+      // that the first version returned here without a word.
+      refusedTracking += 1;
+      const shout = now - lastRefusalLoggedAt >= REFUSAL_LOG_EVERY_MS;
+      if (shout) lastRefusalLoggedAt = now;
+      return { kind: 'untracked', tracked: waiting.size, total: refusedTracking, shout };
+    }
     entry = { firstSeen: now, alarmed: false };
     waiting.set(sessionId, entry);
   }
   const waitedMs = now - entry.firstSeen;
-  if (waitedMs < STUCK_AFTER_MS || entry.alarmed) return null;
+  if (waitedMs < STUCK_AFTER_MS || entry.alarmed) return { kind: 'quiet' };
   entry.alarmed = true;
-  return { waitedMs };
+  return { kind: 'stuck', waitedMs };
 }
 
 /** Their pass arrived. Drop them, so the gauge can fall as well as rise. */
@@ -120,15 +162,24 @@ export function resolveWaiting(sessionId: string): void {
  * only move when someone hits `/paid`, and the buyer who gave up and closed the
  * tab — the one most worth seeing — would never show as stuck.
  */
-export function waitingSnapshot(now = Date.now()): { waiting: number; stuck: number } {
+export function waitingSnapshot(now = Date.now()): {
+  waiting: number;
+  stuck: number;
+  untracked: number;
+} {
   let stuck = 0;
   for (const w of waiting.values()) {
     if (now - w.firstSeen >= STUCK_AFTER_MS) stuck += 1;
   }
-  return { waiting: waiting.size, stuck };
+  // `untracked` is published alongside the other two because the log that
+  // reports saturation is throttled. A number on a surface someone reads is
+  // the record; the log line is only the notification.
+  return { waiting: waiting.size, stuck, untracked: refusedTracking };
 }
 
 /** Testing seam. */
 export function __resetWaiting(): void {
   waiting.clear();
+  refusedTracking = 0;
+  lastRefusalLoggedAt = 0;
 }

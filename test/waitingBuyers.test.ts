@@ -52,26 +52,26 @@ describe('counting buyers rather than requests', () => {
 
 describe('the alarm', () => {
   it('stays quiet on a first sighting, which is normal seconds after paying', () => {
-    expect(noteWaiting('cs_alice', T0)).toBeNull();
+    expect(noteWaiting('cs_alice', T0).kind).toBe('quiet');
   });
 
   it('stays quiet inside the threshold', () => {
     noteWaiting('cs_alice', T0);
-    expect(noteWaiting('cs_alice', T0 + STUCK_AFTER_MS - 1)).toBeNull();
+    expect(noteWaiting('cs_alice', T0 + STUCK_AFTER_MS - 1).kind).toBe('quiet');
   });
 
   it('fires once the buyer has genuinely waited', () => {
     noteWaiting('cs_alice', T0);
     const hit = noteWaiting('cs_alice', T0 + STUCK_AFTER_MS);
-    expect(hit).not.toBeNull();
-    expect(hit?.waitedMs).toBe(STUCK_AFTER_MS);
+    expect(hit.kind).toBe('stuck');
+    expect(hit.kind === 'stuck' && hit.waitedMs).toBe(STUCK_AFTER_MS);
   });
 
   it('fires only ONCE per buyer, so a reload loop cannot bury the incident', () => {
     noteWaiting('cs_alice', T0);
-    expect(noteWaiting('cs_alice', T0 + STUCK_AFTER_MS)).not.toBeNull();
+    expect(noteWaiting('cs_alice', T0 + STUCK_AFTER_MS).kind).toBe('stuck');
     for (let i = 1; i <= 20; i++) {
-      expect(noteWaiting('cs_alice', T0 + STUCK_AFTER_MS + i * 1000)).toBeNull();
+      expect(noteWaiting('cs_alice', T0 + STUCK_AFTER_MS + i * 1000).kind).toBe('quiet');
     }
   });
 
@@ -81,7 +81,7 @@ describe('the alarm', () => {
     // ignore before the day it is real; that exact flaw was found in the webhook
     // classifier two days before this file existed.
     for (let i = 0; i < 500; i++) {
-      expect(noteWaiting(`cs_drive_by_${i}`, T0)).toBeNull();
+      expect(noteWaiting(`cs_drive_by_${i}`, T0).kind).toBe('quiet');
     }
     expect(waitingSnapshot(T0).stuck).toBe(0);
   });
@@ -99,7 +99,7 @@ describe('a flood must not hide a real buyer', () => {
   it('keeps a real stuck buyer visible through a flood of fresh ids', () => {
     noteWaiting('cs_victim', T0);
     // They cross the threshold and alarm, like a real buyer polling the page.
-    expect(noteWaiting('cs_victim', T0 + STUCK_AFTER_MS)).not.toBeNull();
+    expect(noteWaiting('cs_victim', T0 + STUCK_AFTER_MS).kind).toBe('stuck');
 
     // Now a stranger floods far past the cap with distinct valid-shaped ids.
     for (let i = 0; i < MAX_TRACKED * 3; i++) {
@@ -136,8 +136,65 @@ describe('a flood must not hide a real buyer', () => {
     for (let i = 0; i < MAX_TRACKED * 2; i++) noteWaiting(`cs_flood_${i}`, T0 + 1);
     // The victim is still there and still ageing toward the threshold.
     const hit = noteWaiting('cs_victim', T0 + STUCK_AFTER_MS);
-    expect(hit).not.toBeNull();
-    expect(hit?.waitedMs).toBe(STUCK_AFTER_MS);
+    expect(hit.kind).toBe('stuck');
+    expect(hit.kind === 'stuck' && hit.waitedMs).toBe(STUCK_AFTER_MS);
+  });
+});
+
+/**
+ * Saturation must never be silent.
+ *
+ * The first version of the refusal branch simply returned. Security caught it:
+ * declining silently rebuilds the exact blindness this module removes, only by
+ * saturation instead of by absence. There is no routine reading of the state —
+ * either someone is holding every slot past the threshold, or that many people
+ * are genuinely stuck — so it has to be reportable in both.
+ */
+describe('refusing to track is loud', () => {
+  function saturate(at: number): void {
+    for (let i = 0; i < MAX_TRACKED; i++) noteWaiting(`cs_real_${i}`, T0);
+    for (let i = 0; i < MAX_TRACKED; i++) noteWaiting(`cs_real_${i}`, at);
+  }
+
+  it('reports the refusal rather than returning quietly', () => {
+    const later = T0 + STUCK_AFTER_MS;
+    saturate(later);
+    const out = noteWaiting('cs_newcomer', later + 1);
+    expect(out.kind).toBe('untracked');
+    expect(out.kind === 'untracked' && out.tracked).toBe(MAX_TRACKED);
+  });
+
+  it('counts every refusal exactly, even while the log is throttled', () => {
+    const later = T0 + STUCK_AFTER_MS;
+    saturate(later);
+    for (let i = 0; i < 50; i++) noteWaiting(`cs_new_${i}`, later + 1);
+    // The counter is the record; the log line is only the notification.
+    expect(waitingSnapshot(later + 1).untracked).toBe(50);
+  });
+
+  it('shouts on the first refusal and then throttles, so it cannot bury itself', () => {
+    const later = T0 + STUCK_AFTER_MS;
+    saturate(later);
+    const first = noteWaiting('cs_a', later + 1);
+    expect(first.kind === 'untracked' && first.shout).toBe(true);
+    const second = noteWaiting('cs_b', later + 2);
+    expect(second.kind === 'untracked' && second.shout).toBe(false);
+  });
+
+  it('shouts again once the throttle window has passed', () => {
+    const later = T0 + STUCK_AFTER_MS;
+    saturate(later);
+    noteWaiting('cs_a', later + 1);
+    const muted = noteWaiting('cs_b', later + 30_000);
+    expect(muted.kind === 'untracked' && muted.shout).toBe(false);
+    const audible = noteWaiting('cs_c', later + 61_000);
+    expect(audible.kind === 'untracked' && audible.shout).toBe(true);
+  });
+
+  it('stays at zero in normal operation', () => {
+    noteWaiting('cs_alice', T0);
+    noteWaiting('cs_bob', T0);
+    expect(waitingSnapshot(T0).untracked).toBe(0);
   });
 });
 
