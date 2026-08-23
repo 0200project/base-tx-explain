@@ -4,6 +4,15 @@ Mission (updated 19:28Z, founder directive): 10 paying customers at $9/month tod
 
 **Scoreboard: 0 / 10 paid. $0 / $90 MRR.** (Note: our real MRR-eligible product is the "0200 Developer" $9/month Stripe subscription, distinct from the one-time "0200 Pass" — both $9, only Developer recurs. Surface confirmed the Stripe/Developer path is verified up to but not including a completed real payment.)
 
+## 2026-08-23: founder directive — fix listing attribution, reprice the pass pitch
+
+- **server.json (MCP registry)** tagged `?ref=mcp-registry` — safe, correct, this IS the URL the registry hands users. Committed (e80c06c).
+- **Mistake, caught fast, fixed:** tagged `RESOURCE_INFO.url` (src/index.ts:121) with `?ref=x402scan`, deployed it, then platform caught that this URL is not a followable link — it is the resource identity **inside the live 402 payment challenge**. Tagging it would have mis-attributed every payer who copies the challenge URL as "x402scan" regardless of real origin, and risked orphaning our x402scan registration. Reverted and redeployed within one cycle (d979f3b), verified live the challenge is clean. Lesson: check with the domain/mechanism owner before tagging anything that isn't obviously a clicked link.
+- **Apify: structurally unmeasurable, under any configuration.** Platform confirmed `.actor/Dockerfile` builds our source into Apify's own hosted container — an Apify user's traffic never touches base-tx-explain.fly.dev at all. One of our seven "listings" was never going to appear in our numbers; visible only in Apify's own console.
+- **x402 ecosystem PR (#292):** fixed `websiteUrl` to point at 0200project.com instead of the github repo, matching the convention every other real entry uses (checked 3 examples). Correctness fix regardless of tagging. Asked surface whether the site propagates `?ref=` through to actual API calls before tagging it.
+- **awesome-mcp-servers PR (#12553):** left as-is — links to the github repo, which is the correct convention for that list (every entry does this), and the README/canonical link should stay clean per platform's reasoning (tagging it would tag everyone as one channel).
+- **Glama:** unresolved — no Glama config exists in this repo, so it's either scraping server.json (already covered) or a hand-entered URL in their dashboard. Asked platform to check what their listing actually displays before touching anything.
+
 ## Active
 
 | Prospect | Why they might need 0200 | Contact channel | Status | Objection | Next action | Trial / checkout / payment |
