@@ -522,11 +522,46 @@ payment was justified, since a card spend leaves no on-chain trace at all.
 
 ### 9b. Wallet security model (x402 only)
 
-**RECEIVE wallet `0xd4ec730a…` — confirmed hardened, nothing to build.** EOA,
+**RECEIVE wallet — server side confirmed hardened, nothing to build.** EOA,
 nonce 0. No private key for it exists in the codebase or environment; the exact
 scheme pins the destination so payments can only push toward it; there is no
-automated outbound path. The residual is founder key custody, which is not an
-engineering problem. The only deliverable is detection (below).
+automated outbound path. The only server-side deliverable is detection (below).
+
+**CORRECTION 2026-08-23: "the residual is founder key custody, which is not an
+engineering problem" was true and incomplete.** It is not an engineering problem,
+but it is a SPECIFIABLE one, and the rotation of the original payout wallet
+(retired because it had carried unrelated personal activity) showed what the
+specification is:
+
+- **A receive key must never sign anything.** Receiving needs no connection and
+  no signature, so single-purpose costs nothing. This is structural rather than
+  maintenance: a key that never connects to a dApp never grants an approval, so
+  there is never a stray approval to hunt down later. "Revoke approvals
+  periodically" manages a problem the key should not have.
+- **Why a used key is a different category, not the same risk in a different
+  app.** An unused key's exposure is key custody alone. A key used for general
+  activity is key custody PLUS the union of every contract it has ever approved —
+  approvals do not expire, and a contract benign today can be upgraded behind a
+  proxy tomorrow while the approval stays live. The wallet software (MetaMask vs
+  a general-purpose app) is close to irrelevant next to that.
+- **The USDC-specific reason this matters more than generic wallet hygiene.**
+  This key holds USDC, which supports `transferWithAuthorization`: the holder
+  signs off chain, anyone submits. A key phished into signing one has its USDC
+  moved WITHOUT EVER SENDING A TRANSACTION — nonce stays 0, an explorer's
+  Transactions tab shows nothing, and only the balance and the Transfer log
+  reveal it. That is the nonce blind spot arriving from the opposite direction to
+  the drain case below, and it is a stronger argument for "never sign on a
+  website" than the approval argument, because an approval at least leaves an
+  on-chain event someone might notice.
+- **Retiring a payout address is not a config change, and the old one is not
+  closed when the config flips.** `X402_PAY_TO` is published inside the `accepts`
+  block of every 402 challenge we serve, and discovery indexers cache it. After a
+  rotation, payments already in flight and any client or registry holding cached
+  requirements still pay the OLD address. So the old wallet stays live until
+  deposits actually stop — watch both balances through the transition. The danger
+  is not the retired wallet's history; it is a stray deposit arriving later into
+  an address that still carries approvals. Drain it, keep watching it, and never
+  let it be a destination again.
 
 **SPEND wallet `0x2E31f337…` — the real exposure.** EOA, nonce 0, and the
 balance IS the blast radius.
