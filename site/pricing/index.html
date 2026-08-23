@@ -451,12 +451,31 @@
     box.className = 'panel show';
     meta.textContent = 'checking…';
     body.innerHTML = '<p class="pg-hint">Confirming your payment…</p>';
+    /* How long this exact payment has been stuck in "not ready" — survives the
+       manual reloads we're telling them to do. A first sighting gets the plain
+       "give it a moment" message; past ~45s of real waiting, telling them to
+       keep reloading would just be untrue, so the message changes to a real
+       next step instead of a longer wait with no visible end. */
+    var firstSeenKey = 'btx-pending-' + sessionId;
+    var firstSeen = Number(sessionStorage.getItem(firstSeenKey));
+    if (!firstSeen) {
+      firstSeen = Date.now();
+      try { sessionStorage.setItem(firstSeenKey, String(firstSeen)); } catch (e) { /* private mode, etc. */ }
+    }
     fetch('https://base-tx-explain.fly.dev/paid?session_id=' + encodeURIComponent(sessionId))
       .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
       .then(function (r) {
         if (r.status === 404) {
+          var waitedMs = Date.now() - firstSeen;
           meta.textContent = 'not ready yet';
-          body.innerHTML = '<p>' + esc(r.body.error || 'Your payment is still processing. Reload this page in a few seconds.') + '</p>';
+          if (waitedMs > 45000) {
+            body.innerHTML =
+              '<p>This is taking longer than it should. If your card was charged, ' +
+              'email <a href="mailto:security@0200project.com">security@0200project.com</a> with this page\'s URL ' +
+              'and we\'ll sort it out directly — don\'t assume reloading again will fix it at this point.</p>';
+          } else {
+            body.innerHTML = '<p>' + esc(r.body.error || 'Your payment is still processing. Reload this page in a few seconds.') + '</p>';
+          }
           return;
         }
         if (!r.body || !r.body.mcp_url) {

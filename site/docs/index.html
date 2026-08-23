@@ -481,6 +481,7 @@ npm run dev</code></pre>
       <p>Absence of a flag is never a safety guarantee. These are observations about a transaction that has already been mined, not a verdict on it, and not advice about whether to act.</p>
 
       <h2 id="error-handling">Error handling</h2>
+      <p><strong>A payment-required response is also <code class="inline">isError: true</code> — this is not a bug.</strong> Past the free tier, the unpaid call comes back as a tool error carrying the x402 challenge, exactly as the MCP x402 transport spec requires: the wrapper a paying client uses can only detect a challenge on an error result. An x402-capable client reads it and pays automatically; a plain MCP client with no x402 wrapper will surface it as a failed call, which is expected, not broken. See <a href="#x402-payments">x402 payments</a> for the challenge shape.</p>
       <p>Tool-level errors return <code class="inline">isError: true</code> with a body of the shape <code class="inline">{ "error": "...", "code": "..." }</code>:</p>
       <div class="table-wrap">
         <table>
