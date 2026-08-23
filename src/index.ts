@@ -670,7 +670,7 @@ app.get('/favicon.ico', (_req, res) => {
  * The ledger was fixed; this counter is the same number one layer up, and it is
  * published on the PUBLIC /healthz, where a stranger reads it too.
  */
-const metrics = { tool_calls: 0, free: 0, paywalled: 0, degraded: 0, booted_at: new Date().toISOString() };
+const metrics = { tool_calls: 0, free: 0, paywalled: 0, degraded: 0, buyers_waiting: 0, booted_at: new Date().toISOString() };
 
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? '';
 
@@ -880,8 +880,34 @@ app.get('/paid', (req, res) => {
   }
   const pass = passForSession(sessionId);
   if (!pass) {
-    // Also the honest answer while a webhook is still in flight: the buyer
-    // should retry rather than be told their purchase failed.
+    // COUNTED AND LOGGED, because until now it was neither. `not_ready` existed
+    // in exactly one place — the response below — so a buyer stuck reloading
+    // this page was invisible to us: we would not have learned it happened, let
+    // alone that it kept happening. This is somebody who has paid and has
+    // nothing, which is the one failure this service must never produce
+    // silently.
+    //
+    // The response itself is deliberately UNCHANGED. The pricing page fetches
+    // this route and renders `error` to the buyer for the first 45 seconds, and
+    // gates its whole not-ready branch on the 404, so the status and the string
+    // are now user-facing copy owned by Surface rather than internal wording.
+    //
+    // `delivered_count` is the field that means "a live purchase has ever
+    // minted", which is what makes the difference between a delivery still in
+    // flight and a mint path that has never once worked. NOT `verified_count`:
+    // that counts any signed delivery, including a `customer.created` which
+    // mints nothing, so it can sit above zero while pass delivery has never
+    // happened. It did exactly that tonight.
+    metrics.buyers_waiting += 1;
+    const wh = webhookHealth();
+    console.error(
+      `[paid] BUYER WAITING, no pass yet for session ${sessionId.slice(0, 12)}... ` +
+        `(webhook ${wh.status}, delivered_count=${wh.delivered_count}, waiting_since_boot=${metrics.buyers_waiting}). ` +
+        (wh.delivered_count === 0
+          ? 'NO live purchase has EVER minted a pass on this server. If this buyer paid, they are the first, ' +
+            'and the mint path is running for the first time. Check the payout wallet and Stripe before assuming they simply arrived early.'
+          : 'A delivery may still be in flight; this is expected for a few seconds after payment.'),
+    );
     res.status(404).json({
       error: 'No pass is available for that session yet. If you just paid, wait a few seconds and reload.',
       code: 'not_ready',
