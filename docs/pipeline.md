@@ -13,6 +13,8 @@ Mission (updated 19:28Z, founder directive): 10 paying customers at $9/month tod
 - **awesome-mcp-servers PR (#12553):** left as-is — links to the github repo, which is the correct convention for that list (every entry does this), and the README/canonical link should stay clean per platform's reasoning (tagging it would tag everyone as one channel).
 - **Glama:** unresolved — no Glama config exists in this repo, so it's either scraping server.json (already covered) or a hand-entered URL in their dashboard. Asked platform to check what their listing actually displays before touching anything.
 
+**Repriced the pass pitch** (docs/market-notes.md): grounded in §4 of segment research plus tonight's second confirmation (agentmail landed on the same "per-call, not the pass" conclusion as Circadian, via integration judgment rather than arithmetic). Added the checkable break-even (\$9/\$0.02 = 450 calls/30 days — below it, per-call, no exceptions; above it, lead with the pass) and the correct buyer shape (continuous third-party analysis: compliance screening a fixed address list, forensics batches, portfolio trackers, block explorers — not agents whose volume scales with their own transaction frequency). Explicit caveat: the pass is NOT a standing watchlist with alerts — that's a real product §4 describes but we haven't built; oversells it as monitoring infrastructure it isn't. That's a platform/engineering decision, separate from this repricing.
+
 ## Active
 
 | Prospect | Why they might need 0200 | Contact channel | Status | Objection | Next action | Trial / checkout / payment |
