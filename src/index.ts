@@ -118,7 +118,7 @@ let sharedPayTo = '';
 // An https resource URL: x402 indexers (Bazaar, x402scan) group and link
 // resources by URL and may drop non-https schemes.
 const RESOURCE_INFO = {
-  url: `${PUBLIC_URL}/mcp?ref=x402scan`,
+  url: `${PUBLIC_URL}/mcp`,
   description: TOOL_DESCRIPTION,
   mimeType: 'application/json',
   serviceName: 'base-tx-explain',
