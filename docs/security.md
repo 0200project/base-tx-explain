@@ -265,8 +265,8 @@ data. Keep that list honest as fields change.
   Platform encoded the limit into the instrument rather than leaving it in prose:
   the status is `secret_verified`, NOT `healthy`, so "the signature path works"
   cannot be compressed into "the card rail works" by anyone downstream. The money
-  half — a live checkout actually minting a pass — remains untested and is Open
-  #4.
+  half has never executed at all — zero live `checkout.session.completed` handled
+  by this server, ever — and is Open #4.
 
 ## 5. Open (known, unfixed) — ranked
 
@@ -393,7 +393,14 @@ data. Keep that list honest as fields change.
    buffered body on `!settleResult.success` so the token never reaches a
    non-payer; `rest.ts:216` revokes on any non-2xx; and it hooks `res.on('close')`
    so a dropped connection revokes too); Stripe card is a third path whose money
-   half is still untested even now the signature path is proven. **Send a $9
+   half has NEVER EXECUTED — not "untested" in the sense of not yet got round
+   to, but zero live `checkout.session.completed` handled by this server, ever,
+   on any purchase. **This repo has already been bitten by exactly that
+   distinction.** The `extra._meta` vs `ctx.meta` bug sat in the pass-purchase
+   path, passed `tsc`, passed review, and would have failed 100% of real sales —
+   because no real sale had ever run it. A reviewed path that has never executed
+   is not a tested path: its first execution IS the test, and that first
+   execution is currently scheduled to be a stranger's $9. **Send a $9
    buyer to REST `POST /pass`.** The close is a real purchase through the path
    being sold — and afterwards the honest claim is "REST pass delivery is
    proven", never "the pass rail works".
