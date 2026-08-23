@@ -1132,6 +1132,12 @@ app.get('/stats', async (req, res) => {
   res.status(200).json({
     version: VERSION,
     payment_mode: PAYMENT_MODE,
+    // Also on /healthz. Duplicated here deliberately: the daily report and the
+    // dashboard read /stats, and a report line testing `stats.payments_ready
+    // === false` against a field that only existed on /healthz was
+    // `undefined === false` — a degraded-payments warning that could never fire
+    // and read as coverage while providing none.
+    payments_ready: paymentsReady,
     price_usd: PRICE_USD,
     since_boot: metrics,
     treasury,

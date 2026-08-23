@@ -121,7 +121,12 @@ if (stats) {
     say(`- **Card rail UNPROVEN** (\`never_exercised\`): no Stripe delivery has ever verified against the current secret. Not broken, not working — untested. Subscribing the endpoint to \`customer.created\` and creating a live-mode customer proves it for $0.`);
   }
 
-  if (stats.payments_ready === false) {
+  // ABSENT IS ITS OWN ANSWER. This line previously tested a field that /stats
+  // did not carry, so it was `undefined === false` and silently never fired.
+  // A check that cannot fail is not a check, and it reads as coverage.
+  if (stats.payments_ready === undefined) {
+    say(`- Payment status UNKNOWN — \`/stats\` did not return \`payments_ready\`. Not "payments are fine"; we could not tell.`);
+  } else if (stats.payments_ready === false) {
     say(`- **Payments are DOWN** (facilitator unreachable). Free tier still serving; calls that would have been charged are counted as \`degraded\`, not as paywall hits.`);
   }
   say('');
