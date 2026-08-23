@@ -1065,6 +1065,41 @@ Free $0 (10 calls/client) · x402 $0.02/call · 0200 Pass $9 one-time (30 days,
 
 ---
 
+## Card rail proven end-to-end — 2026-08-23T07:50:24Z, real progress, not revenue
+
+Verified against `/stats` directly by Finance before anything got reported.
+The Founder made a real, live $9 purchase to test the card rail — the exact
+proof platform recommended two days ago. It worked: `webhook.status: healthy`,
+1 live purchase minted a pass, 2 signed deliveries verified. **This is the
+card rail's first-ever proof that the code actually runs in production**,
+same significance as Circadian's probe was for x402.
+
+**Correctly classified, independently confirmed by two people: self-purchase,
+not revenue.** `self_revenue_usd: 9`, `revenue_from_customers_usd: 0`. Growth
+independently verified the `SELF_PURCHASE_EMAIL` match in code before
+flagging it, matching Finance's own read from `/stats` — two independent
+confirmations landing on the same classification, not one party asserting it.
+**Booked $0.00 as customer revenue**, same treatment as every other
+known-non-revenue event today. `active_passes: 3` — the third is this
+purchase's pass, also not a customer artifact.
+
+### A reconciler false alarm fired at the same moment — same root cause as D-1/D-4, logged as D-8
+
+`/stats` briefly read `reconciliation.status: overbooked`, `delta_usd: -9`,
+with a note claiming "USDC was swept out of the payout wallet without being
+declared... a shortfall of $9.00." **Nothing was swept. No money is missing.**
+
+Mechanism: `booked_usd` rose to include the $9 Stripe self-purchase, but the
+reconciler compared that total against the x402 payout wallet's on-chain
+USDC balance ($0.04) — mixing rails, exactly the failure this ledger's own
+Reconciliation notes already warn against ("x402 and Stripe will never
+reconcile against each other... any check comparing the payout wallet against
+total revenue will look broken while being correct"). Flagged to platform
+as urgent given it's live on a status endpoint anyone could read, not because
+any money is actually unaccounted for. Same class of bug as D-1 and D-4 —
+the reconciler asserting a discrepancy that the underlying facts don't
+support — logged as **D-8**, fix pending.
+
 ## Overnight close — 2026-08-21 into 2026-08-22, Founder unreachable
 
 Verified against `/stats` directly by Finance before logging, matches
