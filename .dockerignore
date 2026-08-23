@@ -1,0 +1,34 @@
+# What leaves this machine on every deploy.
+#
+# WHY THIS FILE EXISTS. There wasn't one. `fly deploy` tars the whole working
+# directory and uploads it to Fly's remote builder as build context — every
+# deploy, regardless of what the Dockerfile actually COPYs. The Dockerfile is
+# narrow (package.json, package-lock.json, tsconfig.json, src), so none of this
+# ever reached the image; but the CONTEXT is a separate thing from the image,
+# and the context was everything: `.env`, `.internal-marker`, `.stats-token`,
+# and `data/` with the full settlement ledger and every payer address in it.
+#
+# Fly already holds those secrets — they are set as Fly secrets — so this was
+# poor hygiene rather than a breach, and it is not being escalated as one. But
+# "our credentials and our customer ledger leave the machine every ten minutes"
+# is not a sentence anyone had decided to be true. Found by Security while
+# arguing about where private docs should live; the mechanism turned out to
+# matter more than the argument did.
+#
+# DENY BY DEFAULT, then re-include. The allowlist is the point: a new secret
+# file dropped in the repo root is excluded because it was never named, rather
+# than included because nobody remembered to name it. Every deny-list version of
+# this file is one forgotten entry away from the thing it exists to prevent —
+# the same reason the buyer-waiting eviction refuses new ids instead of guessing.
+*
+
+# Exactly what the Dockerfile builds from, and nothing else.
+!package.json
+!package-lock.json
+!tsconfig.json
+!src
+!src/**
+
+# Re-exclude anything that could hide under src.
+src/**/*.env
+src/**/.env*

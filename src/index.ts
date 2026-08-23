@@ -17,7 +17,7 @@ import { buildOpenApiDocument } from './openapi.js';
 import { registerPassRoutes, registerRestRoutes } from './rest.js';
 import { declaredWithdrawn, reconcile } from './reconcile.js';
 import { getTreasury } from './treasury.js';
-import { consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
+import { FREE_CALLS, consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
 import { passFromHeaders, passFromPath, passUrl } from './passUrl.js';
 import { isInternalRequest } from './internal.js';
 import { attribute, attributionSnapshot, initAttribution, unattribute } from './attribution.js';
@@ -34,7 +34,14 @@ import {
   webhookHealth,
   recordWebhookDelivered,
 } from './webhookHealth.js';
-import { noteWaiting, resolveWaiting, waitingSnapshot } from './waitingBuyers.js';
+import {
+  acknowledgeWaiting,
+  initWaitingBuyers,
+  listWaiting,
+  noteWaiting,
+  resolveWaiting,
+  waitingSnapshot,
+} from './waitingBuyers.js';
 import {
   alreadyHandled,
   passForSession,
@@ -46,13 +53,22 @@ import {
   isSelfPurchase,
   type StripeEvent,
 } from './stripe.js';
-import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, renewPass, passSnapshot, refundPassUse, activatePass, revokePass, revokePendingPass, usePass } from './passes.js';
+import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, renewPass, passSnapshot, refundPassUse, activatePass, revokePass, revokePendingPass, usePass,
+  passStatus,
+} from './passes.js';
 import { HOUR, TtlCache } from './cache.js';
 import { APIFY_BILLING_ACTIVE, initApifyBilling, chargeApifyCall } from './apifyBilling.js';
 import { checkHealthSnapshot } from './checkHealth.js';
-import { initUsageLedger, recordEvent, usageSnapshot, flushCheckHealth } from './usage.js';
+import {
+  initUsageLedger,
+  recordEvent,
+  usageSnapshot,
+  flushCheckHealth,
+  onChainBookedFromCustomersUsd,
+  onChainSettlementCount,
+} from './usage.js';
 
-const VERSION = '0.1.2';
+const VERSION = '0.1.3';
 const NETWORK = 'eip155:8453' as const; // Base mainnet
 const PAYMENT_MODE = process.env.PAYMENT_MODE === 'x402' ? 'x402' : 'none';
 const PRICE_USD = process.env.X402_PRICE_USD ?? '0.02';
@@ -556,16 +572,40 @@ function getServer(charge: boolean, ip: string, passToken: string | null = null)
     handler as Parameters<typeof server.registerTool>[2],
   );
   if (buyPassHandler) {
+    // WHAT A PASS HOLDER IS TOLD, when they already hold one.
+    //
+    // The description is the only thing an autonomous agent reads before
+    // deciding to call a tool. A customer connected on a pass URL was being
+    // offered "Buy a 30-day pass for $9" with nothing saying they already had
+    // one — so an agent short on calls, or just exploring, could buy a second
+    // pass while holding 9,999 unused credits. That is a paying customer
+    // charged twice for something they own: money taken, nothing new
+    // delivered, arriving through the front door rather than through a bug.
+    //
+    // The tool stays available, because a nearly-exhausted or nearly-expired
+    // holder genuinely does need it and removing the capability would strand
+    // them. What changes is that the offer now states their position first.
+    const held = passToken ? passStatus(passToken) : { valid: false as const };
+    const description = held.valid
+      ? `YOU ALREADY HOLD AN ACTIVE PASS: ${held.remaining.toLocaleString('en-US')} of ` +
+        `${PASS_CALL_CAP.toLocaleString('en-US')} calls remaining, valid ${held.daysLeft} more ` +
+        `day${held.daysLeft === 1 ? '' : 's'} (until ${held.expiresAt}). You do NOT need to buy ` +
+        'anything to keep using explain_transaction — just keep calling it on this same URL. ' +
+        `Calling buy_pass now purchases a SEPARATE, ADDITIONAL pass and charges you another ` +
+        `$${PASS_PRICE_USD}; passes do not stack or extend. Only buy when your calls are nearly ` +
+        'exhausted or the pass is about to expire.'
+      : `Buy a ${PASS_DAYS}-day pass for $${PASS_PRICE_USD} in USDC on Base via x402: up to ` +
+        `${PASS_CALL_CAP.toLocaleString('en-US')} explain_transaction calls with no per-call payment. ` +
+        'Returns a bearer pass token; attach it at _meta["btx/pass"] on MCP calls or as the ' +
+        'X-BTX-Pass header on POST /explain. No account; the token is the only proof of purchase. ' +
+        'Renew by buying a new pass after expiry.';
     server.registerTool(
       'buy_pass',
       {
-        title: `Buy a ${PASS_DAYS}-day pass`,
-        description:
-          `Buy a ${PASS_DAYS}-day pass for $${PASS_PRICE_USD} in USDC on Base via x402: up to ` +
-          `${PASS_CALL_CAP.toLocaleString('en-US')} explain_transaction calls with no per-call payment. ` +
-          'Returns a bearer pass token; attach it at _meta["btx/pass"] on MCP calls or as the ' +
-          'X-BTX-Pass header on POST /explain. No account; the token is the only proof of purchase. ' +
-          'Renew by buying a new pass after expiry.',
+        title: held.valid
+          ? `Buy another pass (you already have one)`
+          : `Buy a ${PASS_DAYS}-day pass`,
+        description,
         inputSchema: {},
       },
       buyPassHandler as Parameters<typeof server.registerTool>[2],
@@ -691,6 +731,10 @@ const metrics = {
    * published here because the log that reports it is throttled.
    */
   buyers_untracked: 0,
+  /** Our own marked /paid probes. Excluded from the gauges above, counted here. */
+  buyers_internal_probes: 0,
+  /** Test-mode (cs_test_) sessions. Structurally never a real customer. */
+  buyers_test_mode: 0,
   booted_at: new Date().toISOString(),
 };
 
@@ -700,6 +744,8 @@ function refreshWaitingMetrics(): void {
   metrics.buyers_waiting = snap.waiting;
   metrics.buyers_stuck = snap.stuck;
   metrics.buyers_untracked = snap.untracked;
+  metrics.buyers_internal_probes = snap.internal;
+  metrics.buyers_test_mode = snap.test_mode;
 }
 
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? '';
@@ -929,7 +975,9 @@ app.get('/paid', (req, res) => {
     // that counts any signed delivery, including a `customer.created` which
     // mints nothing, so it can sit above zero while pass delivery has never
     // happened. It did exactly that tonight.
-    const outcome = noteWaiting(sessionId);
+    const outcome = noteWaiting(sessionId, Date.now(), {
+      internal: isInternalRequest(req.headers as Record<string, unknown>),
+    });
     if (outcome.kind === 'stuck') {
       const wh = webhookHealth();
       console.error(
@@ -985,6 +1033,8 @@ app.get('/healthz', (_req, res) => {
     buyers_waiting: _bw,
     buyers_stuck: _bs,
     buyers_untracked: _bu,
+    buyers_internal_probes: _bi,
+    buyers_test_mode: _btm,
     ...publicMetrics
   } = metrics;
   res
@@ -1190,6 +1240,42 @@ app.post('/webhook-health/ack', (req, res) => {
   res.set('Cache-Control', 'no-store').json({ ...result, webhook: webhookHealth() });
 });
 
+app.post('/buyers/ack', (req, res) => {
+  // Same token discipline as /webhook-health/ack: header preferred, because a
+  // query token reaches access logs.
+  const header =
+    (req.headers['x-stats-token'] as string | undefined) ??
+    String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+  const query = typeof req.query.token === 'string' ? req.query.token : '';
+  if (!STATS_TOKEN || !(tokenMatches(header) || tokenMatches(query))) {
+    res.status(401).json({ error: 'bad token' });
+    return;
+  }
+  // Per-session and never bulk. Clearing everything at once would erase a real
+  // stranded buyer alongside a known-benign probe, at exactly the moment
+  // somebody is still owed a pass.
+  const sessionId = typeof req.query.session_id === 'string' ? req.query.session_id : '';
+  if (!sessionId) {
+    res
+      .status(400)
+      .set('Cache-Control', 'no-store')
+      .json({
+        error: 'session_id required',
+        hint: 'Name the one entry you checked. GET /stats -> waiting[] lists them.',
+        waiting: listWaiting(),
+      });
+    return;
+  }
+  const result = acknowledgeWaiting(sessionId);
+  console.log(
+    result.cleared
+      ? `[paid] waiting buyer ${sessionId.slice(0, 16)}... acknowledged by a human and cleared`
+      : `[paid] ack for ${sessionId.slice(0, 16)}... matched nothing (already resolved, expired, or never tracked)`,
+  );
+  refreshWaitingMetrics();
+  res.set('Cache-Control', 'no-store').json({ ...result, waiting: listWaiting() });
+});
+
 app.get('/stats', async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*').set('Cache-Control', 'no-store');
   if (!STATS_TOKEN) {
@@ -1218,6 +1304,10 @@ app.get('/stats', async (req, res) => {
   const reconciliation = reconcile({
     treasury,
     booked_usd: usage.lifetime.revenue_usd,
+    // Rail-matched on purpose: the wallet only ever sees x402, so only x402
+    // money may sit on the other side of the comparison.
+    on_chain_booked_from_customers_usd: onChainBookedFromCustomersUsd(),
+    on_chain_settlements: onChainSettlementCount(),
     settlements: usage.lifetime.settlements,
     paid_calls: usage.lifetime.paid_calls,
     price_usd: Number.parseFloat(PRICE_USD),
@@ -1240,6 +1330,9 @@ app.get('/stats', async (req, res) => {
     // someone hits /paid, so the buyer who gave up and closed the tab — the one
     // most worth seeing — would never show as stuck.
     since_boot: (refreshWaitingMetrics(), metrics),
+    // Named entries, so an operator can see WHICH buyer is waiting rather than
+    // only that a number is non-zero — and can name one to acknowledge.
+    waiting: listWaiting(),
     treasury,
     reconciliation,
     ...usage,
@@ -1490,6 +1583,8 @@ initWalletMonitor();
 // Persisted, so a deploy does not erase the memory of a rejected delivery —
 // deploys are frequent here, which makes that the common case, not an edge one.
 initWebhookHealth();
+// Survives a restart so our own deploys cannot reset a stuck buyer's clock.
+initWaitingBuyers();
 // Say which listings are measurable, so a config slip cannot masquerade as
 // "no listing produced anything" — the very conclusion this instrument tests.
 logChannelConfig();
@@ -1686,6 +1781,11 @@ function registerPaidRoutes(): void {
         priceUsd: PRICE_USD,
         network: NETWORK,
         publicUrl: PUBLIC_URL,
+        siteUrl: SITE_URL,
+        passPriceUsd: PASS_PRICE_USD,
+        passDays: PASS_DAYS,
+        passCallCap: PASS_CALL_CAP,
+        freeCalls: FREE_CALLS,
         tryFreeCall: (req) => consumeFreeCall(clientIpOf(req)),
         refundFreeCall: (req) => refundFreeCall(clientIpOf(req)),
         tryPass: (req) => {

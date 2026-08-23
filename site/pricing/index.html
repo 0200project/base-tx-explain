@@ -89,6 +89,35 @@
 
   #pr-success { display: none; margin-bottom: 2rem; }
   #pr-success.show { display: block; }
+
+  .pr-success-head { display: flex; align-items: flex-start; gap: 0.875rem; }
+  .pr-success-icon {
+    flex: none;
+    width: 2.125rem;
+    height: 2.125rem;
+    border-radius: 50%;
+    background: var(--accent-dim);
+    position: relative;
+    margin-top: 0.125rem;
+  }
+  .pr-success-icon::after {
+    content: "";
+    position: absolute;
+    left: 0.65rem;
+    top: 0.85rem;
+    width: 0.6rem;
+    height: 0.325rem;
+    border-left: 2px solid var(--accent);
+    border-bottom: 2px solid var(--accent);
+    transform: rotate(-45deg);
+  }
+  .pr-success-head h2 { font-size: 1.0625rem; font-weight: 500; color: var(--fg-strong); }
+  .pr-success-head p { color: var(--fg-muted); font-size: 0.875rem; margin-top: 0.1875rem; }
+  .pr-url-row { display: flex; align-items: stretch; gap: 0.5rem; }
+  .pr-url-row .pr-url { flex: 1; }
+  .pr-url-row .copy-btn { flex: none; align-self: center; }
+  .pr-success-next { font-size: 0.875rem; color: var(--fg-muted); margin-top: 1rem; }
+  .pr-success-next a { color: var(--accent-strong); }
 </style>
 </head>
 <body>
@@ -128,7 +157,7 @@
     <div class="container">
 
       <div id="pr-success" class="panel">
-        <div class="panel-head"><span>your pass</span><span id="pr-success-meta"></span></div>
+        <div class="panel-head"><span>checkout</span><span id="pr-success-meta"></span></div>
         <div id="pr-success-body" style="padding:1.25rem"></div>
       </div>
 
@@ -157,7 +186,7 @@
           <div class="pr-price">$9<span> one time</span></div>
           <p class="pr-desc">10,000 calls over 30 days. A bearer token, not an account — nothing to cancel, because nothing recurs.</p>
           <p class="pr-url-label">Setup is one URL, pasted into any MCP client:</p>
-          <div class="pr-url">https://base-tx-explain.fly.dev/mcp/btxp_&lt;your token&gt;</div>
+          <div class="pr-url">https://api.0200project.com/mcp/btxp_&lt;your token&gt;</div>
 
           <div class="pr-actions">
             <a class="btn btn-primary btn-sm" href="https://buy.stripe.com/eVq8wP0VS22N2cHglI3wQ00" rel="noopener">Pay with card — $9</a>
@@ -254,10 +283,30 @@
 (function () {
   'use strict';
 
-  var ENDPOINT = 'https://base-tx-explain.fly.dev/mcp';
+  var ENDPOINT = 'https://api.0200project.com/mcp';
 
   function esc(s) {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  /* Shared by both success renders (card redirect-back and wallet inline).
+     site.js only binds [data-copy] buttons present at load, so anything
+     injected later — like these — needs its own listener. */
+  function wireCopyButton(btnId, valueId) {
+    var btn = document.getElementById(btnId);
+    var val = document.getElementById(valueId);
+    if (!btn || !val) return;
+    btn.addEventListener('click', function () {
+      var text = val.textContent.trim();
+      var prev = btn.textContent;
+      var doCopy = window.__copyText || function (t) {
+        return (navigator.clipboard && window.isSecureContext) ? navigator.clipboard.writeText(t) : Promise.reject(new Error('clipboard unavailable'));
+      };
+      doCopy(text).then(
+        function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = prev; }, 1600); },
+        function () { btn.textContent = 'Copy failed'; setTimeout(function () { btn.textContent = prev; }, 1600); }
+      );
+    });
   }
 
   /* ---- Buy the pass with a wallet: same shape as the playground's
@@ -367,13 +416,18 @@
 
   function renderSuccess(payload) {
     var token = payload && payload.pass_token;
-    var url = (payload && payload.mcp_url) || (token ? 'https://base-tx-explain.fly.dev/mcp/' + token : null);
+    var url = (payload && payload.mcp_url) || (token ? 'https://api.0200project.com/mcp/' + token : null);
     renderPanel(
-      '<p>Paid. This is the only proof of purchase — save it now.</p>' +
+      '<div class="pr-success-head" style="margin-top:0.75rem">' +
+        '<div class="pr-success-icon" aria-hidden="true"></div>' +
+        '<div><h2 style="font-size:0.9375rem">Paid.</h2></div>' +
+      '</div>' +
+      '<p style="margin-top:0.625rem;color:var(--fg-strong);font-weight:500">This is the only proof of purchase — save it now.</p>' +
       (url
-        ? '<div class="pr-url" style="margin-top:0.75rem">' + esc(url) + '</div>'
-        : '<p>' + esc((payload && (payload.note || payload.keep_this_token)) || 'Check the response for your token.') + '</p>')
+        ? '<div class="pr-url-row" style="margin-top:0.75rem"><div class="pr-url" id="pr-wallet-url-value">' + esc(url) + '</div><button class="copy-btn" type="button" id="pr-wallet-copy-btn">Copy</button></div>'
+        : '<p style="margin-top:0.75rem">' + esc((payload && (payload.note || payload.keep_this_token)) || 'Check the response for your token.') + '</p>')
     );
+    wireCopyButton('pr-wallet-copy-btn', 'pr-wallet-url-value');
     buyBtn.textContent = 'Paid';
     buyBtn.disabled = true;
   }
@@ -457,8 +511,8 @@
        keep reloading would just be untrue, so the message changes to a real
        next step instead of a longer wait with no visible end.
 
-       THE 45000 BELOW IS SHARED WITH THE SERVER. src/index.ts uses the same
-       number as WAITING_STUCK_AFTER_MS to decide when a waiting buyer becomes a
+       THE 45000 BELOW IS SHARED WITH THE SERVER. src/waitingBuyers.ts uses the
+       same number as STUCK_AFTER_MS to decide when a waiting buyer becomes a
        loud log line, so we start listening at the moment this page tells them to
        shout. They are one invariant in two files and scripts/predeploy.sh gates
        on them being equal -- change this and the deploy stops until the server
@@ -469,7 +523,7 @@
       firstSeen = Date.now();
       try { sessionStorage.setItem(firstSeenKey, String(firstSeen)); } catch (e) { /* private mode, etc. */ }
     }
-    fetch('https://base-tx-explain.fly.dev/paid?session_id=' + encodeURIComponent(sessionId))
+    fetch('https://api.0200project.com/paid?session_id=' + encodeURIComponent(sessionId))
       .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
       .then(function (r) {
         if (r.status === 404) {
@@ -490,10 +544,26 @@
           body.innerHTML = '<p>Something unexpected came back. If you were charged, contact <a href="mailto:security@0200project.com">security@0200project.com</a> with this page\'s URL.</p>';
           return;
         }
-        meta.textContent = r.body.kind === 'subscription' ? '0200 developer' : '0200 pass';
+        var isSub = r.body.kind === 'subscription';
+        meta.textContent = 'confirmed';
         body.innerHTML =
-          '<p>' + esc(r.body.warning || 'Save this URL — it is the only proof of purchase.') + '</p>' +
-          '<div class="pr-url" style="margin-top:0.75rem">' + esc(r.body.mcp_url) + '</div>';
+          '<div class="pr-success-head">' +
+            '<div class="pr-success-icon" aria-hidden="true"></div>' +
+            '<div>' +
+              '<h2>Payment received.</h2>' +
+              '<p>' + (isSub ? '$9 / month' : '$9') + ' &middot; ' + (isSub ? '0200 Developer' : '0200 Pass') +
+                ' &middot; 10,000 calls' + (isSub ? ', renews automatically' : ' over 30 days') + '</p>' +
+            '</div>' +
+          '</div>' +
+          '<p style="margin-top:1rem;color:var(--fg-strong);font-weight:500">' +
+            esc(r.body.warning || 'This URL is your only proof of purchase — copy it now, there is no account to recover it from later.') +
+          '</p>' +
+          '<div class="pr-url-row" style="margin-top:0.75rem">' +
+            '<div class="pr-url" id="pr-url-value">' + esc(r.body.mcp_url) + '</div>' +
+            '<button class="copy-btn" type="button" id="pr-copy-btn">Copy</button>' +
+          '</div>' +
+          '<p class="pr-success-next">Paste this into any MCP client’s server-URL field to start calling it — no separate credential to configure. <a href="/docs/#quickstart">Quickstart</a></p>';
+        wireCopyButton('pr-copy-btn', 'pr-url-value');
       })
       .catch(function () {
         meta.textContent = 'error';

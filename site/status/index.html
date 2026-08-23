@@ -101,7 +101,7 @@
         <div class="service-row" id="row-mcp">
           <div>
             <div class="name">MCP Endpoint</div>
-            <div class="service-sub">base-tx-explain.fly.dev/mcp</div>
+            <div class="service-sub">api.0200project.com/mcp</div>
           </div>
           <span class="state"><span class="dot dot-wait" data-dot></span><span data-label>Checking&hellip;</span><span data-ms></span></span>
         </div>
@@ -129,7 +129,7 @@
       <p class="small faint method-note">These checks run from your browser against the production endpoints — no third-party monitoring service is involved. Reported latency is the round trip from your network location. The server permits reading <code class="inline">/healthz</code> cross-origin, so the MCP row reflects the actual health payload: reported version, payment mode, and lifetime call counters. The facilitator is a third-party host this page can only ping; cross-origin rules prevent reading its response body, so "reachable" means exactly that — the host answered. The MCP endpoint and the transaction decoder are one deployment, so both rows derive from a single probe of <code class="inline">/healthz</code>.</p>
 
       <noscript>
-        <p class="small faint method-note">JavaScript is disabled, so live checks cannot run from this page. You can probe the endpoint directly: <code class="inline">curl https://base-tx-explain.fly.dev/healthz</code></p>
+        <p class="small faint method-note">JavaScript is disabled, so live checks cannot run from this page. You can probe the endpoint directly: <code class="inline">curl https://api.0200project.com/healthz</code></p>
       </noscript>
 
     </div>
@@ -206,7 +206,7 @@
 
 <script>
 (function () {
-  var HEALTH = 'https://base-tx-explain.fly.dev/healthz';
+  var HEALTH = 'https://api.0200project.com/healthz';
   var FACILITATOR = 'https://facilitator.payai.network/';
 
   var bannerDot = document.getElementById('banner-dot');

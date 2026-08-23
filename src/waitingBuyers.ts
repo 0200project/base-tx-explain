@@ -1,3 +1,6 @@
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 /**
  * Who has paid and is standing at the counter with nothing in their hands.
  *
@@ -58,12 +61,76 @@ export const STUCK_AFTER_MS = 45_000;
 /** Bounded because the keys arrive from strangers. */
 export const MAX_TRACKED = 512;
 
+/**
+ * How long a waiting entry survives a restart before it is history, not a gauge.
+ *
+ * A buyer stuck for six hours is still stuck and we want to know. A session id
+ * from three days ago is a record, not somebody standing at the counter, and
+ * leaving it in the live count would make `buyers_waiting` a number that only
+ * ever climbs — the same defect as a counter that cannot fall.
+ */
+const MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
 interface Waiter {
   firstSeen: number;
   alarmed: boolean;
 }
 
 const waiting = new Map<string, Waiter>();
+
+/**
+ * PERSISTED, because a restart must not reset a real buyer's clock.
+ *
+ * Surface found this: nine deploys in ninety minutes, and one restart landed
+ * twenty-five seconds after a stuck entry appeared. In memory only, every
+ * deploy wipes every waiting buyer — so a genuine buyer polling a page that
+ * will not resolve has their 45-second clock reset by our shipping, and at any
+ * real deploy cadence they may never trip the alarm at all. The instrument
+ * built to notice a stranded customer would go blank precisely while we were
+ * busy changing things, which is exactly when we are most likely to strand one.
+ *
+ * `webhookHealth` already persists for this reason and I wrote the comment
+ * explaining why — "a restart forgets that a delivery was rejected, which
+ * under-reports rather than falsely reassures" — and then built this module
+ * with no persistence at all. Same lesson, same night, one file over.
+ *
+ * Failure to write degrades to memory-only and says so, rather than throwing on
+ * a payment path.
+ */
+const dataDir = process.env.DATA_DIR ?? './data';
+const statePath = join(dataDir, 'waiting-buyers.json');
+let persistent = false;
+
+export function initWaitingBuyers(now = Date.now()): void {
+  try {
+    mkdirSync(dataDir, { recursive: true });
+    if (existsSync(statePath)) {
+      const raw = JSON.parse(readFileSync(statePath, 'utf8')) as Record<string, Waiter>;
+      for (const [id, w] of Object.entries(raw)) {
+        if (typeof w?.firstSeen !== 'number') continue;
+        // Stale entries are dropped rather than resurrected: see MAX_AGE_MS.
+        if (now - w.firstSeen >= MAX_AGE_MS) continue;
+        if (waiting.size >= MAX_TRACKED) break;
+        waiting.set(id, { firstSeen: w.firstSeen, alarmed: w.alarmed === true });
+      }
+    }
+    persistent = true;
+  } catch (err) {
+    console.error('waiting-buyer state unavailable, counting in memory only:', err);
+  }
+}
+
+function persist(): void {
+  if (!persistent) return;
+  try {
+    const tmp = `${statePath}.tmp`;
+    writeFileSync(tmp, JSON.stringify(Object.fromEntries(waiting)));
+    renameSync(tmp, statePath);
+  } catch (err) {
+    persistent = false;
+    console.error('waiting-buyer write failed, continuing in memory:', err);
+  }
+}
 
 /**
  * How often we have been unable to track an arriving buyer at all.
@@ -77,6 +144,26 @@ const waiting = new Map<string, Waiter>();
  * by absence.
  */
 let refusedTracking = 0;
+
+/**
+ * Our own marked probes. Counted so the exclusion is visible rather than
+ * silent — a filter nobody can see is indistinguishable from no traffic.
+ */
+let internalProbes = 0;
+
+/**
+ * Entries a human inspected and cleared. Kept as a running total rather than
+ * deleted, so "we cleared three of these tonight" survives the clearing — the
+ * same reason the webhook acknowledgement keeps its count.
+ */
+let acknowledgedTotal = 0;
+
+/**
+ * Test-mode sessions seen at /paid. Never customers, never incidents, but
+ * counted — a test purchase mints a working pass on purpose, so if that flow
+ * breaks the number should still be visible to whoever is running the test.
+ */
+let testModeProbes = 0;
 
 /** Throttle for the saturation log only. The counter above is always exact. */
 const REFUSAL_LOG_EVERY_MS = 60_000;
@@ -124,7 +211,53 @@ export type WaitingOutcome =
  * session rather than once per poll is deliberate: the page reloads on a timer,
  * and a log line per reload is how a real incident gets buried in its own noise.
  */
-export function noteWaiting(sessionId: string, now = Date.now()): WaitingOutcome {
+export function noteWaiting(
+  sessionId: string,
+  now = Date.now(),
+  opts: { internal?: boolean } = {},
+): WaitingOutcome {
+  // OUR OWN PROBES ARE NOT BUYERS.
+  //
+  // Counted, never tracked. Within an hour of shipping this module I curled
+  // /paid to verify the host cutover, forgot the marker was not wired here at
+  // all, and put a phantom buyer on the gauge — then read `stuck: 1` and had to
+  // work out whether a real customer was stranded. That is the sixth time my
+  // own verification traffic has been mistaken for a stranger, and the first
+  // where the instrument doing the mistaking was one I had written that day
+  // while telling everyone else to use `scripts/ours.sh`.
+  //
+  // Same asymmetry as `internal.ts` and the webhook classifier: Stripe and a
+  // real browser never send our marker, so forgetting it still errs toward
+  // showing a buyer who is not there rather than hiding one who is. The safe
+  // direction, and the reason this is a filter rather than a trust boundary.
+  if (opts.internal) {
+    internalProbes += 1;
+    return { kind: 'quiet' };
+  }
+
+  // A TEST-MODE SESSION CANNOT BE A REAL CUSTOMER, so it is never a stranded one.
+  //
+  // Stripe issues `cs_live_` in live mode and `cs_test_` in test mode, and
+  // `validSessionId` accepts both without distinction. Verified against our own
+  // ledger rather than Stripe's documentation: the founder's real 07:50:24Z
+  // purchase carries a `cs_live_` id, and the phantom stuck buyer that woke
+  // everyone at 09:07Z was `cs_test_liveaudit...`.
+  //
+  // Security's fix and it is the right shape. The internal marker is opt-in, so
+  // it has now failed to prevent this seven times — and every time the response
+  // was to ask people to remember harder. This needs nobody to remember
+  // anything: a test-mode id is structurally incapable of being a paying
+  // customer, so it cannot be a customer we stranded. Same lesson as the
+  // commit-msg hook and `scripts/ours.sh` — when discipline fails repeatedly,
+  // the mechanism is the problem.
+  //
+  // Counted, not discarded: a test purchase DOES mint a working pass on purpose,
+  // so if the flow breaks during a test we still want the number visible. It
+  // just is not an incident, because a tester is present and watching.
+  if (sessionId.startsWith('cs_test_')) {
+    testModeProbes += 1;
+    return { kind: 'quiet' };
+  }
   let entry = waiting.get(sessionId);
   if (!entry) {
     if (waiting.size >= MAX_TRACKED && !evictOneDriveBy(now)) {
@@ -142,16 +275,63 @@ export function noteWaiting(sessionId: string, now = Date.now()): WaitingOutcome
     }
     entry = { firstSeen: now, alarmed: false };
     waiting.set(sessionId, entry);
+    persist();
   }
   const waitedMs = now - entry.firstSeen;
   if (waitedMs < STUCK_AFTER_MS || entry.alarmed) return { kind: 'quiet' };
   entry.alarmed = true;
+  persist();
   return { kind: 'stuck', waitedMs };
 }
 
 /** Their pass arrived. Drop them, so the gauge can fall as well as rise. */
 export function resolveWaiting(sessionId: string): void {
-  waiting.delete(sessionId);
+  if (waiting.delete(sessionId)) persist();
+}
+
+/** Entries a human might need to look at before deciding to clear one. */
+export function listWaiting(now = Date.now()): Array<{
+  session_id: string;
+  waited_seconds: number;
+  alarmed: boolean;
+}> {
+  return [...waiting.entries()]
+    .map(([id, w]) => ({
+      session_id: id,
+      waited_seconds: Math.round((now - w.firstSeen) / 1000),
+      alarmed: w.alarmed,
+    }))
+    .sort((a, b) => b.waited_seconds - a.waited_seconds);
+}
+
+/**
+ * A human has established this entry is not a stranded customer: clear it.
+ *
+ * WHY THIS HAS TO EXIST, and it is the same argument as the webhook incident
+ * acknowledgement. Persistence — added an hour earlier so our own deploys stop
+ * wiping stranded buyers — means a benign entry now survives for 24 hours and
+ * holds every dashboard and every quality-check run red for a day. A control
+ * that stays red on something everyone knows is fine is a control people learn
+ * to ignore, and they learn it before the day it is right. That is the sticky
+ * reconciler alarm and the permanent webhook incident, arriving a third time.
+ *
+ * It happened immediately: a teammate probed /paid without the internal marker
+ * at 09:07:49Z, the server correctly recorded a stranger who asked for a pass
+ * and did not get one, and there was no way to say "checked, it was us."
+ *
+ * DELIBERATELY NOT AUTOMATIC and deliberately per-session. Clearing everything
+ * on a timer, or on the next successful delivery, would erase a real stranded
+ * buyer at exactly the moment somebody is still owed something. It takes a
+ * person, naming one session, and the count of what they cleared is kept rather
+ * than deleted so the history survives the clearing.
+ */
+export function acknowledgeWaiting(sessionId: string): { cleared: boolean } {
+  const had = waiting.delete(sessionId);
+  if (had) {
+    acknowledgedTotal += 1;
+    persist();
+  }
+  return { cleared: had };
 }
 
 /**
@@ -166,6 +346,9 @@ export function waitingSnapshot(now = Date.now()): {
   waiting: number;
   stuck: number;
   untracked: number;
+  internal: number;
+  acknowledged: number;
+  test_mode: number;
 } {
   let stuck = 0;
   for (const w of waiting.values()) {
@@ -174,12 +357,23 @@ export function waitingSnapshot(now = Date.now()): {
   // `untracked` is published alongside the other two because the log that
   // reports saturation is throttled. A number on a surface someone reads is
   // the record; the log line is only the notification.
-  return { waiting: waiting.size, stuck, untracked: refusedTracking };
+  return {
+    waiting: waiting.size,
+    stuck,
+    untracked: refusedTracking,
+    internal: internalProbes,
+    acknowledged: acknowledgedTotal,
+    test_mode: testModeProbes,
+  };
 }
 
 /** Testing seam. */
 export function __resetWaiting(): void {
   waiting.clear();
+  persistent = false;
   refusedTracking = 0;
   lastRefusalLoggedAt = 0;
+  internalProbes = 0;
+  acknowledgedTotal = 0;
+  testModeProbes = 0;
 }

@@ -11,8 +11,8 @@
 
 ## API
 
-- MCP endpoint: POST https://base-tx-explain.fly.dev/mcp (streamable HTTP, stateless)
-- OpenAPI: https://base-tx-explain.fly.dev/openapi.json
+- MCP endpoint: POST https://api.0200project.com/mcp (streamable HTTP, stateless)
+- OpenAPI: https://api.0200project.com/openapi.json
 - MCP registry name: io.github.0200project/base-tx-explain
 
 ## Source

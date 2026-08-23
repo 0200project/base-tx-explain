@@ -98,12 +98,49 @@ export function bookedNonRevenueTotal(): number {
  * did settle, and hiding it would be its own dishonesty — but it no longer
  * travels alone.
  */
-export function revenueNote(rawRevenueUsd: number, customerRevenueUsd: number): string | null {
-  const excluded = bookedNonRevenueTotal();
-  if (excluded <= 0 || rawRevenueUsd <= 0) return null;
+export function revenueNote(split: {
+  /** lifetime.revenue_usd — everything booked, every rail. */
+  rawRevenueUsd: number;
+  /** Only what a human has promoted to being from a customer. */
+  customerRevenueUsd: number;
+  /** Our own purchases, labelled at the moment they settled. */
+  selfUsd: number;
+  /** Written off with a stated reason. */
+  knownNonRevenueUsd: number;
+  /** Money arrived, nobody has said whose it is. */
+  unattributedUsd: number;
+}): string | null {
+  const { rawRevenueUsd, customerRevenueUsd, selfUsd, knownNonRevenueUsd, unattributedUsd } = split;
+  if (rawRevenueUsd <= 0) return null;
+
+  // ACCOUNT FOR EVERY DOLLAR, not just the written-off ones. The old sentence
+  // named only the KNOWN_NON_REVENUE portion, so on 2026-08-23 it read
+  // "$9.02 settled on chain, of which $0.02 is not revenue" and then, two
+  // clauses later, "Revenue from customers is $0.00." Both numbers were right
+  // and the sentence contradicted itself: the $9.00 self-purchase was excluded
+  // from revenue but not from the exclusions. A reader could only conclude that
+  // $9 of real revenue had gone missing somewhere in the punctuation.
+  const parts: string[] = [];
+  if (knownNonRevenueUsd > 0) {
+    parts.push(
+      `$${knownNonRevenueUsd.toFixed(2)} written off with a stated reason ` +
+        '(a pre-arranged technical probe by a party who evaluated this service and declined to buy)',
+    );
+  }
+  if (selfUsd > 0) {
+    parts.push(`$${selfUsd.toFixed(2)} paid by us to prove the rail works, which is a cost and not a sale`);
+  }
+  if (unattributedUsd > 0) {
+    parts.push(`$${unattributedUsd.toFixed(2)} arrived but not yet attributed to anyone`);
+  }
+  if (parts.length === 0) return null;
+
+  // NOT "on chain". That was true while x402 was the only rail; the first live
+  // card sale made it false, and a figure that misstates WHERE the money is
+  // sends anyone checking it to the wrong ledger.
   return (
-    `$${rawRevenueUsd.toFixed(2)} settled on chain, of which $${excluded.toFixed(2)} is not revenue ` +
-    '(a pre-arranged technical probe by a party who evaluated this service and declined to buy). ' +
+    `$${rawRevenueUsd.toFixed(2)} has settled across all rails, of which ` +
+    `${parts.join('; ')}. ` +
     `Revenue from customers is $${customerRevenueUsd.toFixed(2)}.`
   );
 }

@@ -1,4 +1,4 @@
-import { bookedNonRevenueTotal, knownNonRevenueTotal } from './knownNonRevenue.js';
+import { knownNonRevenueTotal } from './knownNonRevenue.js';
 import type { TreasurySnapshot } from './treasury.js';
 
 /**
@@ -27,10 +27,28 @@ export type ReconcileStatus = 'reconciled' | 'unbooked_revenue' | 'overbooked' |
 
 export interface ReconcileInput {
   treasury: TreasurySnapshot;
-  /** lifetime.revenue_usd — the sum of confirmed `settled` events. */
+  /**
+   * lifetime.revenue_usd — the sum of confirmed `settled` events across EVERY
+   * rail. Reported, never compared: see the field below.
+   */
   booked_usd: number;
-  /** lifetime.settlements — count of confirmed settlements. */
+  /**
+   * Booked customer money that actually moved on chain — the ONLY figure that
+   * may be compared against the payout wallet, because the wallet only ever
+   * sees that rail. Supplied by `onChainBookedFromCustomersUsd()`, which
+   * explains why comparing the cross-rail total produced a phantom drain.
+   */
+  on_chain_booked_from_customers_usd: number;
+  /**
+   * lifetime.settlements — count of confirmed settlements across every rail.
+   * Reported, never compared against `paid_calls`: see `on_chain_settlements`.
+   */
   settlements: number;
+  /**
+   * Confirmed settlements that moved on chain. The only count that may be
+   * subtracted from `paid_calls`, which is itself x402-only.
+   */
+  on_chain_settlements: number;
   /** lifetime.paid_calls — calls served with a payment attached and verified. */
   paid_calls: number;
   /** Per-call price, used only to size the unbooked-call notional. */
@@ -109,7 +127,14 @@ export function reconcile(input: ReconcileInput): Reconciliation {
   const booked = money(safe(input.booked_usd));
   const withdrawn = money(safe(input.withdrawn_usd));
   const paidCalls = Math.max(0, Math.trunc(safe(input.paid_calls)));
-  const settlements = Math.max(0, Math.trunc(safe(input.settlements)));
+  // ON-CHAIN settlements only. `paid_calls` counts calls that arrived carrying
+  // an x402 payload — a single rail — so subtracting settlements from EVERY rail
+  // makes each card sale silently cancel one unbooked x402 call. Same cross-rail
+  // error as the delta above, one field over, and this one fails in the
+  // flattering direction: a healthy card business would drive this counter to
+  // zero and hide a genuine x402 leak completely. Found while investigating what
+  // the 8 unbooked calls actually were; the honest count was 9.
+  const settlements = Math.max(0, Math.trunc(safe(input.on_chain_settlements)));
   const price = safe(input.price_usd);
   const unbookedCalls = Math.max(0, paidCalls - settlements);
   const unbookedNotional = money(unbookedCalls * price);
@@ -135,7 +160,7 @@ export function reconcile(input: ReconcileInput): Reconciliation {
       received_usd: null,
       known_non_revenue_usd: knownNonRevenueTotal(),
       received_from_customers_usd: null,
-      booked_from_customers_usd: money(booked - bookedNonRevenueTotal()),
+      booked_from_customers_usd: money(safe(input.on_chain_booked_from_customers_usd)),
       delta_usd: null,
       note:
         'Cannot reconcile: the payout wallet balance could not be read, so booked revenue of ' +
@@ -157,7 +182,14 @@ export function reconcile(input: ReconcileInput): Reconciliation {
   // `overbooked` and printed "USDC was swept out of the payout wallet" — a
   // standing false drain alarm on the one surface that is supposed to raise a
   // real one. A control that always cries wolf is worse than no control.
-  const bookedFromCustomers = money(booked - bookedNonRevenueTotal());
+  // AND BOTH SIDES MUST COVER THE SAME RAIL. The received side is one wallet's
+  // USDC balance, so the booked side may only contain money that moved on that
+  // chain. Handing it total booked revenue made the first live CARD sale read
+  // as a $9 on-chain shortfall, and printed "USDC was swept out of the payout
+  // wallet" about money that had arrived safely at Stripe — the same false
+  // drain alarm as before, from the same function, on the axis the earlier fix
+  // did not consider. Every card sale we ever make would have widened it.
+  const bookedFromCustomers = money(safe(input.on_chain_booked_from_customers_usd));
   const delta = money(receivedFromCustomers - bookedFromCustomers);
 
   let status: ReconcileStatus;

@@ -27,7 +27,7 @@
 set -eu
 
 ROOT="$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
-URL="${BTX_URL:-https://base-tx-explain.fly.dev}"
+URL="${BTX_URL:-https://api.0200project.com}"
 
 read_secret() {
   # Env wins, then the on-disk file. Missing is fatal rather than silent: a run

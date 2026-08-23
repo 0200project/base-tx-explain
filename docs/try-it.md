@@ -7,7 +7,7 @@ check and being wrong in front of them costs more than the sale.
 ## The whole setup
 
 ```
-https://base-tx-explain.fly.dev/mcp
+https://api.0200project.com/mcp
 ```
 
 That is it. Paste it into any MCP client as a remote server URL — Claude Desktop,
@@ -17,7 +17,7 @@ signup.** The first calls are free.
 For `POST /explain` instead of MCP:
 
 ```bash
-curl -s -X POST https://base-tx-explain.fly.dev/explain \
+curl -s -X POST https://api.0200project.com/explain \
   -H 'content-type: application/json' \
   -d '{"tx_hash":"0xbe19b79fb578f9714d7f01a871d83eeec6ed19bf6a9a3df514a176d75251581c"}'
 ```
@@ -88,17 +88,24 @@ isError, which is per spec"** — not "we have a bug here."
 - **Per call:** $0.02 USDC on Base over x402. EIP-3009, so the payer signs and
   the facilitator submits — **no ETH needed for gas.**
 - **Pass:** $9 for 30 days, up to 10,000 calls. `buy_pass` over x402, or card.
-- **Card:** half-proven as of 2026-08-23. `webhook.status` on `/stats` now reads
-  `secret_verified`: we created an empty live customer, Stripe signed the
-  resulting `customer.created`, we verified it, and Stripe logged `200 OK`. So
-  **Stripe reaches us and the secret is correct** — that was the open risk and it
-  is closed.
-  What is still untested is the half after that: no live
-  `checkout.session.completed` has ever been handled, so **no card purchase has
-  ever minted a pass here.** The status goes to `healthy` the first time one does.
-  Prefer x402 for anyone already x402-native; it remains the only rail with a
-  demonstrated end-to-end settlement. If someone insists on card, that is fine —
-  stay with them until the pass is in their hands, because they are the first.
+- **Card: PROVEN end-to-end, 2026-08-23.** `webhook.status` on `/stats` reads
+  `healthy`, `delivered_count: 1`. A real live charge minted a pass, the pass was
+  delivered to the browser, and the token was confirmed to actually authorize a
+  call — a decode came back. Every link tested under the current configuration.
+  **This is now the rail to prefer.**
+- **x402: UNPROVEN under the current payout wallet, and this reverses our old
+  advice.** The only x402 settlement we have ever had is Circadian's $0.02 at
+  `2026-08-21T17:14:49Z`. We rotated the payout wallet ~32 hours later, on
+  2026-08-23 at 01:13 EDT. The current wallet `0xc41c4fed…` holds $0.04 and all
+  of it is the swept balance — `received_from_customers_usd` is `$0.00`. **No
+  x402 payment has ever landed in the wallet it would now have to land in.**
+  This is not a claim that x402 is broken: the code path did not change, only the
+  destination, and the rotation was verified. It is a claim that we have no
+  evidence for it today, which is a different thing — and it is exactly the
+  position the card rail was in before someone actually tested it.
+  So: if a prospect is x402-native and wants that rail, **tell Platform before
+  they pay.** A $0.02 test costs nothing and takes a minute. Letting their
+  payment be the test is how we find out the expensive way.
 
 ## If they engage technically
 

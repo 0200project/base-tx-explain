@@ -72,7 +72,7 @@
       <p>Yes — base-tx-explain is an MCP blockchain tool built specifically for Base: it turns any Base mainnet transaction into strict JSON over the Model Context Protocol. The official MCP registry lists other blockchain servers too, mostly for raw chain data — balances, logs, blocks. base-tx-explain is the explanation layer: one call that says what a transaction <em>did</em>, with risk flags attached. The two kinds compose well — raw-data servers for lookups, base-tx-explain for understanding.</p>
 
       <h2 id="how-to-decode">How do I decode a Base transaction programmatically?</h2>
-      <p>Connect any MCP client to the hosted endpoint at <code class="inline">https://base-tx-explain.fly.dev/mcp</code> (streamable HTTP), or send a plain JSON-RPC <code class="inline">tools/call</code> request with curl. The response is strict JSON with a stable schema, so software can parse it blind. The <a href="/docs/#quickstart">quickstart</a> has the exact config and curl command, and the <a href="/playground/">playground</a> decodes hashes live in your browser.</p>
+      <p>Connect any MCP client to the hosted endpoint at <code class="inline">https://api.0200project.com/mcp</code> (streamable HTTP), or send a plain JSON-RPC <code class="inline">tools/call</code> request with curl. The response is strict JSON with a stable schema, so software can parse it blind. The <a href="/docs/#quickstart">quickstart</a> has the exact config and curl command, and the <a href="/playground/">playground</a> decodes hashes live in your browser.</p>
 
       <h2 id="api-key">Do I need an API key or an account?</h2>
       <p>No. There are no accounts, no signup, and no API keys. Every client gets 10 free calls; after that, each call costs $0.02 in USDC on Base, paid through the x402 protocol. The payment challenge arrives inside the response, so an autonomous agent can pay and retry without a human ever filling in a form.</p>
@@ -149,7 +149,7 @@
       "name": "How do I decode a Base transaction programmatically?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Connect any MCP client to the hosted endpoint at https://base-tx-explain.fly.dev/mcp (streamable HTTP), or send a plain JSON-RPC tools/call request with curl. The response is strict JSON with a stable schema, so software can parse it blind. The quickstart has the exact config and curl command, and the playground decodes hashes live in your browser."
+        "text": "Connect any MCP client to the hosted endpoint at https://api.0200project.com/mcp (streamable HTTP), or send a plain JSON-RPC tools/call request with curl. The response is strict JSON with a stable schema, so software can parse it blind. The quickstart has the exact config and curl command, and the playground decodes hashes live in your browser."
       }
     },
     {

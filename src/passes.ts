@@ -268,6 +268,36 @@ export function renewPass(token: string, days = PASS_DAYS): boolean {
   return true;
 }
 
+/**
+ * What a pass holder currently has, WITHOUT consuming a call.
+ *
+ * `usePass` spends a credit, so it cannot answer "what do I already own" — and
+ * that question needs answering before we offer somebody a second pass. A
+ * customer connecting with a valid pass sees `buy_pass` in their tool list
+ * saying "Buy a 30-day pass for $9", with nothing indicating they hold one
+ * already. A human might shrug; an autonomous agent low on context and looking
+ * for more calls can simply buy again, and that is a real customer charged
+ * twice for something they already have — the money-taken-nothing-delivered
+ * shape, arriving through the front door instead of a bug.
+ *
+ * Read-only on purpose: an inspector that changes what it inspects is how the
+ * revenue counters went wrong, and it is not a mistake to repeat on the object
+ * a buyer paid for.
+ */
+export function passStatus(
+  token: string,
+  now = Date.now(),
+): { valid: false } | { valid: true; remaining: number; expiresAt: string; daysLeft: number } {
+  const entry = passes.get(hashToken(token));
+  if (!entry || !entry.active || now > entry.expires) return { valid: false };
+  return {
+    valid: true,
+    remaining: Math.max(0, PASS_CALL_CAP - entry.calls_used),
+    expiresAt: new Date(entry.expires).toISOString(),
+    daysLeft: Math.max(0, Math.ceil((entry.expires - now) / 86_400_000)),
+  };
+}
+
 export type PassCheck =
   | { ok: true; remaining: number }
   | { ok: false; reason: 'invalid' | 'not_activated' | 'expired' | 'cap_exhausted' | 'rate_limited' };

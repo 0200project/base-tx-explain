@@ -24,6 +24,14 @@ export interface RestDeps {
   priceUsd: string;
   network: `${string}:${string}`;
   publicUrl: string;
+  /** The marketing site. Where a HUMAN goes to buy; publicUrl is the API. */
+  siteUrl: string;
+  /** Pass terms, so the paywall can offer the cheaper option instead of only the dearer one. */
+  passPriceUsd: string;
+  passDays: number;
+  passCallCap: number;
+  /** How many calls a new client gets before this wall. Stated, not implied. */
+  freeCalls: number;
   /** Returns true if this caller may have a free call (and consumes it). */
   tryFreeCall: (req: express.Request) => boolean;
   /** Give a free call back when the failure was ours. */
@@ -43,7 +51,7 @@ export interface RestDeps {
 const HASH_RE = /^0x[0-9a-fA-F]{64}$/;
 
 export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
-  const { resourceServer, payTo, priceUsd, network, publicUrl } = deps;
+  const { resourceServer, payTo, priceUsd, network, publicUrl, siteUrl, passPriceUsd, passDays, passCallCap, freeCalls } = deps;
 
   const payGate = paymentMiddleware(
     {
@@ -57,14 +65,32 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
         tags: ['base', 'transaction', 'decoder', 'blockchain', 'risk'],
         // What an unpaid caller sees. Standard clients read the 402 headers,
         // but a human with curl gets something they can act on.
+        // THE HIGHEST-INTENT MOMENT IN THE FUNNEL, and it used to be a dead end
+        // for anyone without a wallet.
+        //
+        // Whoever reads this tried the product, liked it enough to spend all
+        // their free calls, and wants more. That is the closest thing we have to
+        // a buyer. The previous body described the x402 flow, never mentioned
+        // the pass, offered no URL a person could click, and pointed `docs` at
+        // openapi.json — a machine-readable spec handed to a human asking how to
+        // pay. The comment above it already claimed a human "gets something they
+        // can act on"; it did not.
+        //
+        // So: both audiences, explicitly. An agent gets the x402 instruction and
+        // the spec. A person gets the pass, a card option, and a link. The card
+        // rail is the one proven end-to-end under the current configuration, so
+        // it is named rather than left implicit.
         unpaidResponseBody: () => ({
           contentType: 'application/json',
           body: {
             error: 'Payment required',
+            free_tier: `The first ${freeCalls} calls from a new client are free. You have used yours.`,
             price_usd: priceUsd,
-            how: 'This endpoint speaks x402. Pay the quoted amount and retry with the payment attached, or use an x402-capable HTTP client which does it automatically.',
-            free_tier: 'The first calls from a new client are free; you have used yours.',
-            docs: `${publicUrl}/openapi.json`,
+            pay_per_call: `This endpoint speaks x402: pay $${priceUsd} in USDC on Base and retry with the payment attached, or use an x402-capable HTTP client which does it automatically.`,
+            pass: `Better value for repeated use: $${passPriceUsd} buys ${passDays} days and up to ${passCallCap.toLocaleString('en-US')} calls with no per-call payment. POST ${publicUrl}/pass over x402, or pay by card.`,
+            buy_with_card: `${siteUrl}/pricing/`,
+            docs: `${siteUrl}/docs/`,
+            openapi: `${publicUrl}/openapi.json`,
           },
         }),
       },

@@ -3,7 +3,13 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { join } from 'node:path';
 import { DAY, HOUR, TtlCache } from './cache.js';
 
-const FREE_CALLS = Math.max(0, Number.parseInt(process.env.FREE_CALLS_PER_IP ?? '10', 10) || 0);
+/**
+ * Exported so the paywall message can state the REAL number rather than a
+ * hardcoded one. A 402 that says "the first 10 calls are free" while the server
+ * grants a different count is the same drift as a comment describing code it no
+ * longer matches — and this one is read by the person deciding whether to pay.
+ */
+export const FREE_CALLS = Math.max(0, Number.parseInt(process.env.FREE_CALLS_PER_IP ?? '10', 10) || 0);
 const WINDOW_MS = 30 * DAY;
 
 /**

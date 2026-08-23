@@ -304,6 +304,50 @@ function revenueSplit(): {
 }
 
 /**
+ * Booked customer money that actually moved USDC ON CHAIN.
+ *
+ * WHY THIS EXISTS. The reconciler compares the ledger against the balance of
+ * the x402 payout wallet, and was being handed total booked revenue across
+ * every rail. The first live card sale therefore read as a $9 shortfall, with
+ * `/stats` announcing that USDC "was swept out of the payout wallet without
+ * being declared." Nothing had been swept. A card settlement never touches that
+ * wallet, so counting it on the booked side of an on-chain comparison
+ * guarantees a phantom drain the size of every card sale we ever make.
+ *
+ * The finance ledger (now private) already carried the standing warning that x402 and Stripe
+ * would never reconcile against each other and that any check comparing the
+ * payout wallet against total revenue would look broken while being correct.
+ * The warning existed; the code did not honour it.
+ *
+ * THE DISCRIMINATOR IS `tx`, and it is exact rather than a heuristic: an x402
+ * settlement is identified by its on-chain transaction hash and a Stripe one
+ * never has one. If it did not move on chain, it cannot be reconciled against a
+ * chain balance — by definition, not by convention.
+ *
+ * SELF AND WRITTEN-OFF ARRIVALS ARE EXCLUDED for the same reason the received
+ * side excludes them: both sides of a comparison must exclude the same things,
+ * or the difference measures the exclusion rather than the money. That rule was
+ * already written above the delta calculation; this adds the axis it missed,
+ * which is that both sides must also cover the same RAIL.
+ */
+export function onChainSettlementCount(): number {
+  let n = 0;
+  for (const s of settlements) if (s.tx) n += 1;
+  return n;
+}
+
+export function onChainBookedFromCustomersUsd(): number {
+  let total = 0;
+  for (const s of settlements) {
+    if (!s.tx) continue; // Never touched the chain, so not the chain's business.
+    if (s.self) continue;
+    if (isKnownNonRevenue(s.tx) || isKnownNonRevenue(s.id)) continue;
+    total += s.amount_usd;
+  }
+  return Number(total.toFixed(6));
+}
+
+/**
  * Which handle to paste to promote each settlement still awaiting a human.
  *
  * Widening the predicate means either `tx` or `id` works — but only one of them
@@ -469,7 +513,13 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
       unattributed_revenue_usd: Number(split.unattributed.toFixed(6)),
       attributed_revenue_usd: Number(split.attributed.toFixed(6)),
       revenue_from_customers_usd: Number(customerRevenue.toFixed(6)),
-      revenue_note: revenueNote(Number(lifetime.revenue_usd.toFixed(6)), customerRevenue),
+      revenue_note: revenueNote({
+        rawRevenueUsd: Number(lifetime.revenue_usd.toFixed(6)),
+        customerRevenueUsd: customerRevenue,
+        selfUsd: Number(split.self.toFixed(6)),
+        knownNonRevenueUsd: Number(split.knownNonRevenue.toFixed(6)),
+        unattributedUsd: Number(split.unattributed.toFixed(6)),
+      }),
       revenue_usd: Number(lifetime.revenue_usd.toFixed(6)),
       unique_clients: lifetimeClients.size,
     },

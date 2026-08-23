@@ -34,7 +34,9 @@ function input(over: Partial<ReconcileInput> = {}): ReconcileInput {
   return {
     treasury: { usdc_balance: 0, wallet, read_at: '2026-08-21T02:00:00.000Z' },
     booked_usd: 0,
+    on_chain_booked_from_customers_usd: 0,
     settlements: 0,
+    on_chain_settlements: 0,
     paid_calls: 0,
     price_usd: 0.02,
     withdrawn_usd: 0,
@@ -44,7 +46,7 @@ function input(over: Partial<ReconcileInput> = {}): ReconcileInput {
 
 describe('reconcile', () => {
   it('reports reconciled when booked revenue matches the chain', () => {
-    const r = reconcile(input({ treasury: { usdc_balance: BASE + 0.06, wallet, read_at: null }, booked_usd: 0.06 + NR_BOOKED, settlements: 3, paid_calls: 3 }));
+    const r = reconcile(input({ treasury: { usdc_balance: BASE + 0.06, wallet, read_at: null }, booked_usd: 0.06 + NR_BOOKED, on_chain_booked_from_customers_usd: 0.06, settlements: 3, on_chain_settlements: 3, paid_calls: 3 }));
     expect(r.status).toBe('reconciled');
     expect(r.delta_usd).toBe(0);
     expect(r.unbooked_paid_calls).toBe(0);
@@ -56,7 +58,7 @@ describe('reconcile', () => {
   // The state this check was built for, measured 2026-08-20: one $0.02 payment
   // on chain, nothing booked, three calls served against a payment.
   it('names the delta when money arrived that was never booked', () => {
-    const r = reconcile(input({ treasury: { usdc_balance: BASE + 0.02, wallet, read_at: null }, booked_usd: NR_BOOKED, settlements: 0, paid_calls: 3 }));
+    const r = reconcile(input({ treasury: { usdc_balance: BASE + 0.02, wallet, read_at: null }, booked_usd: NR_BOOKED, settlements: 0, on_chain_settlements: 0, paid_calls: 3 }));
     expect(r.status).toBe('unbooked_revenue');
     expect(r.delta_usd).toBe(0.02);
     expect(r.received_usd).toBe(BASE + 0.02);
@@ -70,20 +72,103 @@ describe('reconcile', () => {
   });
 
   it('flags overbooking when the ledger claims more than the chain holds', () => {
-    const r = reconcile(input({ treasury: { usdc_balance: BASE, wallet, read_at: null }, booked_usd: 9.02 + NR_BOOKED, settlements: 2, paid_calls: 2 }));
+    const r = reconcile(input({ treasury: { usdc_balance: BASE, wallet, read_at: null }, booked_usd: 9.02 + NR_BOOKED, on_chain_booked_from_customers_usd: 9.02, settlements: 2, on_chain_settlements: 2, paid_calls: 2 }));
     expect(r.status).toBe('overbooked');
     expect(r.delta_usd).toBe(-9.02);
     expect(r.note).toContain('TREASURY_WITHDRAWN_USD');
   });
 
   it('adds declared sweeps back so a withdrawal is not read as a shortfall', () => {
-    const r = reconcile(input({ treasury: { usdc_balance: BASE, wallet, read_at: null }, booked_usd: 9 + NR_BOOKED, settlements: 1, paid_calls: 1, withdrawn_usd: 9 }));
+    const r = reconcile(input({ treasury: { usdc_balance: BASE, wallet, read_at: null }, booked_usd: 9 + NR_BOOKED, on_chain_booked_from_customers_usd: 9, settlements: 1, on_chain_settlements: 1, paid_calls: 1, withdrawn_usd: 9 }));
     expect(r.status).toBe('reconciled');
     expect(r.received_usd).toBe(BASE + 9);
   });
 
+  /**
+   * A CARD SALE MUST NOT LOOK LIKE AN ON-CHAIN DRAIN.
+   *
+   * The live failure, 2026-08-23: the first real card purchase settled $9 at
+   * Stripe, the reconciler compared total booked revenue against the x402
+   * payout wallet, and `/stats` announced a $9 shortfall with the words "USDC
+   * was swept out of the payout wallet without being declared." No USDC had
+   * moved. Every card sale we ever make would have widened that phantom gap.
+   *
+   * It is the second time this function shipped a false drain alarm, and the
+   * comment above the delta already said BOTH SIDES MUST EXCLUDE THE SAME
+   * THING. What it missed is that both sides must also cover the same RAIL.
+   */
+  it('does NOT report a shortfall when revenue was booked on a rail the wallet never sees', () => {
+    const r = reconcile(
+      input({
+        treasury: { usdc_balance: BASE, wallet, read_at: null },
+        // The ledger's raw total includes a $9 card sale...
+        booked_usd: 9 + NR_BOOKED,
+        // ...which never touched the chain, so the on-chain figure excludes it.
+        on_chain_booked_from_customers_usd: 0,
+        settlements: 2,
+        paid_calls: 2,
+      }),
+    );
+    expect(r.status).toBe('reconciled');
+    expect(r.delta_usd).toBe(0);
+    expect(r.note).not.toContain('swept out');
+    expect(r.note).not.toContain('shortfall');
+    // The raw total still tells the truth about what was booked overall — it is
+    // reported, just never compared against a single rail's wallet.
+    expect(r.booked_usd).toBe(9 + NR_BOOKED);
+  });
+
+  /**
+   * AND A CARD SALE MUST NOT CANCEL AN UNBOOKED x402 CALL.
+   *
+   * Same cross-rail error as the delta, one field over, and this one fails in
+   * the flattering direction. `paid_calls` counts calls that arrived carrying an
+   * x402 payload — a single rail — so subtracting settlements from EVERY rail
+   * means each card sale quietly erases one unbooked call from the report. A
+   * healthy card business would drive this counter to zero and hide a genuine
+   * x402 leak completely.
+   *
+   * Found on 2026-08-23 while investigating what the "8 unbooked calls" were.
+   * Production had 10 payment-attached calls and 2 settlements — but one of
+   * those settlements was the Stripe pass sale, so the honest count was 9.
+   */
+  it('does not let a card settlement cancel an unbooked x402 call', () => {
+    const r = reconcile(
+      input({
+        treasury: { usdc_balance: BASE, wallet, read_at: null },
+        booked_usd: 9 + NR_BOOKED,
+        on_chain_booked_from_customers_usd: 0,
+        // Two settlements total, only one of which moved on chain.
+        settlements: 2,
+        on_chain_settlements: 1,
+        paid_calls: 10,
+      }),
+    );
+    // 10 payment-attached calls minus the ONE on-chain settlement = 9.
+    // Subtracting both would have reported 8 and understated the gap.
+    expect(r.unbooked_paid_calls).toBe(9);
+    expect(r.unbooked_notional_usd).toBe(0.18);
+  });
+
+  it('still catches a REAL on-chain shortfall, so the fix did not just mute the alarm', () => {
+    // The distinction that matters: silencing the false alarm must not silence
+    // the true one. Here the money genuinely was booked on chain and is gone.
+    const r = reconcile(
+      input({
+        treasury: { usdc_balance: BASE, wallet, read_at: null },
+        booked_usd: 5 + NR_BOOKED,
+        on_chain_booked_from_customers_usd: 5,
+        settlements: 2,
+        paid_calls: 2,
+      }),
+    );
+    expect(r.status).toBe('overbooked');
+    expect(r.delta_usd).toBe(-5);
+    expect(r.note).toContain('TREASURY_WITHDRAWN_USD');
+  });
+
   it('degrades to unknown rather than guessing when the balance read failed', () => {
-    const r = reconcile(input({ treasury: { usdc_balance: null, wallet, read_at: null, error: 'rpc down' }, booked_usd: 0.04, settlements: 2, paid_calls: 2 }));
+    const r = reconcile(input({ treasury: { usdc_balance: null, wallet, read_at: null, error: 'rpc down' }, booked_usd: 0.04, settlements: 2, on_chain_settlements: 2, paid_calls: 2 }));
     expect(r.status).toBe('unknown');
     expect(r.delta_usd).toBeNull();
     expect(r.received_usd).toBeNull();
@@ -92,7 +177,7 @@ describe('reconcile', () => {
 
   it('tolerates float drift on summed cents instead of crying divergence', () => {
     const booked = 0.02 + 0.02 + 0.02; // 0.06000000000000001
-    const r = reconcile(input({ treasury: { usdc_balance: BASE + 0.06, wallet, read_at: null }, booked_usd: booked + NR_BOOKED, settlements: 3, paid_calls: 3 }));
+    const r = reconcile(input({ treasury: { usdc_balance: BASE + 0.06, wallet, read_at: null }, booked_usd: booked + NR_BOOKED, on_chain_booked_from_customers_usd: booked, settlements: 3, on_chain_settlements: 3, paid_calls: 3 }));
     expect(r.status).toBe('reconciled');
   });
 
@@ -124,7 +209,7 @@ describe('known non-revenue must not read as unbooked revenue', () => {
   it("reads reconciled when the only arrival is our own money", () => {
     const r = reconcile({
       treasury: { usdc_balance: BASE, wallet, read_at: null },
-      booked_usd: NR_BOOKED, settlements: 0, paid_calls: 4, price_usd: 0.02, withdrawn_usd: 0,
+      booked_usd: NR_BOOKED, settlements: 0, on_chain_settlements: 0, paid_calls: 4, price_usd: 0.02, withdrawn_usd: 0,
     });
     expect(r.status).toBe('reconciled');
     expect(r.delta_usd).toBe(0);
@@ -137,7 +222,7 @@ describe('known non-revenue must not read as unbooked revenue', () => {
     // The property that matters: excluding our money must not blind the check.
     const r = reconcile({
       treasury: { usdc_balance: BASE + 9, wallet, read_at: null },
-      booked_usd: NR_BOOKED, settlements: 0, paid_calls: 0, price_usd: 0.02, withdrawn_usd: 0,
+      booked_usd: NR_BOOKED, settlements: 0, on_chain_settlements: 0, paid_calls: 0, price_usd: 0.02, withdrawn_usd: 0,
     });
     expect(r.status).toBe('unbooked_revenue');
     expect(r.delta_usd).toBe(9);
@@ -146,7 +231,7 @@ describe('known non-revenue must not read as unbooked revenue', () => {
   it('reports the known-non-revenue figure so the adjustment is auditable', () => {
     const r = reconcile({
       treasury: { usdc_balance: BASE, wallet, read_at: null },
-      booked_usd: NR_BOOKED, settlements: 0, paid_calls: 0, price_usd: 0.02, withdrawn_usd: 0,
+      booked_usd: NR_BOOKED, settlements: 0, on_chain_settlements: 0, paid_calls: 0, price_usd: 0.02, withdrawn_usd: 0,
     });
     // A silent adjustment is its own hazard: finance must see what was excluded.
     expect(r.known_non_revenue_usd).toBe(BASE);
@@ -171,7 +256,7 @@ describe('known non-revenue must not read as unbooked revenue', () => {
   it('does not accuse us of losing money that was booked as a favour and stayed put', () => {
     const r = reconcile({
       treasury: { usdc_balance: 0.04, wallet, read_at: '2026-08-21T18:02:38.795Z' },
-      booked_usd: 0.02, settlements: 1, paid_calls: 8, price_usd: 0.02, withdrawn_usd: 0,
+      booked_usd: 0.02, settlements: 1, on_chain_settlements: 1, paid_calls: 8, price_usd: 0.02, withdrawn_usd: 0,
     });
     expect(r.status).toBe('reconciled');
     expect(r.delta_usd).toBe(0);
@@ -189,7 +274,7 @@ describe('known non-revenue must not read as unbooked revenue', () => {
   it('still reports a shortfall when funds actually leave', () => {
     const r = reconcile({
       treasury: { usdc_balance: 0, wallet, read_at: null },
-      booked_usd: 5 + NR_BOOKED, settlements: 3, paid_calls: 3, price_usd: 0.02, withdrawn_usd: 0,
+      booked_usd: 5 + NR_BOOKED, settlements: 3, on_chain_settlements: 3, paid_calls: 3, price_usd: 0.02, withdrawn_usd: 0,
     });
     expect(r.status).toBe('overbooked');
     expect(r.note).toContain('swept out');

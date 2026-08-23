@@ -119,8 +119,8 @@
       </ul>
       <h4>For agents</h4>
       <ul>
-        <li><a href="https://base-tx-explain.fly.dev/openapi.json">openapi.json</a></li>
-        <li><a href="https://base-tx-explain.fly.dev/llms.txt">llms.txt</a></li>
+        <li><a href="https://api.0200project.com/openapi.json">openapi.json</a></li>
+        <li><a href="https://api.0200project.com/llms.txt">llms.txt</a></li>
       </ul>
     </aside>
 
@@ -132,10 +132,10 @@
       <p>0200project builds machine-native tools for autonomous AI agents: narrowly scoped services with strict JSON contracts, designed to be called and parsed by software without a human in the loop. The first and currently only shipped tool is <strong>base-tx-explain</strong>, launched August 20, 2026. More tools are in development.</p>
       <p><strong>Deterministic by design.</strong> There is no LLM in the response path. Every response is produced by deterministic onchain decoding: the same input always produces the same output. Nothing is generated, so nothing can hallucinate or drift between calls.</p>
       <p><strong>MCP is the interface.</strong> Each tool is served over the <a href="https://registry.modelcontextprotocol.io">Model Context Protocol</a> as a streamable HTTP endpoint. Any MCP client can connect; any HTTP client can call it directly with a JSON-RPC request. The registry entry is <code class="inline">io.github.0200project/base-tx-explain</code>.</p>
-      <p><strong>For agents / machine-readable.</strong> The HTTP contract is published as OpenAPI at <a href="https://base-tx-explain.fly.dev/openapi.json">base-tx-explain.fly.dev/openapi.json</a>, and a plain-text guide for agents lives at <a href="https://base-tx-explain.fly.dev/llms.txt">base-tx-explain.fly.dev/llms.txt</a>. The same decode is also available as plain REST &mdash; <code class="inline">POST /explain</code> with <code class="inline">{"tx_hash": "0x&hellip;"}</code> &mdash; identical output, standard x402 flow.</p>
+      <p><strong>For agents / machine-readable.</strong> The HTTP contract is published as OpenAPI at <a href="https://api.0200project.com/openapi.json">api.0200project.com/openapi.json</a>, and a plain-text guide for agents lives at <a href="https://api.0200project.com/llms.txt">api.0200project.com/llms.txt</a>. The same decode is also available as plain REST &mdash; <code class="inline">POST /explain</code> with <code class="inline">{"tx_hash": "0x&hellip;"}</code> &mdash; identical output, standard x402 flow.</p>
 
       <h2 id="quickstart">Quickstart</h2>
-      <p>The server is one streamable-HTTP endpoint: <code class="inline">https://base-tx-explain.fly.dev/mcp</code>. Pick a client — every path calls the same tool.</p>
+      <p>The server is one streamable-HTTP endpoint: <code class="inline">https://api.0200project.com/mcp</code>. Pick a client — every path calls the same tool.</p>
 
       <div class="qs-tabs" role="tablist" aria-label="Quickstart by client">
         <button class="qs-tab" role="tab" type="button" id="tab-qs-rest" data-panel="qs-rest" aria-controls="qs-rest" aria-selected="true" tabindex="0">REST</button>
@@ -153,7 +153,7 @@
         <p>The simplest path &mdash; no MCP client, no SDK. POST a transaction hash, get the explanation back as plain JSON:</p>
         <div class="codeblock">
           <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#qs-rest-cmd">Copy</button></div>
-          <pre><code id="qs-rest-cmd">curl -X POST https://base-tx-explain.fly.dev/explain \
+          <pre><code id="qs-rest-cmd">curl -X POST https://api.0200project.com/explain \
   -H 'Content-Type: application/json' \
   -d '{"tx_hash":"0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c"}'</code></pre>
         </div>
@@ -165,7 +165,7 @@
         <p>One command adds the server over streamable HTTP:</p>
         <div class="codeblock">
           <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#qs-claude-code-cmd">Copy</button></div>
-          <pre><code id="qs-claude-code-cmd">claude mcp add --transport http base-tx-explain https://base-tx-explain.fly.dev/mcp</code></pre>
+          <pre><code id="qs-claude-code-cmd">claude mcp add --transport http base-tx-explain https://api.0200project.com/mcp</code></pre>
         </div>
         <p>Then ask Claude about any Base transaction hash — it calls <code class="inline">explain_transaction</code> on its own.</p>
       </div>
@@ -179,7 +179,7 @@
   <span class="tok-key">"mcpServers"</span><span class="tok-punc">: {</span>
     <span class="tok-key">"base-tx-explain"</span><span class="tok-punc">: {</span>
       <span class="tok-key">"type"</span><span class="tok-punc">:</span> <span class="tok-str">"streamable-http"</span><span class="tok-punc">,</span>
-      <span class="tok-key">"url"</span><span class="tok-punc">:</span> <span class="tok-str">"https://base-tx-explain.fly.dev/mcp"</span>
+      <span class="tok-key">"url"</span><span class="tok-punc">:</span> <span class="tok-str">"https://api.0200project.com/mcp"</span>
     <span class="tok-punc">}</span>
   <span class="tok-punc">}</span>
 <span class="tok-punc">}</span></code></pre>
@@ -200,7 +200,7 @@
   <span class="tok-key">"mcpServers"</span><span class="tok-punc">: {</span>
     <span class="tok-key">"base-tx-explain"</span><span class="tok-punc">: {</span>
       <span class="tok-key">"type"</span><span class="tok-punc">:</span> <span class="tok-str">"streamable-http"</span><span class="tok-punc">,</span>
-      <span class="tok-key">"url"</span><span class="tok-punc">:</span> <span class="tok-str">"https://base-tx-explain.fly.dev/mcp"</span>
+      <span class="tok-key">"url"</span><span class="tok-punc">:</span> <span class="tok-str">"https://api.0200project.com/mcp"</span>
     <span class="tok-punc">}</span>
   <span class="tok-punc">}</span>
 <span class="tok-punc">}</span></code></pre>
@@ -217,7 +217,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 
 const client = new Client({ name: 'my-agent', version: '0.0.1' });
 await client.connect(
-  new StreamableHTTPClientTransport(new URL('https://base-tx-explain.fly.dev/mcp')),
+  new StreamableHTTPClientTransport(new URL('https://api.0200project.com/mcp')),
 );
 
 const result = await client.callTool({
@@ -243,7 +243,7 @@ from mcp.client.streamable_http import streamablehttp_client
 TX = "0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c"
 
 async def main() -> None:
-    async with streamablehttp_client("https://base-tx-explain.fly.dev/mcp") as (read, write, _):
+    async with streamablehttp_client("https://api.0200project.com/mcp") as (read, write, _):
         async with ClientSession(read, write) as session:
             await session.initialize()
             result = await session.call_tool("explain_transaction", {"tx_hash": TX})
@@ -258,7 +258,7 @@ asyncio.run(main())</code></pre>
         <p>No MCP client needed — POST a JSON-RPC <code class="inline">tools/call</code> envelope directly:</p>
         <div class="codeblock">
           <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#curl-cmd">Copy</button></div>
-          <pre><code id="curl-cmd">curl -X POST https://base-tx-explain.fly.dev/mcp \
+          <pre><code id="curl-cmd">curl -X POST https://api.0200project.com/mcp \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"explain_transaction","arguments":{"tx_hash":"0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c"}}}'</code></pre>
@@ -295,7 +295,7 @@ const client = createx402MCPClient({
   },
 });
 
-await client.connect(new StreamableHTTPClientTransport(new URL('https://base-tx-explain.fly.dev/mcp')));
+await client.connect(new StreamableHTTPClientTransport(new URL('https://api.0200project.com/mcp')));
 
 const result = await client.callTool('explain_transaction', {
   tx_hash: '0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c',
@@ -311,7 +311,7 @@ await client.close();</code></pre>
 
       <h2 id="installation">Installation</h2>
       <h3>Hosted endpoint</h3>
-      <p>The hosted server at <code class="inline">https://base-tx-explain.fly.dev/mcp</code> works with any MCP client using the config in the <a href="#quickstart">quickstart</a> — nothing to install. It is also listed in the MCP registry as <code class="inline">io.github.0200project/base-tx-explain</code>.</p>
+      <p>The hosted server at <code class="inline">https://api.0200project.com/mcp</code> works with any MCP client using the config in the <a href="#quickstart">quickstart</a> — nothing to install. It is also listed in the MCP registry as <code class="inline">io.github.0200project/base-tx-explain</code>.</p>
       <h3>Self-hosting</h3>
       <p>The server is open source under an MIT-style license and runs anywhere Docker runs. It is a stateless Express server — no database, no sessions — so it scales horizontally without coordination.</p>
       <div class="codeblock">
@@ -568,7 +568,7 @@ npm run dev</code></pre>
 
       <h3 id="pass">The $9 pass</h3>
       <p>For heavy use, a pass replaces per-call payments: <strong>$9 buys 30 days and up to 10,000 calls</strong>, rate-limited to 60 calls per minute. It is bought with a single x402 payment &mdash; <code class="inline">POST /pass</code> over HTTP, or the <code class="inline">buy_pass</code> tool over MCP.</p>
-      <p>The response is a bearer token. The simplest way to use it: paste <code class="inline">https://base-tx-explain.fly.dev/mcp/&lt;token&gt;</code> into any MCP client's server-URL field &mdash; that's the whole setup, no separate credential to configure. It also works the older ways, for clients that expect one: the <code class="inline">X-BTX-Pass</code> header on <code class="inline">POST /explain</code>, <code class="inline">Authorization: Bearer &lt;token&gt;</code> (the form claude.ai custom connectors require), or <code class="inline">_meta["btx/pass"]</code> on MCP calls.</p>
+      <p>The response is a bearer token. The simplest way to use it: paste <code class="inline">https://api.0200project.com/mcp/&lt;token&gt;</code> into any MCP client's server-URL field &mdash; that's the whole setup, no separate credential to configure. It also works the older ways, for clients that expect one: the <code class="inline">X-BTX-Pass</code> header on <code class="inline">POST /explain</code>, <code class="inline">Authorization: Bearer &lt;token&gt;</code> (the form claude.ai custom connectors require), or <code class="inline">_meta["btx/pass"]</code> on MCP calls.</p>
       <ul>
         <li><strong>No account.</strong> The token is the only proof of purchase. It is transferable &mdash; anyone holding it can spend its calls &mdash; and a lost token is a lost pass, so store it like a key.</li>
         <li><strong>Not a subscription.</strong> x402 payments are one-shot, caller-signed authorizations, so nothing here can auto-renew or silently charge you. When a pass expires or runs out, calls fall back to the standard flow &mdash; any free calls you have left, then the per-call 402 &mdash; and an agent renews by buying a new pass in the same loop.</li>

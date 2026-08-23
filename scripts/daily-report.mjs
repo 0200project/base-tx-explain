@@ -44,7 +44,7 @@ const KNOWN_PAYMENT_TXS = new Set([
  * Real, externally-funded payments that are still not revenue: a known
  * counterparty running a deliberate technical favor (e.g. Circadian-agent
  * exercising the in-band settlement path unprompted, 2026-08-21 - see
- * docs/finance.md, booked at $0.00 there for the same reason). These arrive
+ * the private finance ledger, booked at $0.00 there for the same reason). These arrive
  * from a genuine external address, so they must NOT be lumped into
  * KNOWN_PAYMENT_TXS ("our own tests") - that would misrepresent who paid.
  * They also must NOT count toward the stranger/first-customer signal below -
@@ -277,7 +277,7 @@ try {
   const strangers = usdcTx.filter((t) => !isOurs(t) && !isFavor(t));
   say(
     `On-chain USDC arrivals: ${usdcTx.length} total - ${usdcTx.length - strangers.length - favors.length} our own tests` +
-      (favors.length > 0 ? `, ${favors.length} known non-revenue favor(s) (see docs/finance.md, booked $0)` : '') +
+      (favors.length > 0 ? `, ${favors.length} known non-revenue favor(s) (booked $0 in the private finance ledger)` : '') +
       `, **${strangers.length} unexplained external**.`,
   );
   if (strangers.length > 0) say(`FIRST CUSTOMER SIGNAL: unexplained external payment(s) present, not already accounted for as ours or a known favor - check the dashboard.`);

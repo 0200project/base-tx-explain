@@ -38,7 +38,7 @@ I validated against 100 random recent Base transactions before shipping. 95 deco
 
 Pricing, honestly: 10 free calls per client, then $0.02/call in USDC on Base via x402. The 402 response contains everything a paying agent needs to retry autonomously, no account or API key. An Apify Store listing with flat pricing is pending review.
 
-Endpoint: `https://base-tx-explain.fly.dev/mcp` (streamable HTTP)
+Endpoint: `https://api.0200project.com/mcp` (streamable HTTP)
 
 Repo: https://github.com/0200project/base-tx-explain
 

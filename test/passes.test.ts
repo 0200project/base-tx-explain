@@ -6,7 +6,7 @@ import { join } from 'node:path';
 // Point the pass store at a throwaway dir BEFORE the module reads DATA_DIR.
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'btx-pass-test-'));
 
-const { initPasses, mintPass, usePass, passSnapshot, activatePass, revokePendingPass, listUnconfirmed, PASS_CALL_CAP } =
+const { initPasses, mintPass, usePass, passSnapshot, activatePass, revokePendingPass, listUnconfirmed, passStatus, PASS_CALL_CAP } =
   await import('../src/passes.js');
 
 describe('passes', () => {
@@ -112,5 +112,60 @@ describe('passes — a pass is worthless until its payment settles', () => {
     // ...and the unconfirmed activation is queryable from the store.
     const unconfirmed = listUnconfirmed();
     expect(unconfirmed.some((u) => u.reason.includes('settlement_pending'))).toBe(true);
+  });
+});
+
+/**
+ * What a holder already owns, without spending anything to ask.
+ *
+ * `usePass` consumes a credit, so it cannot answer "what do I have" — and that
+ * question has to be answerable before we offer somebody a second pass. A
+ * customer on a pass URL was being shown "Buy a 30-day pass for $9" with
+ * nothing saying they held one; an agent low on calls could buy again while
+ * sitting on thousands of unused credits. Charged twice for what they own.
+ */
+describe('passStatus', () => {
+  it('reports what a holder has WITHOUT consuming a call', () => {
+    const pass = mintPass({ payer: '0xholder' });
+    const before = passStatus(pass.token);
+    expect(before.valid).toBe(true);
+    expect(before.valid && before.remaining).toBe(PASS_CALL_CAP);
+
+    // Asking twice must not cost anything. An inspector that changes what it
+    // inspects is how the revenue counters went wrong; not repeating it on the
+    // object a buyer paid for.
+    passStatus(pass.token);
+    passStatus(pass.token);
+    const after = passStatus(pass.token);
+    expect(after.valid && after.remaining).toBe(PASS_CALL_CAP);
+
+    // And a real use still decrements, so the reading is live rather than fixed.
+    usePass(pass.token);
+    const used = passStatus(pass.token);
+    expect(used.valid && used.remaining).toBe(PASS_CALL_CAP - 1);
+  });
+
+  it('reports invalid for an unknown token rather than inventing a pass', () => {
+    expect(passStatus('btxp_notarealtoken').valid).toBe(false);
+  });
+
+  it('reports invalid for a minted-but-unactivated pass', () => {
+    // The token string exists but no payment confirmed, so it buys nothing —
+    // and must not be described to its holder as an active pass.
+    const pending = mintPass({ pending: true, nonce: 'nonce-status-test' });
+    expect(passStatus(pending.token).valid).toBe(false);
+  });
+
+  it('reports invalid once expired', () => {
+    const pass = mintPass({ payer: '0xexpiring' });
+    const wayLater = Date.now() + 400 * 24 * 60 * 60 * 1000;
+    expect(passStatus(pass.token, wayLater).valid).toBe(false);
+  });
+
+  it('carries days remaining, so a holder can see when to actually renew', () => {
+    const pass = mintPass({ payer: '0xrenewer' });
+    const st = passStatus(pass.token);
+    expect(st.valid && st.daysLeft).toBeGreaterThan(0);
+    expect(st.valid && typeof st.expiresAt).toBe('string');
   });
 });

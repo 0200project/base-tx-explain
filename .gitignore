@@ -10,3 +10,6 @@ outreach/
 .stats-token
 reports/
 .internal-marker
+
+# Internal company material. PUBLIC = PRODUCT, PRIVATE = COMPANY.
+private/
