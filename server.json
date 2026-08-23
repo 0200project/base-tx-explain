@@ -20,7 +20,7 @@
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://base-tx-explain.fly.dev/mcp"
+      "url": "https://base-tx-explain.fly.dev/mcp?ref=mcp-registry"
     }
   ]
 }
