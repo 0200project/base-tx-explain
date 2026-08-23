@@ -91,6 +91,61 @@ should not be added into one undifferentiated "$90 MRR" number without noting
 which is which, since a Pass sale is not recurring revenue in the sense the
 target is stated in.
 
+### Target arithmetic, checked against actual observed usage — not achievable tonight on either offer as currently priced
+
+Raised 2026-08-22 by platform, arithmetic verified independently by Finance —
+the numbers are exact, not estimates:
+
+- **$100 via the Pass/Developer product = 11.1, rounds to 12 sales at $9.**
+- **$100 via per-call = exactly 5,000 calls at $0.02.**
+- **The only two qualified technical evaluators this product has ever had
+  both independently concluded per-call fits their use and the subscription
+  does not** — Circadian by stated arithmetic, kindrat86 by integration
+  judgement.
+- **Circadian's actual observed usage rate: 24 hashes in 24 days — exactly 1
+  call per day.** At that rate, 5,000 calls is 5,000 days, not tonight.
+
+**The honest conclusion, stated as arithmetic rather than sentiment: both
+existing offers are out of reach for $100 in the time remaining, on the usage
+pattern the only two real evaluators have actually shown.** Twelve pass sales
+requires twelve people to disagree with the only two people who assessed the
+product; the per-call route needs volume roughly 200× what a real user has
+demonstrated. This is not pessimism — it is what the numbers say happens if
+tonight goes exactly like the one real data point available says it will.
+Recorded here so the target's difficulty is measured, not assumed one way or
+the other, consistent with every other number in this ledger.
+
+**On the $20, platform's position, not Finance's to overrule:** hold it
+rather than spend it on ads. No channel has ever produced a confirmed human —
+19 unique clients, 0 people — and there's no landing-page conversion data to
+size a spend against. Spending now would be demonstrating activity, which the
+Founder has explicitly ruled out as a goal. The one spend platform would
+approve: something that puts the product in front of a specific named
+individual with plausible volume, because the only thing that has worked so
+far was a hand-written message to a named person (Circadian, kindrat86).
+Finance's position matches: nothing in the $20 checks (availability, budget,
+duplication, recorded) changes this — it's a strategy call, not a bookkeeping
+one, and platform's read is the one to defer to here.
+
+**Reconfirmed for the record: no promotion of any settlement tonight, from
+either of us, regardless of how the number looks late in the window.**
+Platform states it will treat a request to promote as something to escalate,
+not comply with, however the pressure arrives. Finance holds the identical
+line — already the standing overnight rule, restated here because it now
+has a specific number ($90) and a specific deadline pressing against it,
+which is exactly the condition under which an untested commitment gets
+tested for real.
+
+**Live risk restated with sharper framing: an unproven webhook can produce
+money-taken-with-no-service that is invisible to these books.**
+`webhook.status: never_exercised` still holds. If a card payment lands before
+that's fixed and the secret is stale, Stripe charges the customer and nothing
+gets minted — the customer paid, got nothing, and Finance's own revenue
+figure shows $0.00 either way, which is correct as revenue but would
+completely miss that a real person was charged for nothing. Escalated to the
+Founder by platform; Finance's position is unchanged — Stripe settlements
+stay unreconciled until a real delivery verifies against the current secret.
+
 
 **Basis of accounting: cash, on verified settlement only.** A payment is booked
 when money has actually arrived and can be seen at its source — a USDC transfer
