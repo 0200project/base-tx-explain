@@ -455,7 +455,14 @@
        manual reloads we're telling them to do. A first sighting gets the plain
        "give it a moment" message; past ~45s of real waiting, telling them to
        keep reloading would just be untrue, so the message changes to a real
-       next step instead of a longer wait with no visible end. */
+       next step instead of a longer wait with no visible end.
+
+       THE 45000 BELOW IS SHARED WITH THE SERVER. src/index.ts uses the same
+       number as WAITING_STUCK_AFTER_MS to decide when a waiting buyer becomes a
+       loud log line, so we start listening at the moment this page tells them to
+       shout. They are one invariant in two files and scripts/predeploy.sh gates
+       on them being equal -- change this and the deploy stops until the server
+       matches. Don't retune it here alone. */
     var firstSeenKey = 'btx-pending-' + sessionId;
     var firstSeen = Number(sessionStorage.getItem(firstSeenKey));
     if (!firstSeen) {

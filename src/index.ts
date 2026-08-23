@@ -34,6 +34,7 @@ import {
   webhookHealth,
   recordWebhookDelivered,
 } from './webhookHealth.js';
+import { noteWaiting, resolveWaiting, waitingSnapshot } from './waitingBuyers.js';
 import {
   alreadyHandled,
   passForSession,
@@ -670,7 +671,29 @@ app.get('/favicon.ico', (_req, res) => {
  * The ledger was fixed; this counter is the same number one layer up, and it is
  * published on the PUBLIC /healthz, where a stranger reads it too.
  */
-const metrics = { tool_calls: 0, free: 0, paywalled: 0, degraded: 0, buyers_waiting: 0, booted_at: new Date().toISOString() };
+const metrics = {
+  tool_calls: 0,
+  free: 0,
+  paywalled: 0,
+  degraded: 0,
+  /**
+   * DISTINCT sessions that asked for a pass and did not get one, and the subset
+   * past the point where "still processing" explains it. Filled from
+   * `waitingSnapshot()` at read time — see `src/waitingBuyers.ts` for why they
+   * count sessions rather than requests, and why they are withheld from the
+   * public `/healthz`.
+   */
+  buyers_waiting: 0,
+  buyers_stuck: 0,
+  booted_at: new Date().toISOString(),
+};
+
+/** Pull the buyer gauges into `metrics` just before something reads them. */
+function refreshWaitingMetrics(): void {
+  const snap = waitingSnapshot();
+  metrics.buyers_waiting = snap.waiting;
+  metrics.buyers_stuck = snap.stuck;
+}
 
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET ?? '';
 
@@ -879,6 +902,7 @@ app.get('/paid', (req, res) => {
     return;
   }
   const pass = passForSession(sessionId);
+  if (pass) resolveWaiting(sessionId);
   if (!pass) {
     // COUNTED AND LOGGED, because until now it was neither. `not_ready` existed
     // in exactly one place — the response below — so a buyer stuck reloading
@@ -898,16 +922,19 @@ app.get('/paid', (req, res) => {
     // that counts any signed delivery, including a `customer.created` which
     // mints nothing, so it can sit above zero while pass delivery has never
     // happened. It did exactly that tonight.
-    metrics.buyers_waiting += 1;
-    const wh = webhookHealth();
-    console.error(
-      `[paid] BUYER WAITING, no pass yet for session ${sessionId.slice(0, 12)}... ` +
-        `(webhook ${wh.status}, delivered_count=${wh.delivered_count}, waiting_since_boot=${metrics.buyers_waiting}). ` +
-        (wh.delivered_count === 0
-          ? 'NO live purchase has EVER minted a pass on this server. If this buyer paid, they are the first, ' +
-            'and the mint path is running for the first time. Check the payout wallet and Stripe before assuming they simply arrived early.'
-          : 'A delivery may still be in flight; this is expected for a few seconds after payment.'),
-    );
+    const stuck = noteWaiting(sessionId);
+    if (stuck) {
+      const wh = webhookHealth();
+      console.error(
+        `[paid] BUYER STUCK, still no pass for session ${sessionId.slice(0, 12)}... ` +
+          `after ${Math.round(stuck.waitedMs / 1000)}s of polling ` +
+          `(webhook ${wh.status}, delivered_count=${wh.delivered_count}, distinct buyers waiting=${metrics.buyers_waiting}). ` +
+          (wh.delivered_count === 0
+            ? 'NO live purchase has EVER minted a pass on this server. If this buyer paid, they are the first, ' +
+              'and the mint path is running for the first time. Check the payout wallet and Stripe before assuming they simply arrived early.'
+            : 'A delivery may still be in flight, but 45s is past the point where that is the likely explanation.'),
+      );
+    }
     res.status(404).json({
       error: 'No pass is available for that session yet. If you just paid, wait a few seconds and reload.',
       code: 'not_ready',
@@ -927,6 +954,14 @@ app.get('/paid', (req, res) => {
 
 app.get('/healthz', (_req, res) => {
   const snapshot = usageSnapshot(1) as { lifetime: Record<string, unknown> };
+  // WITHHELD FROM THE PUBLIC RESPONSE. Everything else in `metrics` is published
+  // deliberately, but the two buyer-waiting counters are not: `buyers_stuck` on
+  // an open endpoint is live feedback to anyone flooding /paid that their flood
+  // is landing, and it announces that our payment path is failing at the exact
+  // moment it is failing. They are on token-gated /stats instead. Destructured
+  // rather than deleted so the object handed out is a copy and the real counters
+  // keep counting.
+  const { buyers_waiting: _bw, buyers_stuck: _bs, ...publicMetrics } = metrics;
   res
     .status(200)
     .set('Access-Control-Allow-Origin', '*')
@@ -942,7 +977,7 @@ app.get('/healthz', (_req, res) => {
       // only. Published so a degraded payment path is visible, rather than being
       // inferred from calls quietly not being charged.
       payments_ready: paymentsReady,
-      metrics,
+      metrics: publicMetrics,
       lifetime: snapshot.lifetime,
       check_health: checkHealthSnapshot(24),
     });
@@ -1173,7 +1208,13 @@ app.get('/stats', async (req, res) => {
     // and read as coverage while providing none.
     payments_ready: paymentsReady,
     price_usd: PRICE_USD,
-    since_boot: metrics,
+    // Includes buyers_waiting / buyers_stuck, which /healthz withholds. Behind
+    // the token because it is our own operational state, not a public figure.
+    // Recomputed here because a buyer crosses the stuck threshold by the clock,
+    // not by polling us again: without this the gauge would only move when
+    // someone hits /paid, so the buyer who gave up and closed the tab — the one
+    // most worth seeing — would never show as stuck.
+    since_boot: (refreshWaitingMetrics(), metrics),
     treasury,
     reconciliation,
     ...usage,

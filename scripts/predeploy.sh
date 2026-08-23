@@ -80,6 +80,34 @@ if [ "$KT" -lt 10 ]; then
 fi
 echo "predeploy: shutdown window agrees (kill_timeout ${KT}s = ${KTMS}ms)"
 
+# The buyer-stuck threshold is the same invariant problem in two FILES rather
+# than two TOML sections. The server escalates a waiting buyer to a loud log at
+# WAITING_STUCK_AFTER_MS; the pricing page stops telling that same buyer to
+# reload and tells them to email us at its own 45000ms mark. They are one
+# number. If they drift -- someone retunes the page copy to 30s for a UX reason
+# -- our alarm fires at the wrong moment, or worse, the buyer is told to shout
+# while nothing on our side has started listening. Neither file's comment can
+# hold that; this can.
+SRV_MS=$(sed -n 's/^const WAITING_STUCK_AFTER_MS = \([0-9_]*\);.*/\1/p' src/index.ts | tr -d '_' | head -1)
+PAGE_MS=$(sed -n 's/.*waitedMs > \([0-9]*\).*/\1/p' site/pricing/index.html | head -1)
+if [ -z "$SRV_MS" ] || [ -z "$PAGE_MS" ]; then
+  fail "could not read the buyer-stuck threshold from both sides.
+  Expected WAITING_STUCK_AFTER_MS in src/index.ts and a 'waitedMs > <ms>'
+  comparison in site/pricing/index.html. If either moved, update this check --
+  do not delete it."
+fi
+if [ "$SRV_MS" -ne "$PAGE_MS" ]; then
+  fail "buyer-stuck threshold disagrees across files:
+  src/index.ts WAITING_STUCK_AFTER_MS=${SRV_MS}ms
+  site/pricing/index.html escalates at ${PAGE_MS}ms
+
+  These are one invariant. The page switches the buyer from 'reload' to 'email
+  us' at its mark, and the server starts shouting at its own. If the page is
+  lower, a buyer is told to email an address while nothing here has flagged
+  them. Make them equal."
+fi
+echo "predeploy: buyer-stuck threshold agrees (${SRV_MS}ms server = ${PAGE_MS}ms page)"
+
 npx tsc --noEmit || fail "typecheck failed"
 echo "predeploy: typecheck passed"
 
