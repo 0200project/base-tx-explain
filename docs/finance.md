@@ -529,8 +529,15 @@ unrelated to the company. **The SPEND wallet is explicitly not implicated** —
 confirmed separately and directly, MetaMask-held, untouched.
 
 Consequence: Finance can no longer treat this address as a clean,
-company-only receive point, and it is being retired. **A new payout wallet is
-being created.** This is more consequential than a books correction because
+company-only receive point, and it is being retired. **New payout wallet
+supplied by the Founder 2026-08-22: `0xC41C4FeD450674169AF002b8b3cB47Bd70a1958F`.**
+Verified independently by Finance before recording — not taken on his word
+alone: valid checksum address, **$0.00 USDC, 0 ETH, 0 transactions ever**,
+confirmed distinct from both the old payout wallet and the SPEND wallet.
+Genuinely clean, unused, exactly what a receive key should look like on day
+one per security's standing rule above. **Handed to platform to execute the
+actual `X402_PAY_TO` swap and redeploy — not yet live in production as of
+this entry.** This is more consequential than a books correction because
 the address is live infrastructure — it is `X402_PAY_TO`, baked into every
 x402 payment challenge the server currently issues, publicly disclosed (it's
 the address Circadian's own settlement receipt named), and referenced
