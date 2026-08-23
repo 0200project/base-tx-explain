@@ -173,7 +173,7 @@ const DASH_CSS =
 /* eslint-disable no-useless-escape */
 const DASH_SCRIPT = `
 (function () {
-  var WALLET = '0xd4ec730ab062f20460727710fce70664948a6bc9';
+  var WALLET = '0xc41c4fed450674169af002b8b3cb47bd70a1958f';
   var USDC = '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
   var TARGET_USD = 25;
   var TRANSFERS_URL = 'https://base.blockscout.com/api/v2/addresses/' + WALLET +

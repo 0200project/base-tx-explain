@@ -16,7 +16,7 @@ import { describe, expect, it, vi } from 'vitest';
  * report all-clear on a drained wallet.
  */
 
-const PAYOUT = '0xd4ec730ab062f20460727710fce70664948a6bc9';
+const PAYOUT = '0xc41c4fed450674169af002b8b3cb47bd70a1958f';
 const BUDGET = '0x2E31f33744e26f3093Bc748f2B4eA1c5e3D06FC7';
 
 /** Load the module with a controllable chain read and a fresh baseline. */

@@ -41,7 +41,7 @@ const USER_AGENT =
   "0200project-growth-scan/0.1 (github.com/0200project/base-tx-explain)";
 
 // KPI lane constants
-const PAY_TO = "0xd4ec730ab062f20460727710fce70664948a6bc9";
+const PAY_TO = "0xc41c4fed450674169af002b8b3cb47bd70a1958f";
 const USDC_BASE = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"; // native USDC on Base
 const BLOCKSCOUT_URL = `https://base.blockscout.com/api/v2/addresses/${PAY_TO}/token-transfers?type=ERC-20&filter=to`;
 const REGISTRY_URL =

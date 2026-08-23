@@ -28,7 +28,7 @@ import { client } from './rpc.js';
  */
 
 /** Receives revenue. Any decrease at all is an incident: nothing spends from it. */
-const PAYOUT: Address = '0xd4ec730ab062f20460727710fce70664948a6bc9';
+const PAYOUT: Address = '0xc41c4fed450674169af002b8b3cb47bd70a1958f';
 /** Funds agent spending. A decrease is expected, but must match a logged expense. */
 const BUDGET: Address = '0x2E31f33744e26f3093Bc748f2B4eA1c5e3D06FC7';
 

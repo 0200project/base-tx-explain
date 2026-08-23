@@ -11,7 +11,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const SERVER = process.env.PUBLIC_URL ?? 'https://base-tx-explain.fly.dev';
-const PAYOUT_WALLET = '0xd4ec730ab062f20460727710fce70664948a6bc9';
+const PAYOUT_WALLET = '0xc41c4fed450674169af002b8b3cb47bd70a1958f';
 const USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 
 /** Unique clients recorded while only we were calling it (2026-08-20). */

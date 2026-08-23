@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const SERVER = process.env.PUBLIC_URL ?? 'https://base-tx-explain.fly.dev';
-const WALLET = '0xd4ec730ab062f20460727710fce70664948a6bc9';
+const WALLET = '0xc41c4fed450674169af002b8b3cb47bd70a1958f';
 const USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 /**
  * Before 2026-08-21 the server had no way to self-identify our own traffic, so
