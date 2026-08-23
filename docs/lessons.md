@@ -545,6 +545,27 @@ when a colleague commits to doing something by hand, run their plan before they
 need it. The same afternoon produced two of these, which suggests plans fail this
 way about as often as code does — and unlike code, nobody reviews them.
 
+### The sharpest instance: I reproduced a bug I had personally found
+
+The earlier instances are the author violating a principle they had just written.
+This one is narrower and worse. Two days after finding "my alarm could be raised
+by any stranger with curl" in this codebase — and after catching the same shape
+in a teammate's classifier by reading it rather than firing at it — I added a
+`console.error` alarm and a public counter to `/paid`, an unauthenticated route
+whose only input check is a regex on the shape of a session id. `cs_aaaaaaaa`
+passes. Anyone could raise my alarm at will, from outside, for free.
+
+Not an abstract principle misapplied: **the identical concrete defect, on the same
+class of endpoint, in the same repo, found by me.** Platform caught it by reading
+the input validator, which is exactly what I had done to them.
+
+The useful reading is not that knowing the principle fails to help — that was
+already recorded. It is that **having personally found a bug does not
+meaningfully protect you from writing it.** Recognition and generation are
+different acts, and the memory of catching something lives with the code you were
+reading, not the code you are writing. Which is another argument for the only
+thing that has actually worked here: someone else running it.
+
 ### Visibility is not severity
 
 The same fix carried three defects: a false `promoted: true`, a false log line
