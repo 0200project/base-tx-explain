@@ -252,6 +252,21 @@ data. Keep that list honest as fields change.
   else's uncommitted changes shipped them silently — no commit, no review, and a
   deployed artifact corresponding to no inspectable commit. That voids the
   guarantee the whole review process rests on. Now gated by `scripts/predeploy.sh`.
+- **UNVERIFIED Stripe signing secret — now VERIFIED, and the scope of what that
+  proves is deliberately narrow.** Open for ~36 hours on testimony alone: the
+  malformed entry whose NAME was a secret had been deleted, but deleting a COPY
+  says nothing about the secret itself, and no delivery had ever exercised it
+  (`never_exercised`, `verified_count: 0`). Closed 2026-08-23 by a real signed
+  delivery: `verified_count: 1`, `last_verified_at 07:05:17Z`,
+  `bad_signature_count: 0`. **The value in Fly is cryptographically the one
+  Stripe signs with.** Verified against `/stats` directly rather than accepted
+  from a relayed report — the hop where a qualifier goes missing is exactly the
+  hop this finding was about.
+  Platform encoded the limit into the instrument rather than leaving it in prose:
+  the status is `secret_verified`, NOT `healthy`, so "the signature path works"
+  cannot be compressed into "the card rail works" by anyone downstream. The money
+  half — a live checkout actually minting a pass — remains untested and is Open
+  #4.
 
 ## 5. Open (known, unfixed) — ranked
 
@@ -365,20 +380,23 @@ data. Keep that list honest as fields change.
    The correct close is a reconciler against `authorizationState(payer, nonce)`
    (the same call verify uses) plus the payout wallet, not a cap that papers over
    it.
-4. **UNVERIFIED: that the Stripe signing secret in Fly is the newly-ROLLED one.**
-   The malformed entry whose NAME was a secret value is confirmed deleted, and a
-   secret is loaded and verifying (an unsigned POST to `/stripe/webhook` returns
-   400, not 503). But deleting that entry removed a COPY of the secret; it does
-   nothing to the secret itself. If the value now in `STRIPE_WEBHOOK_SECRET` were
-   still the exposed one, the exposure would be unchanged and only the evidence of
-   it gone — which looks resolved and is worse. The founder states he rolled it in
-   Stripe and pasted from the reveal field, and the digest changed, so the likely
-   case is fine; that is testimony plus a weak signal, not proof, and the
-   pre-rotation digest was never captured for comparison. No real webhook has been
-   delivered since (app logs show only our own unsigned probe), so nothing has
-   exercised it. Closes on the first real delivery, or a Stripe "send test event"
-   — Stripe's dashboard was erroring when we tried. This also gates card payments
-   working at all: a stale value means charged-at-Stripe, no pass minted.
+4. **NO $9 PASS HAS EVER BEEN DELIVERED, ON ANY RAIL.** Found by platform
+   2026-08-23 while checking whether we can deliver what we are selling.
+   Lifetime settlements: 1, and it is the $0.02 Circadian probe. The two
+   `active_passes` were minted in testing (`payer: null`, no settlement behind
+   them). So the offer being actively sold has never completed end to end for
+   anybody. **The three purchase paths are separate code and none is
+   interchangeable evidence for another:** MCP `buy_pass` (`index.ts:441`) mints
+   PENDING and depends on the settlement hook — that is the stranded-pass path,
+   Open #2; REST `POST /pass` (`index.ts:1628`) mints ACTIVE and is structurally
+   safer, verified three layers deep (the `@x402/express` middleware discards the
+   buffered body on `!settleResult.success` so the token never reaches a
+   non-payer; `rest.ts:216` revokes on any non-2xx; and it hooks `res.on('close')`
+   so a dropped connection revokes too); Stripe card is a third path whose money
+   half is still untested even now the signature path is proven. **Send a $9
+   buyer to REST `POST /pass`.** The close is a real purchase through the path
+   being sold — and afterwards the honest claim is "REST pass delivery is
+   proven", never "the pass rail works".
 5. **Test files are never typechecked**, so a signature change silently leaves
    stale callers. `tsconfig.json` includes only `src/**/*.ts`; `npm run typecheck`
    therefore passes while a test calls a function with the wrong shape. Found when
