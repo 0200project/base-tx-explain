@@ -87,7 +87,14 @@ const TOOL_DESCRIPTION =
   'Risk checks fail open, so read `checks` before drawing any conclusion from an empty ' +
   'risk_flags: it reports whether each check ran (ok / partial / unavailable / inconclusive / not_applicable), ' +
   'and no flags alongside a non-ok status means not checked, not clean. ' +
-  'Deterministic onchain decode - no LLM in the response path. Base mainnet (chain id 8453) only.';
+  'Deterministic onchain decode - no LLM in the response path. Base mainnet (chain id 8453) only. ' +
+  // An agent reads this BEFORE it ever hits the paywall. Without it the first
+  // signal that this costs money is a 402 an unequipped client cannot act on,
+  // by which point the operator is debugging rather than deciding. Say the price
+  // and the routes up front, while they can still choose to pay.
+  'PRICING: first 10 calls per client are free, then $0.02 in USDC on Base via x402 - ' +
+  'attach payment at _meta[\'x402/payment\'] and retry, or use POST /explain over plain HTTP with any x402 client. ' +
+  'Heavy use: $9 buys a 30-day pass (10,000 calls) via the buy_pass tool or POST /pass. No account, no API key.';
 
 const INPUT_SHAPE = {
   tx_hash: z
