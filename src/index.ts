@@ -1848,6 +1848,7 @@ function registerPaidRoutes(): void {
         priceUsd: PASS_PRICE_USD,
         network: NETWORK,
         publicUrl: PUBLIC_URL,
+        siteUrl: SITE_URL,
         callCap: PASS_CALL_CAP,
         days: PASS_DAYS,
         // Active on mint: the x402 express middleware buffers the response and

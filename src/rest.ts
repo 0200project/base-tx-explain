@@ -193,6 +193,8 @@ export interface PassRouteDeps {
   resourceServer: x402ResourceServer;
   payTo: string;
   priceUsd: string;
+  /** Where a human is sent to pay by card, which the x402 rail cannot serve. */
+  siteUrl: string;
   network: `${string}:${string}`;
   publicUrl: string;
   callCap: number;
@@ -210,7 +212,7 @@ export interface PassRouteDeps {
  * goes through its own payment gate against the same resource server.
  */
 export function registerPassRoutes(app: express.Express, deps: PassRouteDeps): void {
-  const { resourceServer, payTo, priceUsd, network, publicUrl, callCap, days } = deps;
+  const { resourceServer, payTo, priceUsd, network, publicUrl, siteUrl, callCap, days } = deps;
 
   const passGate = paymentMiddleware(
     {
@@ -232,6 +234,25 @@ export function registerPassRoutes(app: express.Express, deps: PassRouteDeps): v
             what_you_get: `${callCap.toLocaleString('en-US')} calls over ${days} days, rate-limited, transferable bearer token. Lost token = lost pass; there are no accounts.`,
             how: 'This endpoint speaks x402. Pay the quoted amount and retry with the payment attached, or use an x402-capable HTTP client.',
             per_call_alternative: `POST ${publicUrl}/explain at $0.02/call if you would rather pay as you go.`,
+            // A PERSON IN A BROWSER CANNOT RELIABLY PAY THE x402 WAY, AND WE KNEW
+            // IT WITHOUT SAYING IT HERE.
+            //
+            // MetaMask shows a red Blockaid warning on this signature -- "a third
+            // party known for scams might take all your assets" -- at the exact
+            // moment of confirmation. The founder reported it as a false positive
+            // days ago and got no reply, so it is not a lever we control.
+            //
+            // Blockaid lives in a wallet UI, so an agent signing EIP-712 in code
+            // never sees it and a card buyer never sees it. It blocks exactly one
+            // path: a human paying x402 in a browser wallet. Our arrivals are 7
+            // browsers and 2 CLIs and zero MCP clients, so that is the path
+            // essentially all of our traffic is on, and the $9 wall was offering
+            // it as the only way to pay.
+            //
+            // /explain has offered `buy_with_card` all along. The bigger purchase
+            // did not. We cannot fix the warning; we can stop walking people into
+            // it.
+            buy_with_card: `${siteUrl}/pricing/`,
             // THE ONLY MOMENT A HIGH-INTENT VISITOR IS STILL LISTENING.
             //
             // Five distinct clients have reached this wall and every one of them
