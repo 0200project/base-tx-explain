@@ -15,6 +15,14 @@
 # and the surface list stops mattering. New surfaces are covered the day they
 # are created, automatically, because they are tracked files like any other.
 #
+# KNOWN BOUNDARY, named so it is not silent (Growth, 2026-08-27): this sweeps
+# THIS repo only. The private repo (project-0200) holds outreach drafts — the
+# copy-paste surfaces with the highest send-probability — and they are outside
+# this gate's reach. Seven queued email drafts carried the retired registry
+# name there tonight; Growth's manual pre-send re-read caught them, and that
+# re-read is currently the only gate on that side. If a retired fact ever
+# ships in an email, this comment is where the gap was known and accepted.
+#
 # WHEN A FACT RETIRES, add its old value here in the same commit. The allowlist
 # is for files whose JOB is to carry the old value: frozen changelog history,
 # comments quoting a historical failure, and this file itself.
