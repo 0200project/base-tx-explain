@@ -66,6 +66,7 @@ import {
   flushCheckHealth,
   onChainBookedFromCustomersUsd,
   onChainSettlementCount,
+  payFailures,
 } from './usage.js';
 
 const VERSION = '0.1.3';
@@ -272,7 +273,7 @@ async function initPayments(): Promise<void> {
     // rejection guesswork: scheme/network fell outside the first 600 chars.
     // Signatures and authorization nonces are single-use and already public
     // once submitted, so there is no secret here worth truncating for.
-    const logFailure = (label: string) => async (ctx: unknown) => {
+    const logFailure = (label: string, stage: 'verify' | 'settle') => async (ctx: unknown) => {
       let body: string;
       try {
         body = JSON.stringify(ctx, (_k, v) => (typeof v === 'bigint' ? v.toString() : v));
@@ -280,8 +281,30 @@ async function initPayments(): Promise<void> {
         body = String(ctx);
       }
       console.error(`[x402] ${label}:`, body.slice(0, 8000));
+      // AND WRITTEN DOWN, because the console was not enough.
+      //
+      // Nine people attached a payment and none settled. The reason was printed
+      // here every time and went to a Fly log that has since rotated, so the
+      // honest answer to "why did nobody convert" became "we knew nine times
+      // and threw it away." A log nobody can read later is not a record.
+      //
+      // Wrapped so a ledger write can never take down the payment path: the
+      // whole point is to observe a failure, not to add a new way to cause one.
+      try {
+        const payer = (ctx as { paymentPayload?: { payload?: { authorization?: { from?: string } } } })
+          ?.paymentPayload?.payload?.authorization?.from;
+        recordEvent({
+          t: new Date().toISOString(),
+          e: 'payfail',
+          stage,
+          reason: body.slice(0, 600),
+          ...(typeof payer === 'string' && payer ? { payer } : {}),
+        });
+      } catch (err) {
+        console.error('[x402] could not record payment failure:', err);
+      }
     };
-    server.onVerifyFailure(logFailure('VERIFY FAILED')).onSettleFailure(logFailure('SETTLE FAILED'));
+    server.onVerifyFailure(logFailure('VERIFY FAILED', 'verify')).onSettleFailure(logFailure('SETTLE FAILED', 'settle'));
     return server;
   };
 
@@ -319,7 +342,24 @@ async function initPayments(): Promise<void> {
         // did not happen. Booking that as revenue corrupts the ledger and hides
         // the loss, so only a confirmed settle is recorded.
         if (!settledOk(settlement)) {
-          console.error('[x402] SETTLE NOT CONFIRMED, booking no revenue:', JSON.stringify(settlement).slice(0, 400));
+          const detail = JSON.stringify(settlement).slice(0, 600);
+          console.error('[x402] SETTLE NOT CONFIRMED, booking no revenue:', detail);
+          // A THIRD failure shape, and the quietest. The facilitator can answer
+          // HTTP 200 with success:false — so neither onSettleFailure nor
+          // onVerifyFailure fires, and until now this path recorded nothing at
+          // all. A payment that fails without throwing is still a payment that
+          // failed, and it is the one most likely to look like silence.
+          try {
+            recordEvent({
+              t: new Date().toISOString(),
+              e: 'payfail',
+              stage: 'unconfirmed',
+              reason: detail,
+              ...(settlement?.payer ? { payer: settlement.payer } : {}),
+            });
+          } catch (err) {
+            console.error('[x402] could not record unconfirmed settlement:', err);
+          }
           return;
         }
         console.log('[x402] SETTLED:', JSON.stringify(settlement).slice(0, 400));
@@ -1346,6 +1386,9 @@ app.get('/stats', async (req, res) => {
     check_health: checkHealthSnapshot(24),
     check_health_7d: checkHealthSnapshot(24 * 7),
     passes: passSnapshot(),
+    // WHY payments did not complete, newest last. The field that did not exist
+    // when nine people tried to pay us and every reason was discarded.
+    payment_failures: payFailures(),
     // Whether the card rail has ever been proven, and whether it is currently
     // turning away signed deliveries. `never_exercised` is deliberately not
     // reported as healthy.

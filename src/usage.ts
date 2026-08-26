@@ -33,6 +33,35 @@ export type UsageEvent =
        * than letting an unidentifiable settlement be waved through.
        */
       id?: string;
+    }
+  /**
+   * A PAYMENT THAT DID NOT COMPLETE, and why.
+   *
+   * WHY THIS EXISTS. Nine people attached a payment to a call and none of them
+   * settled. The server knew the reason every single time — the facilitator
+   * hands back a structured rejection and we printed 8,000 characters of it —
+   * and wrote it to a console log that has since rotated away. So the honest
+   * answer to "why did nobody convert" was: we knew, nine times, and threw it
+   * away.
+   *
+   * That is the same defect this codebase has removed everywhere else — the
+   * webhook rejection nobody counted, the stranded buyer nobody counted, the
+   * `not_ready` that existed in exactly one place. This is the most expensive
+   * instance, because the failure it discarded is somebody trying to pay us.
+   *
+   * Deliberately NOT counted as revenue, demand, or a call. It is a distinct
+   * event so a reader cannot mistake a failed payment for either a sale or an
+   * absence of interest — the two wrong conclusions available.
+   */
+  | {
+      t: string;
+      e: 'payfail';
+      /** Where it died: signature verification, or the settle broadcast. */
+      stage: 'verify' | 'settle' | 'unconfirmed';
+      /** Facilitator's reason, bounded. The thing that was missing. */
+      reason?: string;
+      /** Payer address when the payload carried one. */
+      payer?: string;
     };
 
 /**
@@ -93,7 +122,7 @@ const dataDir = process.env.DATA_DIR ?? './data';
 const ledgerPath = join(dataDir, 'events.jsonl');
 
 const days = new Map<string, DayAgg>();
-const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0 };
+const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0, payment_failures: 0 };
 
 /**
  * Every settlement as it arrived, so the revenue split can be DERIVED rather
@@ -112,6 +141,16 @@ const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0
  * drift. Volume is one settlement lifetime, so retaining them costs nothing.
  */
 const settlements: Array<{ id?: string; tx?: string; amount_usd: number; self?: boolean; at: string }> = [];
+/**
+ * The most recent payment failures, kept verbatim so a human can read WHY.
+ *
+ * Bounded: this is a diagnostic buffer, not an audit trail — the ledger file
+ * holds every one forever. Capped so a facilitator having a bad hour cannot
+ * grow the /stats response without limit.
+ */
+const MAX_PAYFAIL_KEPT = 20;
+const recentPayFailures: Array<{ at: string; stage: string; reason?: string; payer?: string }> = [];
+
 const lifetimeExternalClients = new Set<string>();
 const lifetimeClients = new Set<string>();
 /** External calls per channel, lifetime. */
@@ -163,6 +202,20 @@ function absorb(ev: LedgerEvent): void {
   // Every type is matched explicitly. A line this replay does not recognise —
   // a rollback to a build that predates an event type, say — must be ignored,
   // not fall through a trailing `else` and be counted as a settlement.
+  if (ev.e === 'payfail') {
+    // Counted, never mistaken for demand or revenue. A failed payment is
+    // neither a sale nor an absence of interest, and both readings are wrong
+    // in expensive directions.
+    lifetime.payment_failures++;
+    recentPayFailures.push({
+      at: ev.t,
+      stage: ev.stage,
+      reason: ev.reason,
+      payer: ev.payer,
+    });
+    if (recentPayFailures.length > MAX_PAYFAIL_KEPT) recentPayFailures.shift();
+    return;
+  }
   if (ev.e === 'call') {
     agg.calls++;
     lifetime.calls++;
@@ -521,8 +574,26 @@ export function usageSnapshot(daysBack = 30): Record<string, unknown> {
         unattributedUsd: Number(split.unattributed.toFixed(6)),
       }),
       revenue_usd: Number(lifetime.revenue_usd.toFixed(6)),
+      /**
+       * Payments that arrived and did NOT complete, with reasons.
+       *
+       * Sits beside revenue on purpose. Nine of these happened before anything
+       * recorded them, so "no revenue" and "nobody wanted it" were
+       * indistinguishable — this is the field that tells them apart.
+       */
+      payment_failures: lifetime.payment_failures,
       unique_clients: lifetimeClients.size,
     },
     daily: series,
   };
+}
+
+/**
+ * The most recent payment failures, newest last, so an operator can read WHY a
+ * payment did not complete instead of inferring it from an absence.
+ *
+ * This is the field that did not exist when nine people tried to pay us.
+ */
+export function payFailures(): Array<{ at: string; stage: string; reason?: string; payer?: string }> {
+  return [...recentPayFailures];
 }
