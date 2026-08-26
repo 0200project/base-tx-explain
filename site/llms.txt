@@ -21,4 +21,4 @@
 
 ## Pricing
 
-- 10 free calls per client IP, then $0.02 per call in USDC on Base via x402. No account, no API key.
+- 50 free calls per network per day, then $0.02 per call in USDC on Base via x402. No account, no API key.

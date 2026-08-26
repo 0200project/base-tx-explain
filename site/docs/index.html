@@ -307,7 +307,7 @@ await client.close();</code></pre>
       </div>
 
       <p>Whichever path you take, the tool result carries the explanation twice: as <code class="inline">structuredContent</code>, and stringified in <code class="inline">content[0].text</code>. Parse whichever your client prefers.</p>
-      <p><strong>The free tier is metered per client IP.</strong> The first 10 calls are free with no signup, counted per IP address — machines behind one NAT or a shared CI egress draw from a single counter, which is why the paywall can appear before 10 of your own calls. After that, each call is $0.02 via <a href="#x402-payments">x402</a>.</p>
+      <p><strong>The free tier is metered per client IP.</strong> The first 50 calls in any 24 hours are free with no signup, counted per IP address (IPv6 collapses to the /64) — machines behind one NAT or a shared CI egress draw from a single counter, which is why the paywall can appear before 50 of your own calls. The window is rolling: a shared address that runs out recovers the next day rather than staying walled. After that, each call is $0.02 via <a href="#x402-payments">x402</a>.</p>
 
       <h2 id="installation">Installation</h2>
       <h3>Hosted endpoint</h3>
@@ -577,7 +577,7 @@ npm run dev</code></pre>
 
       <h2 id="usage">Usage</h2>
       <ul>
-        <li><strong>Free tier</strong> — the first 10 calls are free, with no signup. Metering is per client IP: machines behind the same NAT or a shared CI egress draw from one counter, so shared networks can hit the paywall early. After that, each call is paid via x402.</li>
+        <li><strong>Free tier</strong> — the first 50 calls in any 24 hours are free, with no signup. Metering is per client IP: machines behind the same NAT or a shared CI egress draw from one counter, so shared networks can hit the paywall early, and the counter resets a day later. After that, each call is paid via x402.</li>
         <li><strong>Rate limit</strong> — 60 requests per minute per client. Exceeding it returns JSON-RPC error <code class="inline">-32000</code> with HTTP 429.</li>
         <li><strong>Statelessness</strong> — the server keeps no sessions and no database, and a fresh MCP server is created per request. Calls are independent and deterministic, so parallelizing and retrying are always safe.</li>
       </ul>
@@ -589,7 +589,7 @@ npm run dev</code></pre>
             <tr><th>Tier</th><th>Price</th><th>Notes</th></tr>
           </thead>
           <tbody>
-            <tr><td>Free tier</td><td>$0</td><td>First 10 calls, metered per client IP. No signup.</td></tr>
+            <tr><td>Free tier</td><td>$0</td><td>50 calls per 24 hours, metered per client IP. No signup.</td></tr>
             <tr><td>Per call</td><td>$0.02</td><td>USDC on Base via x402, paid per call.</td></tr>
             <tr><td>Pass</td><td>$9</td><td>30 days, up to 10,000 calls, 60/min. Bearer token via <a href="#pass">one x402 payment</a> &mdash; no account, not a subscription.</td></tr>
             <tr><td>Developer</td><td>$9/mo</td><td>Same usage as the Pass, renewing automatically. Card only, via Stripe.</td></tr>
