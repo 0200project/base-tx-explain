@@ -89,6 +89,24 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
             pay_per_call: `This endpoint speaks x402: pay $${priceUsd} in USDC on Base and retry with the payment attached, or use an x402-capable HTTP client which does it automatically.`,
             pass: `Better value for repeated use: $${passPriceUsd} buys ${passDays} days and up to ${passCallCap.toLocaleString('en-US')} calls with no per-call payment. POST ${publicUrl}/pass over x402, or pay by card.`,
             buy_with_card: `${siteUrl}/pricing/`,
+            // THE ONLY MOMENT A HIGH-INTENT VISITOR IS STILL LISTENING.
+            //
+            // Five distinct clients have reached this wall and every one of them
+            // vanished, because pay-or-leave were the only options on offer. One of
+            // them had made 94 calls and attached a payment four times before giving
+            // up — the most interested party in this company's history, and we
+            // captured no way to reach them. That is the cheapest thing we were
+            // throwing away: not traffic, which is scarce, but the intent of people
+            // who already found us and already wanted more.
+            //
+            // Deliberately not a marketing line. It offers the three things somebody
+            // at a paywall actually has — a quota that does not fit, a question, or a
+            // company that needs an invoice rather than a card — and it names a
+            // mailbox that is verified to reach a human (contact@ routes to the
+            // founder's inbox, same verified Cloudflare route as security@).
+            talk_to_us:
+              'Need a bigger quota, an invoice instead of a card, or something this does not do yet? ' +
+              'Email contact@0200project.com and a person will read it.',
             docs: `${siteUrl}/docs/`,
             openapi: `${publicUrl}/openapi.json`,
           },
@@ -214,6 +232,25 @@ export function registerPassRoutes(app: express.Express, deps: PassRouteDeps): v
             what_you_get: `${callCap.toLocaleString('en-US')} calls over ${days} days, rate-limited, transferable bearer token. Lost token = lost pass; there are no accounts.`,
             how: 'This endpoint speaks x402. Pay the quoted amount and retry with the payment attached, or use an x402-capable HTTP client.',
             per_call_alternative: `POST ${publicUrl}/explain at $0.02/call if you would rather pay as you go.`,
+            // THE ONLY MOMENT A HIGH-INTENT VISITOR IS STILL LISTENING.
+            //
+            // Five distinct clients have reached this wall and every one of them
+            // vanished, because pay-or-leave were the only options on offer. One of
+            // them had made 94 calls and attached a payment four times before giving
+            // up — the most interested party in this company's history, and we
+            // captured no way to reach them. That is the cheapest thing we were
+            // throwing away: not traffic, which is scarce, but the intent of people
+            // who already found us and already wanted more.
+            //
+            // Deliberately not a marketing line. It offers the three things somebody
+            // at a paywall actually has — a quota that does not fit, a question, or a
+            // company that needs an invoice rather than a card — and it names a
+            // mailbox that is verified to reach a human (contact@ routes to the
+            // founder's inbox, same verified Cloudflare route as security@).
+            talk_to_us:
+              'Need a bigger quota, an invoice instead of a card, or something this does not do yet? ' +
+              'Email contact@0200project.com and a person will read it.',
+
           },
         }),
       },
