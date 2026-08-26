@@ -39,6 +39,16 @@ export const FREE_CALLS = Math.max(0, Number.parseInt(process.env.FREE_CALLS_PER
 const WINDOW_MS = 24 * HOUR;
 
 /**
+ * Exported beside FREE_CALLS for the same reason it is: surfaces that cannot
+ * import a constant need something machine-readable to check against. The site
+ * advertised "10 free calls" for hours after the server gave 50 — the one
+ * surface that cannot derive from this module had nothing to disagree WITH.
+ * /healthz publishes both so Surface's drift check can fail when the site and
+ * the server tell different stories.
+ */
+export const FREE_WINDOW_HOURS = WINDOW_MS / HOUR;
+
+/**
  * Free-call counts, persisted to the same volume as the usage ledger.
  *
  * These used to live only in memory, which quietly made the paywall optional:

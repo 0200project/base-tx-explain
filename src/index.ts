@@ -17,7 +17,7 @@ import { buildOpenApiDocument } from './openapi.js';
 import { registerPassRoutes, registerRestRoutes } from './rest.js';
 import { declaredWithdrawn, reconcile } from './reconcile.js';
 import { getTreasury } from './treasury.js';
-import { FREE_CALLS, consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
+import { FREE_CALLS, FREE_WINDOW_HOURS, consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
 import { passFromHeaders, passFromPath, passUrl } from './passUrl.js';
 import { isInternalRequest } from './internal.js';
 import { attribute, attributionSnapshot, initAttribution, unattribute } from './attribution.js';
@@ -1099,6 +1099,11 @@ app.get('/healthz', (_req, res) => {
       // only. Published so a degraded payment path is visible, rather than being
       // inferred from calls quietly not being charged.
       payments_ready: paymentsReady,
+      // The advertised trial, machine-readable. Already public on the paywall,
+      // the tool description and openapi.json — this copy exists so the SITE,
+      // which cannot import the constant, has a live value to check itself
+      // against instead of drifting silently the way it did on 2026-08-26.
+      free_tier: { calls: FREE_CALLS, window_hours: FREE_WINDOW_HOURS, per: 'ip' },
       metrics: publicMetrics,
       lifetime: snapshot.lifetime,
       check_health: checkHealthSnapshot(24),
