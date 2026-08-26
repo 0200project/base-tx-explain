@@ -271,7 +271,7 @@ export function buildOpenApiDocument(
     servers: [{ url: publicUrl, description: 'Production' }],
     externalDocs: { url: 'https://0200project.com/docs/', description: 'Full documentation' },
     info: {
-      title: 'base-tx-explain',
+      title: 'base-transaction-decoder',
       version,
       contact: { name: '0200project', url: 'https://github.com/0200project/base-tx-explain/issues' },
       license: { name: 'MIT', identifier: 'MIT' },

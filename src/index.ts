@@ -147,7 +147,7 @@ const RESOURCE_INFO = {
   url: `${PUBLIC_URL}/mcp`,
   description: TOOL_DESCRIPTION,
   mimeType: 'application/json',
-  serviceName: 'base-tx-explain',
+  serviceName: 'base-transaction-decoder',
   tags: ['base', 'transaction', 'decoder', 'blockchain', 'risk'],
 };
 
@@ -428,7 +428,7 @@ async function initPayments(): Promise<void> {
       url: `${PUBLIC_URL}/pass`,
       description: `${PASS_DAYS}-day pass: up to ${PASS_CALL_CAP.toLocaleString('en-US')} explain_transaction calls for $${PASS_PRICE_USD}. Bearer token, no account.`,
       mimeType: 'application/json',
-      serviceName: 'base-tx-explain',
+      serviceName: 'base-transaction-decoder',
     },
     hooks: {
       onAfterSettlement: ({ settlement, paymentPayload }) => {
@@ -586,7 +586,7 @@ async function initPayments(): Promise<void> {
  * settle on error - the payment wrapper cancels settlement for isError results.
  */
 function getServer(charge: boolean, ip: string, passToken: string | null = null): McpServer {
-  const server = new McpServer({ name: 'base-tx-explain', version: VERSION });
+  const server = new McpServer({ name: 'base-transaction-decoder', version: VERSION });
   const freeHandler = async (args: { tx_hash: string }): Promise<ToolResult> => {
     const result = await runExplain(args);
     // Apify marketplace billing (pay-per-event): charge only after a clean
@@ -704,14 +704,14 @@ app.get('/', (_req, res) => {
     .status(200)
     .type('text/plain')
     .send(
-      `base-tx-explain v${VERSION} - MCP server (streamable HTTP) at POST /mcp\n` +
+      `base-transaction-decoder v${VERSION} - MCP server (streamable HTTP) at POST /mcp\n` +
         `Tool: ${TOOL_NAME}(tx_hash) - Base mainnet only.\n` +
         `\n` +
         `REST:     POST ${PUBLIC_URL}/explain with {"tx_hash":"0x..."} (same decode, plain HTTP)\n` +
         `OpenAPI:  ${PUBLIC_URL}/openapi.json\n` +
         `Health:   ${PUBLIC_URL}/healthz\n` +
         `Docs:     ${SITE_URL}/docs/\n` +
-        `Registry: io.github.0200project/base-tx-explain (registry.modelcontextprotocol.io)\n` +
+        `Registry: io.github.0200project/base-transaction-decoder (registry.modelcontextprotocol.io)\n` +
         `Pricing:  ${FREE_CALLS} free calls per IP per 24h (shared behind one address), then $${PRICE_USD}/call in USDC on Base via x402.\n` +
         `Pass:     $${PASS_PRICE_USD} for ${PASS_DAYS} days / ${PASS_CALL_CAP.toLocaleString('en-US')} calls - POST ${PUBLIC_URL}/pass or the buy_pass tool.\n`,
     );
@@ -723,7 +723,7 @@ app.get('/llms.txt', (_req, res) => {
     .status(200)
     .type('text/plain')
     .send(
-      `# base-tx-explain\n\n` +
+      `# base-transaction-decoder\n\n` +
         `> One MCP tool: explain_transaction(tx_hash) -> strict JSON explanation of any Base mainnet (chain id 8453) transaction. Deterministic onchain decode, no LLM in the response path.\n\n` +
         `MCP endpoint (streamable HTTP): POST ${PUBLIC_URL}/mcp\n` +
         `REST endpoint (standard x402 HTTP flow): POST ${PUBLIC_URL}/explain with {"tx_hash":"0x..."}\n` +
@@ -736,7 +736,7 @@ app.get('/llms.txt', (_req, res) => {
         `- [Documentation](${SITE_URL}/docs/): request format, field contract, x402 payment loop, self-hosting\n` +
         `- [Site](${SITE_URL}/): product overview\n` +
         `- [Source](https://github.com/0200project/base-tx-explain)\n` +
-        `- MCP registry name: io.github.0200project/base-tx-explain\n`,
+        `- MCP registry name: io.github.0200project/base-transaction-decoder\n`,
     );
 });
 
@@ -1680,7 +1680,7 @@ logChannelConfig();
  * tier serves needs payments, so none of it should wait on them.
  */
 const httpServer = app.listen(port, () => {
-  console.log(`base-tx-explain v${VERSION} listening on :${port} (payment mode: ${PAYMENT_MODE})`);
+  console.log(`base-transaction-decoder v${VERSION} listening on :${port} (payment mode: ${PAYMENT_MODE})`);
   // Stated at boot so the live values are observable rather than inferred from
   // two files: this is the window a paid request has to finish before we leave.
   // Never ASSERT the relationship — state it, and say so when it does not hold.

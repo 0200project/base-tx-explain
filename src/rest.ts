@@ -61,7 +61,7 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
         description:
           'Explain a Base mainnet transaction in plain English. POST {"tx_hash":"0x..."} and receive strict JSON: summary, action type, assets moved, labeled counterparties, risk flags, gas in USD. Deterministic decode, no LLM in the response path.',
         mimeType: 'application/json',
-        serviceName: 'base-tx-explain',
+        serviceName: 'base-transaction-decoder',
         tags: ['base', 'transaction', 'decoder', 'blockchain', 'risk'],
         // What an unpaid caller sees. Standard clients read the 402 headers,
         // but a human with curl gets something they can act on.
@@ -236,11 +236,11 @@ export function registerPassRoutes(app: express.Express, deps: PassRouteDeps): v
         accepts: { scheme: 'exact', network, payTo, price: `$${priceUsd}` },
         resource: `${publicUrl}/pass`,
         description:
-          `${days}-day pass for base-tx-explain: up to ${callCap.toLocaleString('en-US')} explain_transaction calls, no account. ` +
+          `${days}-day pass for base-transaction-decoder: up to ${callCap.toLocaleString('en-US')} explain_transaction calls, no account. ` +
           'Returns a bearer token; present it as the X-BTX-Pass header on POST /explain or at _meta["btx/pass"] on MCP calls. ' +
           'Renew by buying a new pass when it expires.',
         mimeType: 'application/json',
-        serviceName: 'base-tx-explain',
+        serviceName: 'base-transaction-decoder',
         tags: ['base', 'transaction', 'decoder', 'pass', 'subscription'],
         unpaidResponseBody: () => ({
           contentType: 'application/json',

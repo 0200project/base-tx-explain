@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.0200project/base-tx-explain",
+  "name": "io.github.0200project/base-transaction-decoder",
   "title": "Base Transaction Explainer",
   "description": "Plain-English decode of any Base mainnet transaction: strict JSON, risk flags, no LLM.",
   "version": "0.1.3",
