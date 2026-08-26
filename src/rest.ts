@@ -84,7 +84,23 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
           contentType: 'application/json',
           body: {
             error: 'Payment required',
-            free_tier: `The first ${freeCalls} calls from a new client are free. You have used yours.`,
+            // "YOU HAVE USED YOURS" WAS A LIE TO THE PERSON MOST LIKELY TO READ IT.
+            //
+            // The free tier is keyed on IP address, so everyone behind one
+            // address shares an allowance. The founder's brother hit this wall
+            // on his FIRST EVER call, having used nothing, because a phone on
+            // the same WiFi had spent the lot. Telling that person "you have
+            // used yours" is false, and it is false in the direction that makes
+            // us look broken rather than limited — they have no way to know a
+            // colleague or a carrier NAT is the reason.
+            //
+            // We cannot tell the two apart from here, so the copy must not
+            // claim to. It says what is actually true — this address is out —
+            // and names the reason they might not recognise, and when it lifts.
+            free_tier:
+              `The first ${freeCalls} calls from each network are free, and this network has used them. ` +
+              'If you have not called us before, someone sharing your IP address, office network, VPN ' +
+              'or mobile carrier likely has. The allowance resets within 24 hours.',
             price_usd: priceUsd,
             pay_per_call: `This endpoint speaks x402: pay $${priceUsd} in USDC on Base and retry with the payment attached, or use an x402-capable HTTP client which does it automatically.`,
             pass: `Better value for repeated use: $${passPriceUsd} buys ${passDays} days and up to ${passCallCap.toLocaleString('en-US')} calls with no per-call payment. POST ${publicUrl}/pass over x402, or pay by card.`,

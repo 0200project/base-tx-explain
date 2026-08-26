@@ -10,7 +10,33 @@ import { DAY, HOUR, TtlCache } from './cache.js';
  * longer matches — and this one is read by the person deciding whether to pay.
  */
 export const FREE_CALLS = Math.max(0, Number.parseInt(process.env.FREE_CALLS_PER_IP ?? '10', 10) || 0);
-const WINDOW_MS = 30 * DAY;
+/**
+ * How long a client's free-call count lasts before it resets.
+ *
+ * WAS 30 DAYS, AND THAT WAS THE BUG. The count is keyed on IP address
+ * (`clientKey`: IPv4 exact, IPv6 /64), so everyone behind one address shares
+ * one allowance — a household, an office, a VPN exit, or a mobile carrier's
+ * NAT with thousands of subscribers behind it. At a thirty-day window a single
+ * curious visitor could exhaust the trial for every other person on that
+ * address for a MONTH.
+ *
+ * That is not hypothetical. The founder's phone burned all ten in seventeen
+ * seconds of ordinary clicking; his brother's phone, on the same WiFi, was
+ * walled on its FIRST call and never saw the product work at all. Six of
+ * twenty-two live buckets were exhausted at the time of this change. And
+ * `1b624776` — a real external client — hit the wall twice, days apart, and
+ * was never served a single free call in its life.
+ *
+ * A trial that can silently deny a genuine first-time visitor is worse than a
+ * smaller trial: they do not learn the product is limited, they learn it is
+ * broken. Twenty-four hours means a shared address recovers by tomorrow
+ * instead of being dead until next month.
+ *
+ * THIS IS NOT THE ABUSE CONTROL and loosening it does not weaken one.
+ * `withinRateLimit` (60/minute per client) is what stops abuse, and it is
+ * untouched. The free tier only decides when we ASK for money.
+ */
+const WINDOW_MS = 24 * HOUR;
 
 /**
  * Free-call counts, persisted to the same volume as the usage ledger.
