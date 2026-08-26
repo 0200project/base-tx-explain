@@ -1,0 +1,72 @@
+#!/bin/sh
+# Guards the PUBLIC repo: github.com/0200project/base-tx-explain
+#
+# Two things can go wrong on a push here and neither is undoable:
+#   1. publishing internal company material  (PUBLIC = PRODUCT, PRIVATE = COMPANY)
+#   2. publishing under the wrong GitHub identity
+#
+# Bypass for a deliberate, founder-approved exception:  PUBLIC_DOCS_OK=1 git push
+# Remove entirely:  rm .git/hooks/pre-push
+
+[ -n "$PUBLIC_DOCS_OK" ] && exit 0
+
+# --- 1. IDENTITY -------------------------------------------------------------
+# `gh` auth is shared CLI state and the founder's PERSONAL account is also in
+# the keyring. It has flipped once already and was caught by luck.
+#
+# Asks gh directly for the login rather than parsing its status prose. The first
+# version of this check parsed the text, got "(keyring)" instead of the account,
+# and blocked a CORRECT push. A guard that fires on the good case gets deleted,
+# and then there is no protection at all.
+#
+# Fails OPEN when gh is missing or offline: this guards a known mistake, it is
+# not a dependency for pushing.
+if command -v gh >/dev/null 2>&1; then
+  ACTIVE=$(gh api user --jq .login 2>/dev/null)
+  if [ -n "$ACTIVE" ] && [ "$ACTIVE" != "0200project" ]; then
+    cat >&2 <<MSG
+
+  PUSH BLOCKED -- wrong GitHub identity.
+
+  Active gh account is "$ACTIVE", not 0200project. Pushing now would
+  attribute company work to that account publicly, and that is not undoable.
+
+  Fix:  gh auth switch --user 0200project
+
+MSG
+    exit 1
+  fi
+fi
+
+# --- 2. INTERNAL COMPANY MATERIAL --------------------------------------------
+INTERNAL='^docs/(security|pipeline|finance|NEXT-STEPS|decisions|market-notes|revenue-experiments|segment-research.*|reconciliation|growth-assistant)\.md$'
+
+status=0
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  case "$local_sha" in *[!0]*) ;; *) continue ;; esac   # branch deletion
+  # For a NEW branch the remote sha is all zeros, and `git diff <sha>` would
+  # compare the WORKING TREE against it -- which falsely blocks on another
+  # session's uncommitted edits in this shared clone. Ask for the commits.
+  case "$remote_sha" in
+    *[!0]*) commits=$(git rev-list "$remote_sha..$local_sha" 2>/dev/null) ;;
+    *)      commits=$(git rev-list "$local_sha" --not --remotes=origin 2>/dev/null) ;;
+  esac
+  hits=$(for c in $commits; do git show --pretty=format: --name-only "$c" 2>/dev/null; done \
+           | sort -u | grep -E "$INTERNAL")
+  if [ -n "$hits" ]; then
+    cat >&2 <<MSG
+
+  PUSH BLOCKED -- internal company material.
+
+  PUBLIC = PRODUCT, PRIVATE = COMPANY. This push would publish:
+
+$(echo "$hits" | sed 's/^/    /')
+
+  Product code and site changes are NOT blocked -- only these paths.
+  If the founder has approved this specific push:  PUBLIC_DOCS_OK=1 git push
+
+MSG
+    status=1
+  fi
+done
+exit $status

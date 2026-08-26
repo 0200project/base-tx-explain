@@ -9,7 +9,7 @@
  * Contract: this script NEVER posts anywhere. It holds no credentials by
  * construction (every request is an unauthenticated GET). A human reads the
  * brief, opens the thread, edits the stub, and posts manually from the right
- * account. See docs/growth-assistant.md.
+ * account. See the private growth notes.
  *
  * Zero npm dependencies. Node 18+ (global fetch, AbortSignal.timeout).
  *

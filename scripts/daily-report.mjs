@@ -251,7 +251,7 @@ if (stats) {
       say(`\`http_library\` means a script, which INCLUDES cron jobs and monitors — it narrows the field, it does not identify a buyer.`);
       say(`\`browser\` is trivially spoofed and is the standard disguise for scanning infrastructure; treat it as weak.`);
       say(`Stronger than any of these: REGULARITY. Gaps of exactly 2.00h or 24.00h to the second are scheduled jobs; a person returns on irregular intervals.`);
-      say(`**This report does not compute regularity yet — it is not in \`/stats\`.** Run it by hand against the ledger before trusting the client count (method + the standing finding: docs/NEXT-STEPS.md).`);
+      say(`**This report does not compute regularity yet — it is not in \`/stats\`.** Run it by hand against the ledger before trusting the client count (method and the standing finding are in the private ops notes).`);
     }
   }
 }
@@ -350,7 +350,7 @@ for (const [name, repo, head] of [
     say(`- ${name}: check failed`);
   }
 }
-say(`- Coinbase Bazaar: BLOCKED (CDP rejects our payment payloads; see docs/NEXT-STEPS.md)`);
+say(`- Coinbase Bazaar: BLOCKED (CDP rejects our payment payloads; see the private ops notes)`);
 
 // --- write + print ---
 const report = `# Daily report - ${today}\n\n${lines.join('\n')}\n`;

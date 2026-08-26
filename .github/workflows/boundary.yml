@@ -1,0 +1,50 @@
+# Detects what the pre-push hook prevents.
+#
+# Hooks are advisory: --no-verify skips them, and a clone that never runs
+# `npm install` never has them. They stop forgetting, not intent, and they only
+# protect the machine they are configured on. This runs on GitHub, so it sees
+# every push regardless of what the pusher's checkout looked like.
+#
+# It CANNOT prevent a push -- it runs after. It exists so that a bypass is loud
+# instead of silent, which is the difference between an incident we find in
+# minutes and one we find in a month.
+name: repo boundary
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  internal-material:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Internal company docs must not be tracked here
+        run: |
+          # PUBLIC = PRODUCT, PRIVATE = COMPANY. These live in the private repo.
+          # Listing the PATHS here is safe; it is the contents that were sensitive.
+          INTERNAL='^docs/(security|pipeline|finance|NEXT-STEPS|decisions|market-notes|revenue-experiments|segment-research.*|reconciliation|growth-assistant)\.md$'
+          HITS=$(git ls-files | grep -E "$INTERNAL" || true)
+          if [ -n "$HITS" ]; then
+            echo "::error::Internal company material is tracked in the public repo:"
+            echo "$HITS" | sed 's/^/  /'
+            echo ""
+            echo "PUBLIC = PRODUCT, PRIVATE = COMPANY. These belong in project-0200."
+            echo "Removing them here does NOT retract them -- the content stays in"
+            echo "published history. Move them, then decide separately about history."
+            exit 1
+          fi
+          echo "No internal company docs tracked. Boundary intact."
+
+      - name: Credentials must never be committed
+        run: |
+          # Patterns only. The real secret VALUES are not in this repo and must
+          # never be put in a workflow file to grep for -- a denylist of secrets
+          # is itself the leak.
+          if git grep -nIE "(whsec_[A-Za-z0-9]{20,}|sk_live_[A-Za-z0-9]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY|ghp_[A-Za-z0-9]{30,}|AKIA[0-9A-Z]{16})" -- . ':!test' ':!*.test.ts'; then
+            echo "::error::Possible credential committed. Verify before dismissing."
+            exit 1
+          fi
+          echo "No credential patterns outside tests."

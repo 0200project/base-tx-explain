@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+# Strip AI co-authorship trailers before a commit is written.
+#
+# The founder's standing rule is that nothing public carries AI attribution.
+# Despite that, 93 commits reached the public repo with
+# "Co-Authored-By: Claude ..." on them, and more were still arriving today —
+# because the rule lived in everyone's memory rather than anywhere that could
+# enforce it, and several agents commit to this repo.
+#
+# Asking people to remember was already tried. This is the same lesson the
+# codebase keeps relearning: the person who knows is the person who will
+# forget, so the check has to happen automatically at the moment of the action.
+#
+# Strips rather than rejects, so nobody's commit fails at an awkward moment,
+# and prints what it removed so the edit is never silent. Only AI trailers go;
+# a genuine human Co-Authored-By is left alone.
+#
+# NOTE: .git/hooks is not version-controlled, so this protects THIS clone only —
+# which is the machine every agent works on. A fresh clone needs it re-added.
+
+msg_file="$1"
+[ -f "$msg_file" ] || exit 0
+
+if grep -qiE '^[[:space:]]*Co-Authored-By:.*(claude|anthropic)' "$msg_file"; then
+  removed=$(grep -iE '^[[:space:]]*Co-Authored-By:.*(claude|anthropic)' "$msg_file")
+  grep -viE '^[[:space:]]*Co-Authored-By:.*(claude|anthropic)' "$msg_file" > "$msg_file.tmp"
+  # Collapse any trailing blank lines the removal left behind.
+  awk 'BEGIN{n=0} {lines[NR]=$0} END{last=NR; while(last>0 && lines[last]~/^[[:space:]]*$/) last--; for(i=1;i<=last;i++) print lines[i]}' \
+    "$msg_file.tmp" > "$msg_file"
+  rm -f "$msg_file.tmp"
+  echo "commit-msg hook: removed AI attribution trailer (house rule, no AI attribution in public):" >&2
+  echo "$removed" | sed 's/^/  /' >&2
+fi
+
+exit 0

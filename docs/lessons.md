@@ -234,7 +234,7 @@ Two things generalise:
    deliberately serves on ambiguity, so booked revenue drifting below reality is
    by design and correct. The bug was never the drift — it was that no surface
    subtracted the two numbers, so the drift was indistinguishable from failure.
-   See `docs/reconciliation.md`.
+   See the private reconciliation notes.
 
 ## Green tests that assert a contract the caller never honoured
 

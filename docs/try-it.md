@@ -44,7 +44,7 @@ curl -s -X POST https://api.0200project.com/explain \
 | `checks` object states which risk lookups ran | in every response; no explorer publishes this |
 
 **Do NOT claim** we decode unverified contracts better than Blockscout. Measured
-at 0/13 — see `segment-research-2026-08-21.md`. The honest line is *"we tell you
+at 0/13 — measured against Blockscout on 13 contracts. The honest line is *"we tell you
 what we could not determine instead of returning null."*
 
 ## The 402 shape: not a defect, and do not apologise for it
