@@ -36,7 +36,7 @@ Example output for a real swap:
 
 I validated against 100 random recent Base transactions before shipping. 95 decode to a specific action type, the rest degrade to an honest partial summary, zero crashes.
 
-Pricing, honestly: 10 free calls per client, then $0.02/call in USDC on Base via x402. The 402 response contains everything a paying agent needs to retry autonomously, no account or API key. An Apify Store listing with flat pricing is pending review.
+Pricing, honestly: 10 free calls per IP per 24h (shared by everyone behind one address, resets daily), then $0.02/call in USDC on Base via x402. The 402 response contains everything a paying agent needs to retry autonomously, no account or API key. An Apify Store listing with flat pricing is pending review.
 
 Endpoint: `https://api.0200project.com/mcp` (streamable HTTP)
 

@@ -36,7 +36,7 @@ curl -s -X POST https://api.0200project.com/explain \
 |---|---|
 | MCP handshake works, no auth | `initialize` returns `serverInfo: base-tx-explain 0.1.2` |
 | Two tools listed | `tools/list` → `explain_transaction`, `buy_pass` |
-| **10 free calls per IP**, 30-day window | `FREE_CALLS_PER_IP` default 10, `WINDOW_MS` 30 days, `freeTier.ts` |
+| **10 free calls per IP, per 24h** | `FREE_CALLS_PER_IP` default 10, `WINDOW_MS` 24 hours, `freeTier.ts`. Per IP, not per person: everyone behind one address or a carrier NAT shares the allowance, and it resets daily. |
 | Rate limit 60/min | `RATE_LIMIT_PER_MINUTE` in `freeTier.ts` |
 | `gas_paid_usd` as a discrete converted field | live: `0.000351` and `0.00866` on two real txs |
 | Reverted → `assets_moved: []` | live: a reverted tx returned `status: reverted`, `[]` |

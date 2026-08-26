@@ -279,7 +279,7 @@ export function buildOpenApiDocument(
         'Plain-English, deterministic decode of any Base mainnet transaction. Strict JSON: summary, action type, assets moved, labeled counterparties, risk flags, gas in USD. No LLM in the response path.',
       'x-guidance':
         'Two ways to call this. PLAIN HTTP: POST /explain with {"tx_hash":"0x..."} and read JSON back; it speaks x402, so an unpaid call returns a 402 challenge you pay and retry. MCP: this is also an MCP server (streamable HTTP). POST a JSON-RPC 2.0 envelope to /mcp with header "Accept: application/json, text/event-stream". Call method tools/call with name "explain_transaction" and arguments {"tx_hash": "0x..."} where tx_hash is a Base mainnet (chain id 8453) transaction hash. ' +
-        `The first ${FREE_CALLS} calls per client are free` +
+        `${FREE_CALLS} free calls per IP per 24h, shared by everyone behind one address` +
         '; afterwards the server returns an x402 payment challenge for $' +
         priceUsd +
         ' USDC on Base — attach the payment payload at _meta["x402/payment"] per the x402 MCP transport and retry the same call. The result\'s structuredContent field carries the explanation object.',
