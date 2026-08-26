@@ -1,4 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 /**
  * Stripe card checkout: webhook receipt, and token delivery after payment.
@@ -53,13 +55,61 @@ export interface DeliveredPass {
  * enough to come back for it and short enough that this is not a token
  * database.
  *
- * In memory only. A restart drops it, so a buyer mid-window would have to
- * contact us — acceptable because the pass itself survives on the volume, so
- * nothing is destroyed, only harder to reach.
+ * PERSISTED, because "in memory only" stopped being acceptable the day deploys
+ * became hourly. The original tradeoff — "a restart drops it, so a buyer
+ * mid-window would have to contact us" — was written when restarts were rare.
+ * We then deployed eleven-plus times in one day, which turned the coded
+ * 48-hour retrieval guarantee into "until the next deploy," measured in
+ * minutes. The founder's own $9 pass proved it: unreachable through his
+ * success URL 11.5 hours into a 48-hour window, while the page told him to
+ * "wait a few seconds and reload" — a promise that could never come true.
+ *
+ * The original author's reasoning was sound for its facts and is kept above;
+ * the facts changed. Same pattern as webhookHealth and waitingBuyers: load on
+ * boot, atomic tmp+rename writes, degrade to memory-only with a loud line
+ * rather than ever taking down the payment path.
  */
 const bySession = new Map<string, DeliveredPass>();
 /** Subscription id -> session id, so renewals and cancellations find the pass. */
 const sessionBySubscription = new Map<string, string>();
+
+const dataDir = process.env.DATA_DIR ?? './data';
+const deliveryPath = join(dataDir, 'stripe-deliveries.json');
+let persistent = false;
+
+export function initStripeDeliveries(now = Date.now()): void {
+  try {
+    mkdirSync(dataDir, { recursive: true });
+    if (existsSync(deliveryPath)) {
+      const raw = JSON.parse(readFileSync(deliveryPath, 'utf8')) as Record<string, DeliveredPass>;
+      for (const [id, p] of Object.entries(raw)) {
+        if (!p || typeof p.delivered_at !== 'number' || typeof p.token !== 'string') continue;
+        if (now - p.delivered_at > RETRIEVAL_WINDOW_MS) continue; // aged out honestly
+        bySession.set(id, p);
+        if (p.subscription_id) sessionBySubscription.set(p.subscription_id, id);
+      }
+    }
+    persistent = true;
+    console.log(`stripe deliveries: ${deliveryPath} (${bySession.size} retrievable)`);
+  } catch (err) {
+    // Memory-only under-serves (a restart forgets deliveries) rather than
+    // falsely reassuring — but say so, every boot, since silence here is how
+    // the original gap survived three days.
+    console.error('stripe delivery store unavailable, retrieval window is until-next-restart:', err);
+  }
+}
+
+function flushDeliveries(): void {
+  if (!persistent) return;
+  try {
+    const tmp = `${deliveryPath}.tmp`;
+    writeFileSync(tmp, JSON.stringify(Object.fromEntries(bySession)));
+    renameSync(tmp, deliveryPath);
+  } catch (err) {
+    persistent = false;
+    console.error('stripe delivery write failed, continuing in memory:', err);
+  }
+}
 
 function prune(now: number): void {
   for (const [id, p] of bySession) {
@@ -159,6 +209,7 @@ export function recordDelivery(sessionId: string, pass: DeliveredPass): void {
   prune(Date.now());
   bySession.set(sessionId, pass);
   if (pass.subscription_id) sessionBySubscription.set(pass.subscription_id, sessionId);
+  flushDeliveries();
 }
 
 /**

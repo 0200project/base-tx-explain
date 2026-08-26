@@ -51,6 +51,7 @@ import {
   validSessionId,
   verifyStripeSignature,
   isSelfPurchase,
+  initStripeDeliveries,
   type StripeEvent,
 } from './stripe.js';
 import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, renewPass, passSnapshot, refundPassUse, activatePass, revokePass, revokePendingPass, usePass,
@@ -1656,6 +1657,7 @@ initAttribution();
 initUsageLedger();
 initFreeTier();
 initPasses();
+initStripeDeliveries();
 initWalletMonitor();
 // Persisted, so a deploy does not erase the memory of a rejected delivery —
 // deploys are frequent here, which makes that the common case, not an edge one.

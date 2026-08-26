@@ -1,5 +1,8 @@
 import { createHmac } from 'node:crypto';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   alreadyHandled,
   passForSession,
@@ -222,5 +225,59 @@ describe('subscription renewal must extend the pass', () => {
   it('ignores unrelated invoice events', () => {
     expect(shouldRenew({ type: 'invoice.payment_failed', obj: { billing_reason: 'subscription_cycle', subscription: 'sub_1' } })).toBe(false);
     expect(shouldRenew({ type: 'checkout.session.completed', obj: { subscription: 'sub_1' } })).toBe(false);
+  });
+});
+
+/**
+ * The 48-hour retrieval promise must survive what actually kills it: deploys.
+ *
+ * The map was memory-only by documented tradeoff — written when restarts were
+ * rare. Eleven deploys in one day made the real window minutes, and the
+ * founder's own $9 pass became unreachable through his success URL 11.5 hours
+ * into a 48-hour window, while the page told him to "wait and reload."
+ */
+describe('delivery retrieval survives a restart', () => {
+  it('finds a delivered pass again after reload from disk', async () => {
+    vi.resetModules();
+    const dir = mkdtempSync(join(tmpdir(), 'stripe-deliv-'));
+    process.env.DATA_DIR = dir;
+    const m1 = await import('../src/stripe.js');
+    m1.initStripeDeliveries();
+    m1.recordDelivery('cs_live_persist_me', {
+      token: 'btxp_' + 'a'.repeat(48),
+      expires_at: new Date(Date.now() + 86400000).toISOString(),
+      call_cap: 10000,
+      kind: 'pass',
+      delivered_at: Date.now(),
+    });
+
+    vi.resetModules();
+    process.env.DATA_DIR = dir;
+    const m2 = await import('../src/stripe.js');
+    m2.initStripeDeliveries();
+    const found = m2.passForSession('cs_live_persist_me');
+    expect(found?.token).toBe('btxp_' + 'a'.repeat(48));
+  });
+
+  it('drops aged-out deliveries on load rather than resurrecting them', async () => {
+    vi.resetModules();
+    const dir = mkdtempSync(join(tmpdir(), 'stripe-deliv-aged-'));
+    process.env.DATA_DIR = dir;
+    const m1 = await import('../src/stripe.js');
+    m1.initStripeDeliveries();
+    m1.recordDelivery('cs_live_ancient', {
+      token: 'btxp_' + 'b'.repeat(48),
+      expires_at: new Date().toISOString(),
+      call_cap: 10000,
+      kind: 'pass',
+      delivered_at: Date.now() - 49 * 60 * 60 * 1000, // past the 48h window
+    });
+
+    vi.resetModules();
+    process.env.DATA_DIR = dir;
+    const m2 = await import('../src/stripe.js');
+    m2.initStripeDeliveries();
+    // Aged out honestly: same answer a live prune would have given.
+    expect(m2.passForSession('cs_live_ancient')).toBeNull();
   });
 });
