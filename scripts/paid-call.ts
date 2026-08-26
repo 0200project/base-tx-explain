@@ -85,8 +85,12 @@ const MAX_CALLS = 60;
 
 try {
 for (let i = 1; i <= MAX_CALLS; i++) {
-  // The same hash repeatedly is served from cache, fast enough to brush the
-  // 60/minute rate limit before the free tier runs out. Pace it.
+  // KEEP THIS LOOP SEQUENTIAL. The server rate-limits at 60 requests/minute
+  // per IP, separate from the free tier. ~51 paced sequential calls fit under
+  // it with room to spare; a Promise.all "optimisation" would trip 429s
+  // mid-burn that look exactly like server errors. The sleep matters too:
+  // the same hash repeatedly is served from cache, fast enough to brush the
+  // limit without it.
   await new Promise((r) => setTimeout(r, 250));
   const result = await client.callTool('explain_transaction', { tx_hash: TX_HASH });
   const first = result.content.find((c) => c.type === 'text') as { text?: string } | undefined;
