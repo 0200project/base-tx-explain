@@ -1,4 +1,4 @@
-# base-tx-explain
+# base-transaction-decoder
 
 **One MCP tool: `explain_transaction(tx_hash)` → strict JSON explanation of any Base mainnet transaction.**
 
@@ -6,7 +6,9 @@ Feed it a transaction hash. Get back what happened, in plain English, plus the s
 
 Base mainnet (chain id 8453) only.
 
-**Links:** [Live endpoint](https://base-tx-explain.fly.dev/mcp) · [Docs](https://0200project.com/docs/) · [OpenAPI](https://base-tx-explain.fly.dev/openapi.json) · MCP registry: `io.github.0200project/base-tx-explain` · [Site](https://0200project.com)
+**Links:** [Live endpoint](https://api.0200project.com/mcp) · [Docs](https://0200project.com/docs/) · [OpenAPI](https://api.0200project.com/openapi.json) · MCP registry: `io.github.0200project/base-transaction-decoder` · [Site](https://0200project.com)
+
+> Formerly `base-tx-explain`. The tool, the endpoint and the schema are unchanged — only the name moved, so that a search for "transaction" or "decoder" can find it. The repository keeps its original name, so existing clones, forks and links still work.
 
 ## For agents
 
@@ -65,7 +67,7 @@ Raw transaction + receipt from Base RPC → builtin decoders for ~40 event forma
 
 ## Pricing
 
-- **10 free calls** per client, no signup.
+- **50 free calls per network, every 24 hours**, no signup. Metered per IP (IPv6 collapses to the /64), so everyone behind one address — a household, an office, a VPN exit, a mobile carrier's NAT — draws from the same allowance, and it resets the next day.
 - After that: **$0.02 per call in USDC on Base via [x402](https://x402.org)** — the payment-required response contains everything an x402-capable agent needs to pay and retry autonomously. No account, no API key.
 - Also available marketplace-hosted (marketplace billing applies there instead).
 
@@ -74,9 +76,9 @@ Raw transaction + receipt from Base RPC → builtin decoders for ~40 event forma
 ```json
 {
   "mcpServers": {
-    "base-tx-explain": {
+    "base-transaction-decoder": {
       "type": "streamable-http",
-      "url": "https://base-tx-explain.fly.dev/mcp"
+      "url": "https://api.0200project.com/mcp"
     }
   }
 }

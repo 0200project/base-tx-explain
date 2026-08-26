@@ -35,8 +35,19 @@
 set -eu
 
 ROOT="$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)"
-SITE="$ROOT/site"
 API="${BTX_URL:-https://api.0200project.com}"
+
+# Every surface that states these facts to a buyer or an agent.
+#
+# README.md was added on 2026-08-26 after it drifted precisely BECAUSE this
+# check only looked at site/. While the site was corrected end to end, the
+# README still advertised ten free calls and named a registry entry that had
+# been deleted hours earlier -- and it is the worse place to be wrong: GitHub
+# renders it as the repo landing page, and the Apify marketplace renders it as
+# the product page for a listing that bills real money. A gate scoped to one
+# surface silently certifies the others.
+SITE="$ROOT/site"
+SURFACES="$ROOT/site $ROOT/README.md"
 
 fails=0
 
@@ -76,7 +87,7 @@ else
     # including the old value, and correcting history to match the present is
     # how a changelog stops being one.
     STALE="$(grep -rnoE '[0-9]+ (free calls|calls per (client|network)|calls each day|calls in any 24)' \
-               "$SITE" 2>/dev/null \
+               $SURFACES 2>/dev/null \
              | grep -v '/changelog/' \
              | grep -vE ":[0-9]+:${CALLS} " || true)"
 
@@ -115,7 +126,7 @@ else
     # gets", "counted per network", "metered per client IP". An earlier draft
     # demanded the literal "per network" and flagged two pages that do say it,
     # phrased differently. A check that cries wolf is one people learn to skip.
-    UNQUAL="$(grep -rnE "${CALLS} (free calls|calls)" "$SITE" 2>/dev/null \
+    UNQUAL="$(grep -rnE "${CALLS} (free calls|calls)" $SURFACES 2>/dev/null \
               | grep -v '/changelog/' \
               | grep -vE 'network|per IP|client IP|/64|shared' || true)"
     if [ -n "$UNQUAL" ]; then
@@ -137,7 +148,7 @@ fi
 # telling a buyer to curl one host while their pass URL shows another is the
 # same unpolished seam the rename existed to remove.
 
-FLYREF="$(grep -rn 'base-tx-explain\.fly\.dev' "$SITE" 2>/dev/null | grep -v '/changelog/' || true)"
+FLYREF="$(grep -rn 'base-tx-explain\.fly\.dev' $SURFACES 2>/dev/null | grep -v '/changelog/' || true)"
 if [ -n "$FLYREF" ]; then
   fail "site still points at the pre-rename Fly hostname" \
     "$(printf '%s' "$FLYREF" | sed "s|$ROOT/||" | sed 's/^/        /')"
@@ -158,7 +169,7 @@ fi
 # tier reads /healthz: a check that carries its own copy of the answer becomes
 # the thing that is wrong.
 
-CLAIMED="$(grep -rhoE 'io\.github\.0200project/[a-z0-9-]+' "$SITE" 2>/dev/null | sort -u || true)"
+CLAIMED="$(grep -rhoE 'io\.github\.0200project/[a-z0-9-]+' $SURFACES 2>/dev/null | sort -u || true)"
 if [ -z "$CLAIMED" ]; then
   pass "no registry-name claims on the site"
 else
@@ -172,7 +183,7 @@ else
       # The historical changelog entry legitimately names a retired listing --
       # it records what shipped that day. Live claims must resolve; history
       # must not be rewritten to match the present.
-      if grep -rn "$name" "$SITE" | grep -qv '/changelog/'; then
+      if grep -rn "$name" $SURFACES | grep -qv '/changelog/'; then
         fail "site claims a registry entry that is not live: $name" \
           "A reader following this finds nothing. If a rename is in flight, the
         new listing must be PUBLISHED before the site that names it is
