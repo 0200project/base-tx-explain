@@ -74,8 +74,20 @@ await client.connect(
   }),
 );
 
+/**
+ * Must clear the server's free-tier allowance with room to spare, or the run
+ * ends with free calls still standing and no 402 ever seen. The allowance is
+ * 50/24h since 2026-08-26 (was 10/30d, which is what the old bound of 12 was
+ * written for — a real payer following our own instructions would have hit
+ * "Never hit the paywall" 38 calls short of the wall).
+ */
+const MAX_CALLS = 60;
+
 try {
-for (let i = 1; i <= 12; i++) {
+for (let i = 1; i <= MAX_CALLS; i++) {
+  // The same hash repeatedly is served from cache, fast enough to brush the
+  // 60/minute rate limit before the free tier runs out. Pace it.
+  await new Promise((r) => setTimeout(r, 250));
   const result = await client.callTool('explain_transaction', { tx_hash: TX_HASH });
   const first = result.content.find((c) => c.type === 'text') as { text?: string } | undefined;
   // Never let an unparseable body crash the run: the body IS the diagnosis.
@@ -105,7 +117,7 @@ for (let i = 1; i <= 12; i++) {
     console.log('\nCheck the payout wallet on Basescan - the $0.02 should be there.');
     break;
   }
-  if (i === 12) console.log('\nNever hit the paywall - free-tier counter may have reset; rerun.');
+  if (i === MAX_CALLS) console.log('\nNever hit the paywall - free-tier counter may have reset; rerun.');
 }
 } catch (err) {
   console.log('\nTHREW during the call loop:');
