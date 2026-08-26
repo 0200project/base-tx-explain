@@ -145,6 +145,45 @@ else
   pass "no stale fly.dev references"
 fi
 
+# ------------------------------------------------------------ registry name
+#
+# The site states, as fact, which entry we are in the MCP registry. During the
+# 2026-08-26 rename that claim had to be sequenced by hand: publish the new name
+# first, THEN deploy the site, or the site names an entry that does not exist.
+# Sequencing held by memory is sequencing that eventually does not hold, so the
+# gate enforces it -- deploying ahead of the publish now fails here instead of
+# shipping a lie about where to find us.
+#
+# Reads the registry rather than a hardcoded name, for the same reason the free
+# tier reads /healthz: a check that carries its own copy of the answer becomes
+# the thing that is wrong.
+
+CLAIMED="$(grep -rhoE 'io\.github\.0200project/[a-z0-9-]+' "$SITE" 2>/dev/null | sort -u || true)"
+if [ -z "$CLAIMED" ]; then
+  pass "no registry-name claims on the site"
+else
+  for name in $CLAIMED; do
+    slug="${name#io.github.0200project/}"
+    if curl -s --max-time 15 \
+        "https://registry.modelcontextprotocol.io/v0/servers?search=$slug&limit=100" \
+        | grep -q "\"$name\""; then
+      pass "registry claim resolves: $name"
+    else
+      # The historical changelog entry legitimately names a retired listing --
+      # it records what shipped that day. Live claims must resolve; history
+      # must not be rewritten to match the present.
+      if grep -rn "$name" "$SITE" | grep -qv '/changelog/'; then
+        fail "site claims a registry entry that is not live: $name" \
+          "A reader following this finds nothing. If a rename is in flight, the
+        new listing must be PUBLISHED before the site that names it is
+        deployed. If this is only in the changelog it is history and fine."
+      else
+        pass "retired name appears only in changelog history: $name"
+      fi
+    fi
+  done
+fi
+
 # ----------------------------------------------------------------- JSON-LD
 #
 # The FAQ publishes a FAQPage schema. Google requires the structured answer to
