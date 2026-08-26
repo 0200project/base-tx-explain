@@ -28,6 +28,15 @@
  */
 
 export type ClientKind =
+  /**
+   * Completed an MCP handshake. This is the ONLY kind established by protocol
+   * behaviour rather than a self-reported header: a caller that sends
+   * `MCP-Protocol-Version` or an `initialize` message is an MCP client because
+   * it acted like one, and browsers and curl do not. It is the buyer this
+   * product was built for, and until this existed we were inferring its
+   * presence from a user-agent string that says nothing about MCP at all.
+   */
+  | 'mcp_client'
   /** Announces itself as a crawler, spider, or link-preview fetcher. */
   | 'bot_declared'
   /** A real browser engine — a person clicked something. */
@@ -78,6 +87,7 @@ export function clientKind(userAgent: unknown): ClientKind {
 
 /** Every bucket, so a report shows zeroes rather than gaps. */
 export const CLIENT_KINDS: ClientKind[] = [
+  'mcp_client',
   'bot_declared',
   'browser',
   'cli',

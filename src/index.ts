@@ -1518,7 +1518,29 @@ app.post(['/mcp', '/mcp/:token'], async (req, res) => {
     const channel = isOurs ? undefined : channelOf(req.query, req.headers as Record<string, unknown>);
     // Resolved only for external traffic, and BEFORE any use, so a marked call
     // can never contribute to what kind of stranger has been arriving.
-    const callerKind = isOurs ? undefined : clientKind(req.headers['user-agent']);
+    // A caller that speaks MCP is identified by BEHAVIOUR, not by what its
+    // user-agent claims. `MCP-Protocol-Version` and an `initialize` message are
+    // things a browser and curl never send, so their presence is evidence
+    // rather than a self-report — and it is the only kind here that is.
+    //
+    // This matters more than a nicer label: the question "have any agents ever
+    // arrived" was being answered from a user-agent regex that knows nothing
+    // about MCP, and the answer it gave was zero. That reading is what the
+    // registry experiment is about to be judged on, so it needs to be real.
+    // LIMIT, so nobody reads this as certainty: the header is the durable
+    // signal, present on every request a spec-compliant MCP client makes. The
+    // `initialize` check only catches a batched request, so a client that
+    // handshakes and then omits the header on later calls is missed. That
+    // direction under-counts agents, which is the safe way to be wrong about
+    // whether our buyer showed up.
+    const speaksMcp =
+      Boolean(req.headers['mcp-protocol-version']) ||
+      messages.some((m) => m?.method === 'initialize');
+    const callerKind = isOurs
+      ? undefined
+      : speaksMcp
+        ? ('mcp_client' as const)
+        : clientKind(req.headers['user-agent']);
     console.log(`[call] ${new Date().toISOString()} ${kind} client=${ipTag}${channel ? ` via=${channel}` : ''}`);
     recordEvent({
       t: new Date().toISOString(),
