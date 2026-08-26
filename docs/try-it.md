@@ -34,9 +34,9 @@ curl -s -X POST https://api.0200project.com/explain \
 
 | Claim | Verified |
 |---|---|
-| MCP handshake works, no auth | `initialize` returns `serverInfo: base-tx-explain 0.1.2` |
+| MCP handshake works, no auth | `initialize` returns `serverInfo: base-tx-explain 0.1.3` |
 | Two tools listed | `tools/list` → `explain_transaction`, `buy_pass` |
-| **10 free calls per IP, per 24h** | `FREE_CALLS_PER_IP` default 10, `WINDOW_MS` 24 hours, `freeTier.ts`. Per IP, not per person: everyone behind one address or a carrier NAT shares the allowance, and it resets daily. |
+| **50 free calls per IP, per 24h** | `FREE_CALLS_PER_IP=50` read off the live machine 2026-08-26; `WINDOW_MS` 24 hours, `freeTier.ts`. Per IP, not per person: everyone behind one address or a carrier NAT shares the allowance, and it resets daily. |
 | Rate limit 60/min | `RATE_LIMIT_PER_MINUTE` in `freeTier.ts` |
 | `gas_paid_usd` as a discrete converted field | live: `0.000351` and `0.00866` on two real txs |
 | Reverted → `assets_moved: []` | live: a reverted tx returned `status: reverted`, `[]` |
@@ -93,19 +93,21 @@ isError, which is per spec"** — not "we have a bug here."
   delivered to the browser, and the token was confirmed to actually authorize a
   call — a decode came back. Every link tested under the current configuration.
   **This is now the rail to prefer.**
-- **x402: UNPROVEN under the current payout wallet, and this reverses our old
-  advice.** The only x402 settlement we have ever had is Circadian's $0.02 at
-  `2026-08-21T17:14:49Z`. We rotated the payout wallet ~32 hours later, on
-  2026-08-23 at 01:13 EDT. The current wallet `0xc41c4fed…` holds $0.04 and all
-  of it is the swept balance — `received_from_customers_usd` is `$0.00`. **No
-  x402 payment has ever landed in the wallet it would now have to land in.**
-  This is not a claim that x402 is broken: the code path did not change, only the
-  destination, and the rotation was verified. It is a claim that we have no
-  evidence for it today, which is a different thing — and it is exactly the
-  position the card rail was in before someone actually tested it.
-  So: if a prospect is x402-native and wants that rail, **tell Platform before
-  they pay.** A $0.02 test costs nothing and takes a minute. Letting their
-  payment be the test is how we find out the expensive way.
+- **x402: PROVEN end-to-end, 2026-08-26.** The founder ran a real $0.02 per-call
+  payment through the full stranger path — wallet signature, facilitator
+  submission, on-chain settlement to the current payout wallet:
+  `0x96c6a01854d9c412145ae2f2d9a7dcd46f252d24514df931fa955d79bbf05c32`.
+  Payout wallet moved $0.04 → $0.06, reconciler stayed balanced. **Both rails
+  are now proven under the current configuration**; either is safe to send a
+  buyer down.
+  Two caveats that survive the proof: a HUMAN paying x402 from a browser wallet
+  may see MetaMask's Blockaid "deceptive request" warning (known false-positive
+  pattern for new domains receiving EIP-3009; our report is filed and
+  unanswered; never coach anyone past their own wallet's warning — offer card
+  instead). Programmatic/agent payments have no wallet UI and never see it.
+  And if any payment fails, `/stats` records WHY within seconds
+  (`payment_failures`) — ask Platform for the actual cause before asking the
+  buyer to retry.
 
 ## If they engage technically
 
