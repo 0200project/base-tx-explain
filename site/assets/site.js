@@ -122,9 +122,9 @@
     { g: 'Navigate', t: 'Changelog', hint: '/changelog', href: '/changelog/' },
     { g: 'Navigate', t: 'Security', hint: '/security', href: '/security/' },
     { g: 'Resources', t: 'GitHub repository', hint: 'github.com', href: 'https://github.com/0200project/base-tx-explain' },
-    { g: 'Resources', t: 'MCP Registry', hint: 'registry', href: 'https://registry.modelcontextprotocol.io/v0/servers?search=base-tx-explain' },
+    { g: 'Resources', t: 'MCP Registry', hint: 'registry', href: 'https://registry.modelcontextprotocol.io/v0/servers?search=base-transaction-decoder' },
     { g: 'Actions', t: 'Copy MCP endpoint', hint: 'copy', copy: 'https://api.0200project.com/mcp' },
-    { g: 'Actions', t: 'Copy MCP client config', hint: 'copy', copy: '{\n  "mcpServers": {\n    "base-tx-explain": {\n      "type": "streamable-http",\n      "url": "https://api.0200project.com/mcp"\n    }\n  }\n}' }
+    { g: 'Actions', t: 'Copy MCP client config', hint: 'copy', copy: '{\n  "mcpServers": {\n    "base-transaction-decoder": {\n      "type": "streamable-http",\n      "url": "https://api.0200project.com/mcp"\n    }\n  }\n}' }
   ];
 
   var root = null, input = null, list = null, open = false, filtered = [], sel = 0, lastFocus = null;

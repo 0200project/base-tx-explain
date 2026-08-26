@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>base-tx-explain Documentation — Decode Base Transactions over MCP</title>
+<title>base-transaction-decoder Documentation — Decode Base Transactions over MCP</title>
 <meta name="description" content="How to decode Base transactions over MCP: request format, strict JSON schema with 30 action types and 8 risk flags, x402 pay-per-call, and self-hosting.">
 <meta name="theme-color" content="#050505">
-<meta property="og:title" content="base-tx-explain Documentation — Decode Base Transactions over MCP">
+<meta property="og:title" content="base-transaction-decoder Documentation — Decode Base Transactions over MCP">
 <meta property="og:description" content="Request format, strict JSON schema, 30 action types, 8 risk flags, x402 pay-per-call, self-hosting.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="0200project">
@@ -104,7 +104,7 @@
       </ul>
       <h4>Tools</h4>
       <ul>
-        <li><a href="#base-tx-explain">base-tx-explain</a></li>
+        <li><a href="#base-transaction-decoder">base-transaction-decoder</a></li>
         <li><a href="#request-format">Request format</a></li>
         <li><a href="#response-schema">Response schema</a></li>
         <li><a href="#error-handling">Error handling</a></li>
@@ -129,9 +129,9 @@
       <p class="docs-lead">Everything needed to connect an MCP client, call <code class="inline">explain_transaction</code>, parse the response, and pay per call — by hand or autonomously.</p>
 
       <h2 id="introduction">Introduction</h2>
-      <p>0200project builds machine-native tools for autonomous AI agents: narrowly scoped services with strict JSON contracts, designed to be called and parsed by software without a human in the loop. The first and currently only shipped tool is <strong>base-tx-explain</strong>, launched August 20, 2026. More tools are in development.</p>
+      <p>0200project builds machine-native tools for autonomous AI agents: narrowly scoped services with strict JSON contracts, designed to be called and parsed by software without a human in the loop. The first and currently only shipped tool is <strong>base-transaction-decoder</strong>, launched August 20, 2026. More tools are in development.</p>
       <p><strong>Deterministic by design.</strong> There is no LLM in the response path. Every response is produced by deterministic onchain decoding: the same input always produces the same output. Nothing is generated, so nothing can hallucinate or drift between calls.</p>
-      <p><strong>MCP is the interface.</strong> Each tool is served over the <a href="https://registry.modelcontextprotocol.io">Model Context Protocol</a> as a streamable HTTP endpoint. Any MCP client can connect; any HTTP client can call it directly with a JSON-RPC request. The registry entry is <code class="inline">io.github.0200project/base-tx-explain</code>.</p>
+      <p><strong>MCP is the interface.</strong> Each tool is served over the <a href="https://registry.modelcontextprotocol.io">Model Context Protocol</a> as a streamable HTTP endpoint. Any MCP client can connect; any HTTP client can call it directly with a JSON-RPC request. The registry entry is <code class="inline">io.github.0200project/base-transaction-decoder</code>.</p>
       <p><strong>For agents / machine-readable.</strong> The HTTP contract is published as OpenAPI at <a href="https://api.0200project.com/openapi.json">api.0200project.com/openapi.json</a>, and a plain-text guide for agents lives at <a href="https://api.0200project.com/llms.txt">api.0200project.com/llms.txt</a>. The same decode is also available as plain REST &mdash; <code class="inline">POST /explain</code> with <code class="inline">{"tx_hash": "0x&hellip;"}</code> &mdash; identical output, standard x402 flow.</p>
 
       <h2 id="quickstart">Quickstart</h2>
@@ -165,7 +165,7 @@
         <p>One command adds the server over streamable HTTP:</p>
         <div class="codeblock">
           <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#qs-claude-code-cmd">Copy</button></div>
-          <pre><code id="qs-claude-code-cmd">claude mcp add --transport http base-tx-explain https://api.0200project.com/mcp</code></pre>
+          <pre><code id="qs-claude-code-cmd">claude mcp add --transport http base-transaction-decoder https://api.0200project.com/mcp</code></pre>
         </div>
         <p>Then ask Claude about any Base transaction hash — it calls <code class="inline">explain_transaction</code> on its own.</p>
       </div>
@@ -177,7 +177,7 @@
           <div class="panel-head"><span>claude_desktop_config.json</span><button class="copy-btn" type="button" data-copy="#qs-desktop-json">Copy</button></div>
           <pre><code id="qs-desktop-json"><span class="tok-punc">{</span>
   <span class="tok-key">"mcpServers"</span><span class="tok-punc">: {</span>
-    <span class="tok-key">"base-tx-explain"</span><span class="tok-punc">: {</span>
+    <span class="tok-key">"base-transaction-decoder"</span><span class="tok-punc">: {</span>
       <span class="tok-key">"type"</span><span class="tok-punc">:</span> <span class="tok-str">"streamable-http"</span><span class="tok-punc">,</span>
       <span class="tok-key">"url"</span><span class="tok-punc">:</span> <span class="tok-str">"https://api.0200project.com/mcp"</span>
     <span class="tok-punc">}</span>
@@ -198,7 +198,7 @@
           <div class="panel-head"><span>.cursor/mcp.json</span><button class="copy-btn" type="button" data-copy="#qs-cursor-json">Copy</button></div>
           <pre><code id="qs-cursor-json"><span class="tok-punc">{</span>
   <span class="tok-key">"mcpServers"</span><span class="tok-punc">: {</span>
-    <span class="tok-key">"base-tx-explain"</span><span class="tok-punc">: {</span>
+    <span class="tok-key">"base-transaction-decoder"</span><span class="tok-punc">: {</span>
       <span class="tok-key">"type"</span><span class="tok-punc">:</span> <span class="tok-str">"streamable-http"</span><span class="tok-punc">,</span>
       <span class="tok-key">"url"</span><span class="tok-punc">:</span> <span class="tok-str">"https://api.0200project.com/mcp"</span>
     <span class="tok-punc">}</span>
@@ -311,13 +311,13 @@ await client.close();</code></pre>
 
       <h2 id="installation">Installation</h2>
       <h3>Hosted endpoint</h3>
-      <p>The hosted server at <code class="inline">https://api.0200project.com/mcp</code> works with any MCP client using the config in the <a href="#quickstart">quickstart</a> — nothing to install. It is also listed in the MCP registry as <code class="inline">io.github.0200project/base-tx-explain</code>.</p>
+      <p>The hosted server at <code class="inline">https://api.0200project.com/mcp</code> works with any MCP client using the config in the <a href="#quickstart">quickstart</a> — nothing to install. It is also listed in the MCP registry as <code class="inline">io.github.0200project/base-transaction-decoder</code>.</p>
       <h3>Self-hosting</h3>
       <p>The server is open source under an MIT-style license and runs anywhere Docker runs. It is a stateless Express server — no database, no sessions — so it scales horizontally without coordination.</p>
       <div class="codeblock">
         <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#selfhost-cmd">Copy</button></div>
         <pre><code id="selfhost-cmd">git clone https://github.com/0200project/base-tx-explain
-cd base-tx-explain
+cd base-transaction-decoder
 npm install
 cp .env.example .env
 npm run dev</code></pre>
@@ -343,7 +343,7 @@ npm run dev</code></pre>
       <p>There is none, by design. No accounts, no API keys, no OAuth — nothing to provision, rotate, leak, or revoke.</p>
       <p>Identity is replaced by payment. A free tier is metered per client IP, and beyond it each call is paid individually over <a href="#x402-payments">x402</a>. The server never needs to know who you are, only that the call is paid for.</p>
 
-      <h2 id="base-tx-explain">base-tx-explain</h2>
+      <h2 id="base-transaction-decoder">base-transaction-decoder</h2>
       <p>One tool: <code class="inline">explain_transaction(tx_hash)</code> returns a strict JSON explanation of any Base mainnet transaction (chain id 8453) — a plain-English summary, a classified action type, every asset that moved, labeled counterparties, evidence-backed risk flags, and the total gas cost in USD.</p>
       <p><strong>Input contract.</strong> <code class="inline">tx_hash</code> is <code class="inline">0x</code> followed by 64 hex characters. Base mainnet only.</p>
       <p><strong>Determinism.</strong> The pipeline is raw transaction + receipt from Base RPC, through roughly 40 builtin event decoders (ERC-20/721/1155, Uniswap V2/V3/V4, Aerodrome/Solidly, Seaport, Aave V3, Compound V3, OP-stack bridges, ERC-4337 EntryPoint, EAS, Basenames, WETH, LP position managers), into a deterministic rule-ordered classification. Labels come from a verified table of major Base contracts; app-specific events are named via verified ABIs on Sourcify. No model touches the response — the same hash always yields the same bytes.</p>
@@ -593,7 +593,7 @@ npm run dev</code></pre>
             <tr><td>Per call</td><td>$0.02</td><td>USDC on Base via x402, paid per call.</td></tr>
             <tr><td>Pass</td><td>$9</td><td>30 days, up to 10,000 calls, 60/min. Bearer token via <a href="#pass">one x402 payment</a> &mdash; no account, not a subscription.</td></tr>
             <tr><td>Developer</td><td>$9/mo</td><td>Same usage as the Pass, renewing automatically. Card only, via Stripe.</td></tr>
-            <tr><td>Marketplace-hosted</td><td>&mdash;</td><td>Via the <a href="https://apify.com/0200project/base-tx-explain" rel="noopener">Apify Store listing</a>: runs on your own Apify plan's compute, no per-call charge from us.</td></tr>
+            <tr><td>Marketplace-hosted</td><td>&mdash;</td><td>Via the <a href="https://apify.com/0200project/base-transaction-decoder" rel="noopener">Apify Store listing</a>: runs on your own Apify plan's compute, no per-call charge from us.</td></tr>
           </tbody>
         </table>
       </div>
@@ -629,7 +629,7 @@ npm run dev</code></pre>
         <ul>
           <li><a href="/playground/">Playground</a></li>
           <li><a href="https://github.com/0200project">GitHub</a></li>
-          <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-tx-explain">MCP Registry</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-transaction-decoder">MCP Registry</a></li>
           <li><a href="/status/">Status</a></li>
         </ul>
       </nav>
@@ -650,7 +650,7 @@ npm run dev</code></pre>
       </nav>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 0200project <span class="faint">&middot;</span> <span class="mono">base-tx-explain v0.1.2 &middot; Base mainnet</span></span>
+      <span>© 2026 0200project <span class="faint">&middot;</span> <span class="mono">base-transaction-decoder v0.1.3 &middot; Base mainnet</span></span>
       <a class="pill footer-status" href="/status/"><span class="dot"></span><span id="ft-status">Checking status&hellip;</span></a>
     </div>
   </div>

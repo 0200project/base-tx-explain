@@ -1,4 +1,4 @@
-# 0200project / base-tx-explain
+# 0200project / base-transaction-decoder
 
 > A paid MCP server with one tool, `explain_transaction(tx_hash)`: deterministic plain-English decode of any Base mainnet transaction as strict JSON. No LLM in the response path.
 
@@ -13,7 +13,7 @@
 
 - MCP endpoint: POST https://api.0200project.com/mcp (streamable HTTP, stateless)
 - OpenAPI: https://api.0200project.com/openapi.json
-- MCP registry name: io.github.0200project/base-tx-explain
+- MCP registry name: io.github.0200project/base-transaction-decoder
 
 ## Source
 

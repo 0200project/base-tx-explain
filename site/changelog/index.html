@@ -70,6 +70,20 @@
       <article class="log-entry">
         <div class="log-date"><time datetime="2026-08-26">August 26, 2026</time></div>
         <div class="log-body">
+          <h2>base-tx-explain is now base-transaction-decoder</h2>
+          <p>Same tool, same endpoint, same schema. Only the name changed, and only so that it can be found.</p>
+          <ul>
+            <li><strong>Nothing you have configured breaks.</strong> Clients connect by URL, and the URL is unchanged: <code class="inline">https://api.0200project.com/mcp</code>. The name in your own config is a label you chose; it keeps working exactly as it is.</li>
+            <li><strong>Why rename at all</strong> &mdash; the MCP registry matches search terms against the server <em>name</em> only, not its description or title. Ours was <code class="inline">base-tx-explain</code>, so the only words that could find us were &ldquo;base&rdquo;, &ldquo;tx&rdquo; and &ldquo;explain&rdquo;. A search for &ldquo;transaction&rdquo; or &ldquo;decoder&rdquo; &mdash; what this actually is &mdash; returned us nowhere at all.</li>
+            <li><strong>The registry entry</strong> is now <code class="inline">io.github.0200project/base-transaction-decoder</code>. The old listing has been retired rather than left to rot.</li>
+            <li><strong>The repository keeps its name</strong> at <a href="https://github.com/0200project/base-tx-explain">github.com/0200project/base-tx-explain</a>, so existing links, clones and forks are untouched.</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="log-entry">
+        <div class="log-date"><time datetime="2026-08-26">August 26, 2026</time></div>
+        <div class="log-body">
           <h2>A bigger free tier, and one that resets</h2>
           <p>The free tier went from 10 calls per network ever to 50 calls per network every day.</p>
           <ul>
@@ -155,7 +169,7 @@
         <ul>
           <li><a href="/playground/">Playground</a></li>
           <li><a href="https://github.com/0200project">GitHub</a></li>
-          <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-tx-explain">MCP Registry</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-transaction-decoder">MCP Registry</a></li>
           <li><a href="/status/">Status</a></li>
         </ul>
       </nav>
@@ -176,7 +190,7 @@
       </nav>
     </div>
     <div class="footer-bottom">
-      <span>© 2026 0200project <span class="faint">&middot;</span> <span class="mono">base-tx-explain v0.1.2 &middot; Base mainnet</span></span>
+      <span>© 2026 0200project <span class="faint">&middot;</span> <span class="mono">base-transaction-decoder v0.1.3 &middot; Base mainnet</span></span>
       <a class="pill footer-status" href="/status/"><span class="dot"></span><span id="ft-status">Checking status&hellip;</span></a>
     </div>
   </div>
