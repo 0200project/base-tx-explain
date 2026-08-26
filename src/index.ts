@@ -93,7 +93,7 @@ const TOOL_DESCRIPTION =
   // signal that this costs money is a 402 an unequipped client cannot act on,
   // by which point the operator is debugging rather than deciding. Say the price
   // and the routes up front, while they can still choose to pay.
-  'PRICING: first 10 calls per client are free, then $0.02 in USDC on Base via x402 - ' +
+  `PRICING: ${FREE_CALLS} free calls per IP per 24h - shared by everyone behind one address - then $0.02 in USDC on Base via x402 - ` +
   'attach payment at _meta[\'x402/payment\'] and retry, or use POST /explain over plain HTTP with any x402 client. ' +
   'Heavy use: $9 buys a 30-day pass (10,000 calls) via the buy_pass tool or POST /pass. No account, no API key.';
 
@@ -564,7 +564,7 @@ async function initPayments(): Promise<void> {
     accepts,
     extensions: BAZAAR_EXTENSIONS,
     hint:
-      `First ${process.env.FREE_CALLS_PER_IP ?? '10'} calls per client are free - no account, no API key. ` +
+      `First ${FREE_CALLS} calls per client are free - no account, no API key. ` +
       'This is an MCP server (streamable HTTP). Connect an MCP client with header ' +
       '"Accept: application/json, text/event-stream" and call the explain_transaction tool; ' +
       'payment settles over the x402 MCP transport (_meta["x402/payment"]). ' +
@@ -712,7 +712,7 @@ app.get('/', (_req, res) => {
         `Health:   ${PUBLIC_URL}/healthz\n` +
         `Docs:     ${SITE_URL}/docs/\n` +
         `Registry: io.github.0200project/base-tx-explain (registry.modelcontextprotocol.io)\n` +
-        `Pricing:  10 free calls per client, then $${PRICE_USD}/call in USDC on Base via x402.\n` +
+        `Pricing:  ${FREE_CALLS} free calls per client, then $${PRICE_USD}/call in USDC on Base via x402.\n` +
         `Pass:     $${PASS_PRICE_USD} for ${PASS_DAYS} days / ${PASS_CALL_CAP.toLocaleString('en-US')} calls - POST ${PUBLIC_URL}/pass or the buy_pass tool.\n`,
     );
 });
@@ -727,7 +727,7 @@ app.get('/llms.txt', (_req, res) => {
         `> One MCP tool: explain_transaction(tx_hash) -> strict JSON explanation of any Base mainnet (chain id 8453) transaction. Deterministic onchain decode, no LLM in the response path.\n\n` +
         `MCP endpoint (streamable HTTP): POST ${PUBLIC_URL}/mcp\n` +
         `REST endpoint (standard x402 HTTP flow): POST ${PUBLIC_URL}/explain with {"tx_hash":"0x..."}\n` +
-        `Pricing: first 10 calls free per client, then $${PRICE_USD} per call in USDC on Base via x402 (MCP: challenge in-band, attach payment at _meta["x402/payment"] and retry; REST: standard 402 + PAYMENT-REQUIRED header). No account, no API key.\n` +
+        `Pricing: first ${FREE_CALLS} calls free per client, then $${PRICE_USD} per call in USDC on Base via x402 (MCP: challenge in-band, attach payment at _meta["x402/payment"] and retry; REST: standard 402 + PAYMENT-REQUIRED header). No account, no API key.\n` +
         `Pass: $${PASS_PRICE_USD} buys ${PASS_DAYS} days / ${PASS_CALL_CAP.toLocaleString('en-US')} calls - POST ${PUBLIC_URL}/pass or the buy_pass MCP tool; present the token as X-BTX-Pass (REST) or _meta["btx/pass"] (MCP).\n\n` +
         `## Contracts\n\n` +
         `- [OpenAPI](${PUBLIC_URL}/openapi.json): request/response schemas for the tools/call envelope\n` +
