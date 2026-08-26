@@ -51,8 +51,20 @@ while read -r _local_ref local_sha _remote_ref remote_sha; do
     *[!0]*) commits=$(git rev-list "$remote_sha..$local_sha" 2>/dev/null) ;;
     *)      commits=$(git rev-list "$local_sha" --not --remotes=origin 2>/dev/null) ;;
   esac
-  hits=$(for c in $commits; do git show --pretty=format: --name-only "$c" 2>/dev/null; done \
-           | sort -u | grep -E "$INTERNAL")
+  touched=$(for c in $commits; do git show --pretty=format: --name-only "$c" 2>/dev/null; done \
+              | sort -u | grep -E "$INTERNAL")
+  # REMOVING an internal doc is the thing we WANT published; only adding or
+  # editing one is the leak. Without this the hook blocks its own cleanup, and a
+  # guard that needs a bypass for legitimate work teaches people to bypass it --
+  # after which it protects nothing. Present at the tip = still tracked = block.
+  hits=""
+  for f in $touched; do
+    if git cat-file -e "$local_sha:$f" 2>/dev/null; then
+      hits="${hits}${f}
+"
+    fi
+  done
+  hits=$(printf '%s' "$hits" | sed '/^$/d')
   if [ -n "$hits" ]; then
     cat >&2 <<MSG
 
