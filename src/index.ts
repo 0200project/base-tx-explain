@@ -70,7 +70,7 @@ import {
   payFailures,
 } from './usage.js';
 
-const VERSION = '0.1.3';
+const VERSION = '0.1.4';
 const NETWORK = 'eip155:8453' as const; // Base mainnet
 const PAYMENT_MODE = process.env.PAYMENT_MODE === 'x402' ? 'x402' : 'none';
 const PRICE_USD = process.env.X402_PRICE_USD ?? '0.02';
@@ -432,7 +432,18 @@ async function initPayments(): Promise<void> {
     accepts: passAccepts,
     resource: {
       url: `${PUBLIC_URL}/pass`,
-      description: `${PASS_DAYS}-day pass: up to ${PASS_CALL_CAP.toLocaleString('en-US')} explain_transaction calls for $${PASS_PRICE_USD}. Bearer token, no account.`,
+      // THE EXPENSIVE PATH MUST NAME THE CHEAP ONE. The cheap challenge
+      // already advertises the pass ("Heavy use: $9 buys..."); this one offered
+      // "$9 or nothing." The first MCP agent this company ever recorded —
+      // 1b624776, registry-discovered, three visits over five days, never once
+      // served a call — hit exactly this challenge at 2026-08-26T13:24:19Z
+      // (log-verified: `buy-pass client=1b624776`) and walked. It was being
+      // asked for $9 by a product it had never seen work, with no mention that
+      // a $0.02 trial of the same tool existed. Surface found the asymmetry;
+      // the buyer it protects is named and real.
+      description:
+        `${PASS_DAYS}-day pass: up to ${PASS_CALL_CAP.toLocaleString('en-US')} explain_transaction calls for $${PASS_PRICE_USD}. Bearer token, no account. ` +
+        `Not ready for a pass? explain_transaction costs $${PRICE_USD}/call the same x402 way - try one real decode first, then decide.`,
       mimeType: 'application/json',
       serviceName: 'base-transaction-decoder',
     },
