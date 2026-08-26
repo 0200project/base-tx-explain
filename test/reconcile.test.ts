@@ -254,9 +254,16 @@ describe('known non-revenue must not read as unbooked revenue', () => {
    * was misreported and not a general property.
    */
   it('does not accuse us of losing money that was booked as a favour and stayed put', () => {
+    // RE-REASONED 2026-08-26, exactly as the comment above instructs. The
+    // original pinned the 2026-08-21 state: balance $0.04, one booked favour.
+    // The founder's $0.02 x402 self-test then arrived (tx 0x96c6a018...,
+    // verified on chain by two parties independently), the payout wallet rose
+    // to $0.06, and the write-off list gained its third entry. Same property
+    // under the new state: every cent accounted for, nothing missing, and the
+    // reconciler must say so rather than alarm.
     const r = reconcile({
-      treasury: { usdc_balance: 0.04, wallet, read_at: '2026-08-21T18:02:38.795Z' },
-      booked_usd: 0.02, settlements: 1, on_chain_settlements: 1, paid_calls: 8, price_usd: 0.02, withdrawn_usd: 0,
+      treasury: { usdc_balance: 0.06, wallet, read_at: '2026-08-26T05:54:00.000Z' },
+      booked_usd: 0.04, settlements: 2, on_chain_settlements: 2, paid_calls: 11, price_usd: 0.02, withdrawn_usd: 0,
     });
     expect(r.status).toBe('reconciled');
     expect(r.delta_usd).toBe(0);

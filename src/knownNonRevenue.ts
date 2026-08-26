@@ -69,6 +69,26 @@ export const KNOWN_NON_REVENUE: KnownNonRevenue[] = [
     // Settled through the normal path, so the ledger did book it as revenue.
     booked: true,
   },
+  {
+    // The founder proving the x402 rail end to end, 2026-08-26T05:53:55Z. Payer
+    // 0x2E31f337...D06FC7 is the company SPEND wallet; the destination is the
+    // company payout wallet. Verified three ways independently: Platform watched
+    // the signature happen and confirmed the settlement in the ledger within
+    // seconds; Finance traced the transfer via eth_getLogs and matched the
+    // spend wallet's balance dropping by exactly $0.02; and the payout wallet
+    // rose $0.04 -> $0.06. Money moving between two pockets of the same company.
+    //
+    // Stripe has SELF_PURCHASE_EMAIL to label the founder's own card purchases
+    // at the moment they happen; x402 has no equivalent guard, so this landed
+    // in `unattributed` — the bucket that means "awaiting a human." It was not
+    // awaiting anyone: three parties knew whose it was within the minute. This
+    // entry is that human ruling, written down.
+    tx: '0x96c6a01854d9c412145ae2f2d9a7dcd46f252d24514df931fa955d79bbf05c32',
+    amount_usd: 0.02,
+    why: "Founder's own x402 self-test proving the rail, spend wallet to payout wallet. Company money on both sides, not a sale.",
+    // Settled through the normal path, so the ledger booked it.
+    booked: true,
+  },
 ];
 
 const round6 = (n: number): number => Math.round(n * 1e6) / 1e6;
@@ -123,8 +143,11 @@ export function revenueNote(split: {
   const parts: string[] = [];
   if (knownNonRevenueUsd > 0) {
     parts.push(
-      `$${knownNonRevenueUsd.toFixed(2)} written off with a stated reason ` +
-        '(a pre-arranged technical probe by a party who evaluated this service and declined to buy)',
+      // Was "(a pre-arranged technical probe...)" — accurate while the list
+      // held one booked entry, wrong the moment it held two for different
+      // reasons. The per-entry reasons live in KNOWN_NON_REVENUE; this sentence
+      // only claims what is true of all of them.
+      `$${knownNonRevenueUsd.toFixed(2)} written off as known non-revenue, each with its reason recorded`,
     );
   }
   if (selfUsd > 0) {
