@@ -7,7 +7,7 @@
  * not: the smallest routed allocation is a /64, and any commodity VPS or home
  * connection gets at least that. A caller who binds a new source address per
  * request therefore presents 2^64 distinct identities without doing anything
- * unusual — each one a fresh 10-call free tier and a fresh 60/minute window.
+ * unusual — each one a fresh free-tier allowance and a fresh rate-limit window.
  * Keying on the full address makes the paywall and the throttle optional for
  * anyone on IPv6, and the fix is not to detect the rotation but to stop treating
  * addresses within one allocation as different clients.

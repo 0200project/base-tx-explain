@@ -74,7 +74,12 @@ const VERSION = '0.1.3';
 const NETWORK = 'eip155:8453' as const; // Base mainnet
 const PAYMENT_MODE = process.env.PAYMENT_MODE === 'x402' ? 'x402' : 'none';
 const PRICE_USD = process.env.X402_PRICE_USD ?? '0.02';
-const PUBLIC_URL = (process.env.PUBLIC_URL ?? 'https://base-tx-explain.fly.dev').replace(/\/$/, '');
+// Fallback is the BRANDED host: production sets the env so this never fires
+// today, but a latent default decides what happens on the day someone forgets —
+// and minting pass URLs against the hosting provider's domain is the exact
+// mistake the founder caught by reading his own receipt. Defaults should fail
+// toward the identity we chose, not the one we retired from view.
+const PUBLIC_URL = (process.env.PUBLIC_URL ?? 'https://api.0200project.com').replace(/\/$/, '');
 const SITE_URL = 'https://0200project.com';
 
 const TOOL_NAME = 'explain_transaction';

@@ -27,6 +27,12 @@
 # is for files whose JOB is to carry the old value: frozen changelog history,
 # comments quoting a historical failure, and this file itself.
 #
+# HONEST LIMIT (found by Surface planting variants, not by reasoning): this
+# matches retired VALUES, not retired FACTS. A rephrasing nobody listed — a
+# spelled-out number, a reformatted rate — passes clean, so coverage is exactly
+# as good as the imagination of whoever wrote the pattern. Add variants when
+# found; do not mistake a passing sweep for "no stale claim exists."
+#
 # Proven both directions before first trust, per the house rule: a planted
 # stale claim fails; the clean tree passes.
 set -e
@@ -46,8 +52,8 @@ check() {
 }
 
 # Free tier was 10 per 30 days until 2026-08-26 (9e46cfb). It is 50 per 24h.
-check "first 10 calls|10 free calls|10 calls per client" \
-      "^site/changelog/index.html$|^src/freeTier.ts$|^scripts/retired-facts.sh$" \
+check "first 10 calls|10 free calls|10 calls per client|ten free calls|first ten calls" \
+      "^site/changelog/index.html$|^src/freeTier.ts$|^scripts/site-check.sh$|^scripts/retired-facts.sh$" \
       "trial is 50/24h, not 10 (changelog history and the freeTier WHY-comment are exempt by job)"
 
 # Registry entry renamed 2026-08-27; the old name is DELETED from the registry.
