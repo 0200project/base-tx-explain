@@ -108,6 +108,8 @@ if [ "$SRV_MS" -ne "$PAGE_MS" ]; then
 fi
 echo "predeploy: buyer-stuck threshold agrees (${SRV_MS}ms server = ${PAGE_MS}ms page)"
 
+bash scripts/retired-facts.sh || fail "a retired fact is still live in a tracked file"
+
 npx tsc --noEmit || fail "typecheck failed"
 echo "predeploy: typecheck passed"
 

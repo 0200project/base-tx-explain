@@ -36,7 +36,7 @@ Example output for a real swap:
 
 I validated against 100 random recent Base transactions before shipping. 95 decode to a specific action type, the rest degrade to an honest partial summary, zero crashes.
 
-Pricing, honestly: 10 free calls per IP per 24h (shared by everyone behind one address, resets daily), then $0.02/call in USDC on Base via x402. The 402 response contains everything a paying agent needs to retry autonomously, no account or API key. An Apify Store listing with flat pricing is pending review.
+Pricing, honestly: 50 free calls per IP per 24h (shared by everyone behind one address, resets daily), then $0.02/call in USDC on Base via x402. The 402 response contains everything a paying agent needs to retry autonomously, no account or API key. An Apify Store listing with flat pricing is pending review.
 
 Endpoint: `https://api.0200project.com/mcp` (streamable HTTP)
 
@@ -61,7 +61,7 @@ Real output, real tx. 95/100 random recent Base txs decode clean, the rest fail 
 Risk flags included: unverified contract, unlimited approval, approval-for-all, known-drainer match.
 
 **Tweet 3:**
-10 free calls, then $0.02/call USDC on Base via x402. A paying agent handles the 402 and retries with no signup and no API key.
+50 free calls a day, then $0.02/call USDC on Base via x402. A paying agent handles the 402 and retries with no signup and no API key.
 
 Endpoint + repo: https://github.com/0200project/base-tx-explain
 
@@ -71,7 +71,7 @@ Endpoint + repo: https://github.com/0200project/base-tx-explain
 
 ## 3. Community MCP Discord (discord.me/mcp, showcase/servers channel, from polaris0028)
 
-Built a small paid MCP server and would appreciate eyes on it: base-tx-explain. One tool, explain_transaction(tx_hash) for Base mainnet. Plain-English summary plus strict JSON (assets moved, labeled counterparties, risk flags, gas in USD). Deterministic decode only, no LLM in the response path, so the output contract is stable enough to parse blind. 10 free calls, then $0.02/call via x402. Repo: https://github.com/0200project/base-tx-explain. Feedback on the schema very welcome, especially from anyone building trading or wallet agents.
+Built a small paid MCP server and would appreciate eyes on it: base-tx-explain. One tool, explain_transaction(tx_hash) for Base mainnet. Plain-English summary plus strict JSON (assets moved, labeled counterparties, risk flags, gas in USD). Deterministic decode only, no LLM in the response path, so the output contract is stable enough to parse blind. 50 free calls a day, then $0.02/call via x402. Repo: https://github.com/0200project/base-tx-explain. Feedback on the schema very welcome, especially from anyone building trading or wallet agents.
 
 ---
 

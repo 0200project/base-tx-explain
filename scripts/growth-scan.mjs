@@ -104,11 +104,11 @@ function classifyText(text) {
 
 const DRAFT_STUBS = {
   [ANGLE_DECODE]:
-    "Disclosure: I built this. base-tx-explain is an MCP tool that takes a Base mainnet transaction hash and returns strict JSON: a plain-English summary, assets moved, labeled counterparties, risk flags, and gas in USD. The decode is deterministic with no LLM in the response path, and the first 10 calls are free if you want to test it against your case.",
+    "Disclosure: I built this. base-tx-explain is an MCP tool that takes a Base mainnet transaction hash and returns strict JSON: a plain-English summary, assets moved, labeled counterparties, risk flags, and gas in USD. The decode is deterministic with no LLM in the response path, and the first 50 calls a day are free if you want to test it against your case.",
   [ANGLE_MONETIZE]:
-    "Disclosure: I built one of these. base-tx-explain charges $0.02 per call in USDC on Base via x402 after 10 free calls, with the 402 challenge delivered in-band so an agent can pay and retry without an account or API key. Happy to share the wiring details if that would help here.",
+    "Disclosure: I built one of these. base-tx-explain charges $0.02 per call in USDC on Base via x402 after 50 free calls a day, with the 402 challenge delivered in-band so an agent can pay and retry without an account or API key. Happy to share the wiring details if that would help here.",
   [ANGLE_INTEGRATE]:
-    "Disclosure: I built a paid MCP server that uses x402 (base-tx-explain, $0.02 per call in USDC on Base, 10 free calls first). If a live x402 seller endpoint is useful for testing your project, it is public and needs no account. Open to feedback in either direction.",
+    "Disclosure: I built a paid MCP server that uses x402 (base-tx-explain, $0.02 per call in USDC on Base, 50 free calls a day first). If a live x402 seller endpoint is useful for testing your project, it is public and needs no account. Open to feedback in either direction.",
 };
 
 // ---------------------------------------------------------------------------
