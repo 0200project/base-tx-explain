@@ -282,10 +282,31 @@
         setState(rows.decoder, 'dot-live', 'Operational');
         var lt = d.lifetime || {};
         if (typeof lt.calls === 'number') {
+          /* MONEY ON A PUBLIC PAGE MUST NOT FLATTER.
+             This line used to read "(N free / N paid)" with the paid figure taken
+             from lt.paid_calls -- which counts calls that ARRIVED CARRYING a
+             payment, not payments that settled. It read "11 paid" while only 3
+             payments had ever settled and customer revenue was $0.00. Wrong, in
+             public, about money, in our favour.
+
+             The free/total split was misleading on its own too: 155 free out of
+             250 invites the reader to assume the other 95 were paid. They were
+             mostly paywall responses. So every component is now named. */
           var freeN = typeof lt.free === 'number' ? lt.free : 0;
-          var paidN = typeof lt.paid_calls === 'number' ? lt.paid_calls : 0;
-          lifetimeLine.textContent = lt.calls.toLocaleString() + ' tool calls served all-time (' +
-            freeN.toLocaleString() + ' free / ' + paidN.toLocaleString() + ' paid)';
+          var walledN = typeof lt.wall_hits === 'number' ? lt.wall_hits : 0;
+          var settledN = typeof lt.settlements === 'number' ? lt.settlements : 0;
+          var line = lt.calls.toLocaleString() + ' tool calls all-time \u00b7 ' +
+            freeN.toLocaleString() + ' served free \u00b7 ' +
+            walledN.toLocaleString() + ' returned a payment challenge \u00b7 ' +
+            settledN.toLocaleString() + ' payment' + (settledN === 1 ? '' : 's') + ' settled';
+          /* "3 payments settled" still reads as "3 customers paid" unless we say
+             otherwise, and every settlement so far has been our own testing.
+             Derived from the live figure rather than hardcoded, so it disappears
+             by itself the day a real customer pays. */
+          if (typeof lt.revenue_from_customers_usd === 'number' && lt.revenue_from_customers_usd === 0 && settledN > 0) {
+            line += ' (none from a customer yet)';
+          }
+          lifetimeLine.textContent = line;
         }
       } else if (health.ok) {
         // The host answered but the health body could not be read.
