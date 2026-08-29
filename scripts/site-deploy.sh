@@ -51,8 +51,20 @@ if [ -n "$DIRTY" ]; then
 fi
 
 # ---- 3. the right GitHub account
-if ! gh auth status 2>/dev/null | grep -q 'Logged in to github.com account 0200project'; then
-  die "gh is not authenticated as 0200project. Run: gh auth switch --user 0200project"
+#
+# `gh auth status` lists EVERY logged-in account, so grepping it for our name
+# passes even when that account is merely present and some OTHER account is
+# active. The founder's personal account is permanently signed in on this
+# machine for a separate production app of his, which makes "logged in" and
+# "acting as" routinely different things. `gh api user` answers the only
+# question that matters -- who am I RIGHT NOW -- because it is the identity the
+# credential helper will actually push with.
+WHOAMI="$(gh api user --jq .login 2>/dev/null || true)"
+if [ "$WHOAMI" != "$IDENTITY_NAME" ]; then
+  die "gh is acting as '${WHOAMI:-unknown}', not $IDENTITY_NAME.
+
+  A push now would be attributed to the wrong GitHub account on a
+  pseudonymous org. Run: gh auth switch --user $IDENTITY_NAME"
 fi
 
 # ---- 4. a fresh clone every time. A stale one silently deploys against an old
