@@ -710,11 +710,30 @@
         if (s && PAY_STATE_LABEL[state]) s.textContent = PAY_STATE_LABEL[state];
       }
     }).then(function (result) {
-      if (el !== payPanelEl()) return;
-      el.innerHTML = '<p>Payment signed &mdash; retrying the call&hellip;</p>';
+      /* THE RELAY IS NOT OPTIONAL. By this point a signature exists: the user
+         authorised a USDC transfer in their wallet, and x402 only moves those
+         funds once WE hand that authorisation to the facilitator. Returning
+         here because the panel was replaced would silently discard a payment
+         the user believes they made, leaving no trace anywhere -- not in the
+         ledger, not on chain, not on screen. It was the worst branch in this
+         file. The panel check now gates only the cosmetic status line; the
+         relay runs unconditionally, and retryWithPayment renders into the main
+         output area, so the outcome is visible even if this panel is gone. */
+      if (el === payPanelEl()) {
+        el.innerHTML = '<p>Payment signed &mdash; retrying the call&hellip;</p>';
+      }
       retryWithPayment(hash, result.payment);
     }).catch(function (err) {
-      if (el !== payPanelEl()) return;
+      /* A rejection means NO payment payload was produced -- declined, wallet
+         error, or insufficient funds -- so no money is at risk and there is
+         nothing to relay. Still not silent: if the panel moved on we cannot
+         render into it, but we do not swallow the reason. */
+      if (el !== payPanelEl()) {
+        if (window.console && console.warn) {
+          console.warn('[x402] payment failed after the panel changed:', (err && err.message) || err);
+        }
+        return;
+      }
       renderPayError(el, challenge, hash, err);
     });
   }
