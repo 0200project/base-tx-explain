@@ -432,7 +432,37 @@
     buyBtn.disabled = true;
   }
 
+  /* ONE SIGNATURE AT A TIME.
+     Every payChallenge mints a FRESH random nonce (assets/pay.js randomNonce),
+     so two signatures are two independent EIP-3009 authorisations and BOTH
+     settle. Nothing stopped a second wallet prompt opening while the first was
+     still up: two clicks on a slow wallet buys one pass for $18. At $9 that is
+     450x the stake of the playground's $0.02 path.
+
+     What is guarded is SIGNATURE ACQUISITION, never the relay. Gating the relay
+     would recreate the bug just fixed on the playground -- discarding an
+     authorisation the user has already given. Once signed, it is always sent.
+
+     The timeout matters. A wallet promise that never settles (extension closed,
+     user walks away) would otherwise latch this forever and lock the payer out
+     of paying at all. Failing open after three minutes is the safe direction:
+     the worst case is the behaviour we have today. */
+  var signingInFlight = false;
+  var signingTimer = null;
+
+  function beginSigning() {
+    if (signingInFlight) return false;
+    signingInFlight = true;
+    signingTimer = setTimeout(function () { signingInFlight = false; signingTimer = null; }, 180000);
+    return true;
+  }
+  function endSigning() {
+    signingInFlight = false;
+    if (signingTimer) { clearTimeout(signingTimer); signingTimer = null; }
+  }
+
   function runPurchase(challenge) {
+    if (!beginSigning()) return;
     renderPanel('<p id="pass-status">Connecting wallet…</p>');
     window.x402Pay.payChallenge(challenge, {
       onState: function (state) {
@@ -452,7 +482,7 @@
       renderSuccess(res.payload);
     }).catch(function (err) {
       renderError(challenge, err);
-    });
+    }).then(endSigning, endSigning);
   }
 
   function startBuy() {
