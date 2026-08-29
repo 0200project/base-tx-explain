@@ -89,6 +89,27 @@ export const KNOWN_NON_REVENUE: KnownNonRevenue[] = [
     // Settled through the normal path, so the ledger booked it.
     booked: true,
   },
+  {
+    // The founder proving the never-run $9 buy_pass composition end to end,
+    // 2026-08-29T22:06:33Z. Payer 0x2E31f337...D06FC7 is the company SPEND
+    // wallet again; destination is the payout wallet. This one exercised the
+    // path no prior test had: verify -> settle -> mint -> deliver -> and the
+    // delivered token authorized a real decode (Platform confirmed the token
+    // returned live output within the minute). Payout wallet rose $0.08 -> $9.08.
+    // Same company on both sides, so it is a cost of proving the rail, not a
+    // sale — the human ruling, written down, exactly like the $0.02 above.
+    //
+    // Booked the same day the FIRST REAL customer settlement was promoted
+    // (kindrat86, $0.02, tx 0x325557e1...). Kept scrupulously apart: that $0.02
+    // is customer revenue; this $9.00 is ours. Conflating them would have put
+    // the founder's own money on the board as a sale, which is the precise
+    // failure this list exists to prevent.
+    tx: '0x5606d4f24a2846ed8144a35abf724921b0aa3147af9ceeabb00a89e383fd9ba8',
+    amount_usd: 9,
+    why: "Founder's own x402 self-test proving the $9 buy_pass mint-and-deliver path, spend wallet to payout wallet. Company money on both sides, not a sale.",
+    // Settled through the normal path, so the ledger booked it.
+    booked: true,
+  },
 ];
 
 const round6 = (n: number): number => Math.round(n * 1e6) / 1e6;

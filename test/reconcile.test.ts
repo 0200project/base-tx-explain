@@ -81,7 +81,9 @@ describe('reconcile', () => {
   it('adds declared sweeps back so a withdrawal is not read as a shortfall', () => {
     const r = reconcile(input({ treasury: { usdc_balance: BASE, wallet, read_at: null }, booked_usd: 9 + NR_BOOKED, on_chain_booked_from_customers_usd: 9, settlements: 1, on_chain_settlements: 1, paid_calls: 1, withdrawn_usd: 9 }));
     expect(r.status).toBe('reconciled');
-    expect(r.received_usd).toBe(BASE + 9);
+    // round6 to match the reconciler: once BASE grew to $9.06, the raw float
+    // BASE + 9 is 18.060000000000002, while the reconciler rounds to 18.06.
+    expect(r.received_usd).toBe(Number((BASE + 9).toFixed(6)));
   });
 
   /**
@@ -254,21 +256,25 @@ describe('known non-revenue must not read as unbooked revenue', () => {
    * was misreported and not a general property.
    */
   it('does not accuse us of losing money that was booked as a favour and stayed put', () => {
-    // RE-REASONED 2026-08-26, exactly as the comment above instructs. The
-    // original pinned the 2026-08-21 state: balance $0.04, one booked favour.
-    // The founder's $0.02 x402 self-test then arrived (tx 0x96c6a018...,
-    // verified on chain by two parties independently), the payout wallet rose
-    // to $0.06, and the write-off list gained its third entry. Same property
-    // under the new state: every cent accounted for, nothing missing, and the
-    // reconciler must say so rather than alarm.
+    // RE-REASONED 2026-08-29, exactly as the comment above instructs — and this
+    // time the re-reasoning records a milestone. Two settlements landed since
+    // the last one: the founder's $9 buy_pass self-test (tx 0x5606d4f2...,
+    // booked known-non-revenue) and — the first REAL customer payment in the
+    // company's life — kindrat86's $0.02 (tx 0x325557e1..., promoted to
+    // attributed revenue). Known-non-revenue is now $9.06; customer revenue is
+    // $0.02; the payout wallet holds $9.08, which is exactly those two sums with
+    // nothing swept. The property is unchanged — every cent accounted for, so
+    // the reconciler must say reconciled — but it must now show $0.02 FROM
+    // CUSTOMERS rather than $0. That last assertion is the line this whole
+    // company spent a week earning.
     const r = reconcile({
-      treasury: { usdc_balance: 0.06, wallet, read_at: '2026-08-26T05:54:00.000Z' },
-      booked_usd: 0.04, settlements: 2, on_chain_settlements: 2, paid_calls: 11, price_usd: 0.02, withdrawn_usd: 0,
+      treasury: { usdc_balance: 9.08, wallet, read_at: '2026-08-29T22:07:00.000Z' },
+      booked_usd: 9.06, on_chain_booked_from_customers_usd: 0.02, settlements: 5, on_chain_settlements: 5, paid_calls: 11, price_usd: 0.02, withdrawn_usd: 0,
     });
     expect(r.status).toBe('reconciled');
     expect(r.delta_usd).toBe(0);
-    expect(r.received_from_customers_usd).toBe(0);
-    expect(r.booked_from_customers_usd).toBe(0);
+    expect(r.received_from_customers_usd).toBe(0.02);
+    expect(r.booked_from_customers_usd).toBe(0.02);
     // The specific sentence that was wrong. It must not come back.
     expect(r.note).not.toContain('swept out');
     expect(r.note).not.toContain('shortfall');
