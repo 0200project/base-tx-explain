@@ -356,6 +356,102 @@ PY
 # ------------------------------------------------------------------- verdict
 
 printf '\n'
+
+# ------------------------------------------- published samples must EXECUTE
+#
+# THE GENRE THIS KILLS. Five times in three days we published an artifact that
+# fails when run, while every gate we had checked whether the text was CORRECT
+# rather than whether the thing was OPERABLE. Those are different properties,
+# and only one of them is what a machine experiences:
+#   - llms.txt documented POST /mcp, which 402s without the Accept header
+#   - the OpenAPI example hash was 'ab' x32, which 404s
+#   - llms.txt was served and reachable by nothing
+#   - provenance shipped in every response, named on no agent-facing surface
+#   - the pricing page linked an Apify slug that was never created
+#
+# 200 ONLY, deliberately. 402 is a real response but it is NOT accepted here,
+# because "documents a call that 402s" IS the original bug -- the machine front
+# door published exactly that. A sample meant to fail belongs in SAMPLE_ALLOW
+# with its reason, the way retired-facts.sh allowlists files whose job is to
+# carry an old value.
+#
+# COST, stated because the first version of this comment got it wrong: these
+# calls SPEND the free tier. The x-btx-internal marker labels a call as ours for
+# attribution -- channel, client kind, an `internal` flag on the recorded event
+# -- and internal.ts says so outright: "NOT A SECURITY CONTROL. It grants no
+# access and gates nothing." It does not exempt anything from metering. So this
+# branch costs one free call per sample per run, against 50 per IP per 24h.
+#
+# WHICH MEANS THE FAILURE MODE MATTERS MORE THAN THE CHECK. Once the deploy
+# machine's own allowance is spent, every sample returns 402, and a naive
+# version of this branch reports "the site publishes a call that does not work"
+# -- which is false, and is precisely the genre this branch exists to kill. An
+# exhausted-tier 402 is therefore detected by its body and reported as UNABLE TO
+# VERIFY, with the real cause named. A 402 of any other shape is still a
+# failure, because "documents a call that 402s" is the original bug.
+
+SAMPLE_ALLOW=""   # exact sample substrings expected NOT to return 200
+
+SAMPLE_TSV="$(python3 "$ROOT/scripts/lib/published-samples.py" "$SITE" || true)"
+if [ -z "$SAMPLE_TSV" ]; then
+  fail "no runnable curl samples found on the site" \
+    "Either the site documents no callable example, or the extractor stopped
+        matching the markup. Both are findings: this branch would otherwise
+        report success while checking nothing."
+else
+  MARKER=""
+  [ -f "$ROOT/.internal-marker" ] && MARKER="$(cat "$ROOT/.internal-marker")"
+  SAMP_BAD="$(mktemp)"; SAMP_SPENT="$(mktemp)"; SAMP_LIST="$(mktemp)"; SAMP_N=0
+  printf '%s\n' "$SAMPLE_TSV" > "$SAMP_LIST"
+  # Read from a FILE, not a pipe: a pipe puts the loop in a subshell and the
+  # counter dies with it. And no IFS splitting -- the first version set
+  # IFS="$(printf '\n')", which command substitution strips to the EMPTY
+  # string, so every sample was concatenated into one unrunnable command and
+  # the gate failed on a site that was fine.
+  while IFS= read -r row; do
+    [ -z "$row" ] && continue
+    src="${row%%	*}"; cmd="${row#*	}"
+    [ -z "$cmd" ] && continue
+    SAMP_N=$((SAMP_N + 1))
+    run="$cmd"
+    if [ -n "$MARKER" ]; then
+      run="$(printf '%s' "$cmd" | sed "s|curl |curl -H 'x-btx-internal: $MARKER' |")"
+    fi
+    SAMP_BODY="$(mktemp)"
+    code="$(eval "$run" -s -o "$SAMP_BODY" -w '%{http_code}' --max-time 25 2>/dev/null || echo 000)"
+    if [ "$code" != "200" ]; then
+      case "$SAMPLE_ALLOW" in
+        ?*) case "$cmd" in *"$SAMPLE_ALLOW"*) rm -f "$SAMP_BODY"; continue ;; esac ;;
+      esac
+      # Our own allowance being spent is not the site being broken. The
+      # exhausted-tier body says so in words the server owns.
+      if [ "$code" = "402" ] && grep -q "this address has used them" "$SAMP_BODY" 2>/dev/null; then
+        printf '        %s\n' "$src" >> "$SAMP_SPENT"
+      else
+        printf '        %s  %s\n            %s\n' "$code" "$src" "$(printf '%s' "$cmd" | cut -c1-92)" >> "$SAMP_BAD"
+      fi
+    fi
+    rm -f "$SAMP_BODY"
+  done < "$SAMP_LIST"
+  rm -f "$SAMP_LIST"
+  if [ -s "$SAMP_BAD" ]; then
+    fail "the site publishes a call that does not work" "$(cat "$SAMP_BAD")
+        A published example is a promise that it runs. Fix the sample, or add
+        it to SAMPLE_ALLOW with the reason it is expected to fail."
+  elif [ -s "$SAMP_SPENT" ]; then
+    fail "could not verify the published samples: this IP's free tier is spent" \
+      "$(cat "$SAMP_SPENT")
+        These samples were NOT proven broken. This machine has used its 50 free
+        calls for the current 24h window, so every sample returns the
+        free-tier-exhausted 402 regardless of whether it is correct. Re-run
+        after the window resets, or from an address with allowance left. Do not
+        read this as the site being wrong."
+  else
+    pass "every published curl sample executes ($SAMP_N checked)"
+  fi
+  rm -f "$SAMP_BAD" "$SAMP_SPENT"
+fi
+
 if [ "$fails" -gt 0 ]; then
   printf 'site-check: %s FAILED. The site is telling a prospect something the server will not honour.\n\n' "$fails"
   exit 1
