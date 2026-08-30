@@ -14,7 +14,8 @@ import { ExplainError, explainTransaction } from './explain.js';
 import { FAVICON_PNG } from './favicon.js';
 import { withAcceptedFieldRepair } from './cdpCompat.js';
 import { buildOpenApiDocument } from './openapi.js';
-import { registerPassRoutes, registerRestRoutes } from './rest.js';
+import { registerEngagementRoutes, registerPassRoutes, registerRestRoutes } from './rest.js';
+import { ENGAGEMENTS } from './engagements.js';
 import { declaredWithdrawn, reconcile } from './reconcile.js';
 import { getTreasury } from './treasury.js';
 import { FREE_CALLS, FREE_WINDOW_HOURS, consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
@@ -1950,6 +1951,33 @@ function registerPaidRoutes(): void {
           });
         },
       });
+      registerEngagementRoutes(app, {
+        resourceServer: sharedResourceServer,
+        payTo: sharedPayTo,
+        network: NETWORK,
+        publicUrl: PUBLIC_URL,
+        siteUrl: SITE_URL,
+        engagements: ENGAGEMENTS,
+        recordSale: (engagement) => {
+          // Booked only on a delivered success (see rest.ts). Tagged
+          // 'rest-engagement' + the engagement id so a service sale stays
+          // separable from product (per-call / pass) revenue, and so the
+          // founder's own marked acceptance test of `demo` is identifiable and
+          // rules non-revenue the same way the $9 buy_pass self-test did.
+          recordEvent({
+            t: new Date().toISOString(),
+            e: 'settled',
+            client: 'rest-engagement',
+            amount_usd: engagement.amountUsd,
+            id: `engagement-${engagement.id}-${Date.now()}`,
+          });
+        },
+      });
+      if (ENGAGEMENTS.length) {
+        console.log(
+          `Engagement rail: ${ENGAGEMENTS.map((e) => `POST ${PUBLIC_URL}/engagement/${e.id} ($${e.amountUsd})`).join(', ')} via x402 HTTP`,
+        );
+      }
       console.log(`REST rail: POST ${PUBLIC_URL}/explain ($${PRICE_USD}/call) and POST ${PUBLIC_URL}/pass ($${PASS_PRICE_USD}/${PASS_DAYS}d) via x402 HTTP`);
   }
   paidRoutesRegistered = true;

@@ -3,6 +3,7 @@ import { paymentMiddleware } from '@x402/express';
 import type { x402ResourceServer } from '@x402/core/server';
 import type express from 'express';
 import { ExplainError, explainTransaction } from './explain.js';
+import type { Engagement } from './engagements.js';
 
 /**
  * Plain REST access to the same decode the MCP tool serves.
@@ -342,6 +343,132 @@ export function registerPassRoutes(app: express.Express, deps: PassRouteDeps): v
       price_usd: priceUsd,
       what_you_get: `${callCap.toLocaleString('en-US')} calls over ${days} days, no account.`,
       example: `curl -X POST ${publicUrl}/pass (x402 payment required; an x402-capable client handles it automatically)`,
+    });
+  });
+}
+
+export interface EngagementRouteDeps {
+  resourceServer: x402ResourceServer;
+  payTo: string;
+  network: `${string}:${string}`;
+  publicUrl: string;
+  /** Where a human pays by card / asks for a formal invoice when x402 is not their rail. */
+  siteUrl: string;
+  /** The committed engagements to expose, each at its own custom amount. */
+  engagements: Engagement[];
+  /**
+   * Book a settled engagement sale — called ONLY on a delivered success, so it
+   * must never be invoked for an attempt that did not settle. Tagged to the id
+   * so service revenue stays separable from product revenue.
+   */
+  recordSale: (engagement: Engagement) => void;
+}
+
+/**
+ * POST /engagement/<id>: pay a quoted engagement amount over the same x402 flow
+ * the product uses, at a CUSTOM price per deal. One route per committed
+ * engagement; the on-chain settlement transaction is the invoice.
+ *
+ * Settle-gating is identical to registerPassRoutes and for the identical reason:
+ * the @x402/express middleware buffers the handler's body and replays it only on
+ * a settled 2xx, discarding it otherwise. So the receipt reaches the buyer only
+ * if the money moved, and the sale is booked only then — an unsettled attempt
+ * leaves no receipt and no revenue. This is a payment endpoint, deliberately not
+ * a service surface: it takes the agreed money and hands back the agreed
+ * receipt, nothing more.
+ */
+export function registerEngagementRoutes(app: express.Express, deps: EngagementRouteDeps): void {
+  const { resourceServer, payTo, network, publicUrl, engagements } = deps;
+
+  for (const engagement of engagements) {
+    const routePath = `/engagement/${engagement.id}`;
+    const price = `$${engagement.amountUsd}`;
+    const gate = paymentMiddleware(
+      {
+        [`POST ${routePath}`]: {
+          // The price is the requirement verbatim — what the buyer signs is
+          // exactly what was quoted, no arithmetic between the two.
+          accepts: { scheme: 'exact', network, payTo, price },
+          resource: `${publicUrl}${routePath}`,
+          description:
+            `${engagement.title} — ${engagement.summary} Priced at ${price}, paid once over x402; ` +
+            'the on-chain settlement transaction is the receipt.',
+          mimeType: 'application/json',
+          serviceName: '0200project-engagement',
+          tags: ['0200project', 'engagement', 'x402', 'invoice'],
+          unpaidResponseBody: () => ({
+            contentType: 'application/json',
+            body: {
+              error: 'Payment required',
+              engagement: engagement.id,
+              title: engagement.title,
+              amount_usd: engagement.amountUsd,
+              what_this_is: engagement.summary,
+              how: 'This endpoint speaks x402. Pay the quoted amount in USDC on Base and retry with the payment attached, or use an x402-capable HTTP client which does it automatically.',
+              the_receipt:
+                'The on-chain settlement transaction IS your invoice — publicly verifiable on BaseScan, no separate document issued.',
+              // A crypto-native buyer pays here; a buyer who needs a card or a
+              // formal invoice against a legal entity should reach a human.
+              need_a_card_or_invoice: 'Email contact@0200project.com — a person will read it.',
+            },
+          }),
+        },
+      },
+      resourceServer,
+    );
+
+    app.post(routePath, gate, (_req, res) => {
+      let resolved = false;
+      const finish = (): void => {
+        if (resolved) return;
+        resolved = true;
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          deps.recordSale(engagement);
+          return;
+        }
+        console.error(
+          `[engagement] ${engagement.id} ($${engagement.amountUsd}) not settled (status ${res.statusCode}); ` +
+            'no receipt delivered, no revenue booked',
+        );
+      };
+      res.on('finish', finish);
+      res.on('close', finish);
+      res.status(200).json({
+        receipt: 'paid',
+        engagement: engagement.id,
+        title: engagement.title,
+        amount_usd: engagement.amountUsd,
+        network: `Base (${network})`,
+        paid_to: payTo,
+        the_invoice:
+          'This on-chain settlement is the invoice for this engagement. The transaction hash is in the ' +
+          'x402 payment-response header of this reply and in your own wallet history; it is publicly ' +
+          'verifiable on BaseScan.',
+        issued_by: '0200project',
+        keep_this: 'The on-chain transaction is your proof of payment; nothing else is issued.',
+      });
+    });
+
+    app.get(routePath, (_req, res) => {
+      res.status(405).json({
+        error: 'Use POST.',
+        engagement: engagement.id,
+        title: engagement.title,
+        amount_usd: engagement.amountUsd,
+        example: `curl -X POST ${publicUrl}${routePath} (x402 payment required; an x402-capable client handles it automatically)`,
+      });
+    });
+  }
+
+  // An id we have not committed is not for sale, and the answer is identical
+  // whether the id is unknown or malformed, so a probe cannot enumerate live
+  // engagements by watching which ids answer differently. Registered after the
+  // concrete routes so a defined engagement always wins.
+  app.all('/engagement/:id', (_req, res) => {
+    res.status(404).json({
+      error: 'No such engagement.',
+      how: 'Engagements are issued by 0200project for a specific agreed deal. If you were quoted one, use the exact URL you were given.',
+      contact: 'contact@0200project.com',
     });
   });
 }
