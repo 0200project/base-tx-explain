@@ -81,7 +81,6 @@ MSG
     status=1
   fi
 done
-exit $status
 
 # ---- 4. company state on a public surface
 #
@@ -98,3 +97,5 @@ if [ -x scripts/public-surface-check.sh ]; then
     exit 1
   }
 fi
+
+exit $status
