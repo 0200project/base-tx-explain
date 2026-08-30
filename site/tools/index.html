@@ -5,7 +5,7 @@
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>base-transaction-decoder — Base Transaction Decoder API with Risk Flags</title>
-<meta name="description" content="Decode any Base mainnet transaction into plain English and strict JSON — action type, assets moved, risk flags. MCP server, 50 free calls a day per network, then $0.02 via x402.">
+<meta name="description" content="Decode any Base mainnet transaction into plain English and strict JSON — action type, assets moved, risk flags. MCP server, 50 free calls a day per IP, then $0.02 via x402.">
 <meta name="theme-color" content="#050505">
 <meta property="og:title" content="base-transaction-decoder — Base Transaction Decoder API">
 <meta property="og:description" content="Decode any Base transaction into plain English and strict JSON — action types, assets moved, risk flags. MCP + x402, no API key.">
@@ -30,12 +30,12 @@
   "url": "https://0200project.com/tools/",
   "description": "Deterministic Base mainnet transaction decoding for AI agents over MCP. One tool, explain_transaction(tx_hash), returns strict JSON.",
   "author": { "@type": "Organization", "name": "0200project", "url": "https://0200project.com/" },
-  "offers": { "@type": "Offer", "price": "0.02", "priceCurrency": "USD", "description": "50 free calls per network per day, then $0.02 per call in USDC on Base via x402. No account, no API key." },
+  "offers": { "@type": "Offer", "price": "0.02", "priceCurrency": "USD", "description": "50 free calls per IP address per day, then $0.02 per call in USDC on Base via x402. No account, no API key." },
   "softwareVersion": "0.1.1",
   "featureList": [
     "Plain-English summary of any Base mainnet transaction",
     "Strict JSON with 30 action types: swaps, transfers, NFT mints and sales, bridges, lending, staking, ERC-4337 bundles, attestations",
-    "Six evidence-based risk flags: unverified contract, unlimited approval, approval-for-all, known drainer match, first-time counterparty, reverted transaction",
+    "Eight evidence-based risk flags: unverified contract, unlimited approval, approval-for-all, known drainer match, first-time counterparty, reverted transaction",
     "Deterministic decode — no LLM in the response path",
     "MCP streamable-HTTP endpoint, pay-per-call via x402"
   ]
@@ -152,10 +152,10 @@
             <li>Agent-ready responses (MCP + x402)</li>
           </ul>
           <div class="tool-meta">
-            <span class="pill">v0.1.1</span>
+            <span class="pill">v0.1.4</span>
             <span class="pill">Base mainnet</span>
             <span class="pill">$0.02 per call</span>
-            <span class="pill">50 free calls a day per network</span>
+            <span class="pill">50 free calls a day per IP</span>
           </div>
           <p class="small faint" style="margin-top:1.25rem">Validated on 100 random live Base transactions before launch — 95 decoded to a specific action type, the rest to an honest partial, zero crashes.</p>
           <div class="tool-actions">

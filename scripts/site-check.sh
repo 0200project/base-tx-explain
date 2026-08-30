@@ -149,8 +149,15 @@ fi
 
 SRV_VER="$(printf '%s' "$HEALTH" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')"
 if [ -n "$SRV_VER" ]; then
-  STAMPS="$(grep -rhoE 'base-transaction-decoder v[0-9][0-9.]*' $SURFACES 2>/dev/null | sort -u || true)"
-  BADV="$(printf '%s\n' "$STAMPS" | grep -v "^base-transaction-decoder v${SRV_VER}$" | grep . || true)"
+  # Keep the FILENAME (-n, not -h): without it there is nothing to exclude the
+  # changelog by, and history's own v0.1.0 / v0.1.1 entries trip a check that is
+  # supposed to police LIVE claims. Broadening the pattern from the qualified
+  # "base-transaction-decoder vX" form to any vX.Y.Z is what exposed this --
+  # the narrow version had been silently certifying a bare "v0.1.1" pill on
+  # /tools/ that a cold reader found and this check never looked at.
+  BADV="$(grep -rnoE 'v[0-9]+\.[0-9]+\.[0-9]+' $SURFACES 2>/dev/null \
+          | grep -v '/changelog/' \
+          | grep -v ":v${SRV_VER}$" || true)"
   if [ -n "$BADV" ]; then
     fail "a page stamps a version the server is not serving (server: $SRV_VER)" \
       "$(printf '%s' "$BADV" | sed 's/^/        /')

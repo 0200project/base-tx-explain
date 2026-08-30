@@ -11,7 +11,15 @@
 
 ## API
 
+- Simplest call, no headers beyond content-type, no account:
+  POST https://api.0200project.com/explain
+  Content-Type: application/json
+  {"tx_hash": "0x..."}
+
 - MCP endpoint: POST https://api.0200project.com/mcp (streamable HTTP, stateless)
+  REQUIRED header, or the request is rejected before metering:
+  Accept: application/json, text/event-stream
+
 - OpenAPI: https://api.0200project.com/openapi.json
 - MCP registry name: io.github.0200project/base-transaction-decoder
 
@@ -21,4 +29,9 @@
 
 ## Pricing
 
-- 50 free calls per network per day, then $0.02 per call in USDC on Base via x402. No account, no API key.
+- 50 free calls per IP address per 24h, shared by everyone behind one address (an
+  office, a VPN exit, a CI runner all draw from the same allowance). Resets daily.
+- Then $0.02 per call in USDC on Base via x402, or $9 for a 30-day pass covering
+  10,000 calls. Rate limit 60 requests/minute. No account, no API key.
+- Risk checks fail open: read `checks` before drawing conclusions from an empty
+  `risk_flags`.
