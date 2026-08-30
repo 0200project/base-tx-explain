@@ -773,6 +773,28 @@ app.get('/robots.txt', (_req, res) => {
   res.status(200).type('text/plain').send('User-agent: *\nAllow: /\nDisallow: /dashboard\n');
 });
 
+/**
+ * 402index domain verification. Proves we control api.0200project.com by serving
+ * a hash they issued against a secret only we hold, which flips our accepted
+ * listing from `pending` to approved — and grants instant approval plus
+ * self-service editing for every future registration from this domain, so it is
+ * the domain's discovery path, not one listing.
+ *
+ * Their rules are exact and each one is a way this silently fails: served
+ * DIRECTLY (no redirect — so it lives here on the API host rather than being
+ * bounced to the site), text/plain, under 1KB, and NOTHING in the body but the
+ * hash. The trailing newline is deliberate and safe; the value is the only line.
+ *
+ * The hash is public by design — it is a challenge, not a credential. The paired
+ * secret is held by the session that opened the claim and is not in this repo.
+ */
+app.get('/.well-known/402index-verify.txt', (_req, res) => {
+  res
+    .status(200)
+    .type('text/plain')
+    .send('12a022149026afe3a8dea2576874428f64647a291120be9845029f09a4cee144\n');
+});
+
 // Discovery crawlers (x402scan among them) probe /favicon.ico for a site icon.
 app.get('/favicon.ico', (_req, res) => {
   res.status(200).type('image/png').set('Cache-Control', 'public, max-age=86400').send(FAVICON_PNG);
