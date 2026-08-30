@@ -43,7 +43,7 @@ direct invocation.
 removing the personal account from this machine's keyring:**
 
 ```sh
-gh auth logout --user alejandroaervante
+gh auth logout --user <the-personal-account>
 ```
 
 Then the wrong identity cannot be active because it does not exist here. No
