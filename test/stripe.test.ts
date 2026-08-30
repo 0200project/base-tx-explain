@@ -173,6 +173,22 @@ describe('delivery lookup', () => {
     expect(passForSubscription(sub)?.kind).toBe('subscription');
   });
 
+  it('keeps a subscription pass past the window so a day-30 CANCELLATION can still revoke it', () => {
+    // The cancellation branch (customer.subscription.deleted, index.ts) uses the
+    // SAME passForSubscription as renewal, so it carries the identical
+    // regression: if the 48h prune drops the mapping, a lapsed subscriber's pass
+    // can't be found, nothing is revoked, and they keep calling — the silent
+    // access leak the else-branch now logs. Guarded explicitly here, not only by
+    // the renewal test that happens to share the lookup.
+    const id = `cs_test_${Math.random().toString(36).slice(2, 12)}`;
+    const sub = `sub_${Math.random().toString(36).slice(2, 12)}`;
+    recordDelivery(id, mk({ kind: 'subscription', subscription_id: sub, delivered_at: Date.now() - 30 * 24 * 60 * 60 * 1000 }));
+    passForSession('cs_test_prune_trigger_c'); // any later lookup runs prune()
+    // A found pass is a token the handler can revoke; a null (pre-095fc2a) is a
+    // subscriber that keeps working access after cancelling.
+    expect(passForSubscription(sub)?.kind).toBe('subscription');
+  });
+
   it('still prunes an aged one-time pass — the exemption is subscription-only', () => {
     // The fix must not stop pruning one-time checkout sessions, whose 48h
     // window is correct; only subscription mappings are exempt.

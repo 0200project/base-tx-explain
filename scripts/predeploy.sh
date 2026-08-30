@@ -108,6 +108,23 @@ if [ "$SRV_MS" -ne "$PAGE_MS" ]; then
 fi
 echo "predeploy: buyer-stuck threshold agrees (${SRV_MS}ms server = ${PAGE_MS}ms page)"
 
+# Same one-invariant-across-two-files shape as the buyer-stuck check above, for
+# the recurring plan. If the pricing page SELLS a /month subscription, the
+# machine must be proven to keep the promise that page makes -- it says the plan
+# "cancels itself through Stripe" -- so the cancellation lifecycle must be
+# tested. This exists because a live $9/month link sat above a renewal path that
+# was 100% broken for its entire life (fixed in 095fc2a), purchasable the whole
+# time; zero subscribers was luck. An advertised subscription with no
+# cancellation test certifies a promise the machine may silently break.
+if grep -qiE '/ ?month' site/pricing/index.html; then
+  grep -rqE 'subscription\.deleted|CANCELLATION' test/ \
+    || fail "pricing page advertises a /month subscription, but no test covers
+  customer.subscription.deleted. The page promises the plan cancels itself; the
+  machine must be proven to revoke a cancelled subscriber's pass before it ships.
+  Add a cancellation test (test/stripe.test.ts) or remove the /month offer."
+  echo "predeploy: /month offer is live and its cancellation lifecycle is tested"
+fi
+
 bash scripts/retired-facts.sh || fail "a retired fact is still live in a tracked file"
 
 npx tsc --noEmit || fail "typecheck failed"

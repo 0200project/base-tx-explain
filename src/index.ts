@@ -943,6 +943,18 @@ function handleStripeWebhook(req: express.Request, res: express.Response): void 
       if (existing) {
         revokePass(existing.token);
         console.log(`[stripe] subscription ${subId.slice(0, 12)}... ended, pass revoked`);
+      } else {
+        // The silent sibling of the renewal branch below, and the one that
+        // leaks ACCESS rather than money: with no pass found, nothing is
+        // revoked, so a lapsed subscriber keeps calling — unseen, because until
+        // now this path logged nothing. 095fc2a made the subscription->pass
+        // mapping durable so a null here should be rare, but rare-and-silent is
+        // exactly how the renewal bug survived. Loud, so an operator can revoke
+        // by hand rather than discover it in a usage bill.
+        console.error(
+          `[stripe] SUBSCRIPTION CANCELLED for ${subId.slice(0, 12) || 'unknown'}... but no pass found. ` +
+            'A lapsed subscriber may still hold working access. Needs manual revoke.',
+        );
       }
     } else if (event.type === 'invoice.paid') {
       // Renewal. Without this a subscriber is charged a second month and their
