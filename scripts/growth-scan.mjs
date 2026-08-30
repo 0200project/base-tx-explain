@@ -97,7 +97,7 @@ function classifyText(text) {
 }
 
 // ---------------------------------------------------------------------------
-// Draft reply stubs. Style contract from docs/launch-posts.md: disclosure line
+// Draft reply stubs. Style contract from the private repo (project-0200 docs/base-tx-explain/engineering/launch-posts.md): disclosure line
 // always, no emoji, no hype adjectives, no em-dashes. These are STUBS: the
 // human edits them to fit the actual thread before posting.
 // ---------------------------------------------------------------------------

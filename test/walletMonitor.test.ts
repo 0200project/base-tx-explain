@@ -17,7 +17,7 @@ import { describe, expect, it, vi } from 'vitest';
  */
 
 const PAYOUT = '0xc41c4fed450674169af002b8b3cb47bd70a1958f';
-const BUDGET = '0x2E31f33744e26f3093Bc748f2B4eA1c5e3D06FC7';
+const BUDGET = '0x00000000000000000000000000000000000B0d67'; // fixture, not the real spend wallet
 
 /** Load the module with a controllable chain read and a fresh baseline. */
 async function load(balances: Record<string, number | Error>) {

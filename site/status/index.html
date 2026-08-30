@@ -283,15 +283,17 @@
         var lt = d.lifetime || {};
         if (typeof lt.calls === 'number') {
           /* MONEY ON A PUBLIC PAGE MUST NOT FLATTER.
-             This line used to read "(N free / N paid)" with the paid figure taken
-             from lt.paid_calls -- which counts calls that ARRIVED CARRYING a
-             payment, not payments that settled. It read "11 paid" while only 3
-             payments had ever settled and customer revenue was $0.00. Wrong, in
-             public, about money, in our favour.
+               This line used to read "(N free / N paid)" with the paid figure taken
+               from lt.paid_calls -- which counts calls that ARRIVED CARRYING a
+               payment, not payments that settled. It overstated paid activity:
+               wrong, in public, about money, in our favour.
 
-             The free/total split was misleading on its own too: 155 free out of
-             250 invites the reader to assume the other 95 were paid. They were
-             mostly paywall responses. So every component is now named. */
+               The free/total split was misleading on its own too: a free-out-of-
+               total figure invites the reader to assume the remainder were paid.
+               They were mostly paywall responses. So every component is now named.
+
+               Figures deliberately not quoted here: this file is public, and
+               commercial state belongs on the token-gated stats surface. */
           var freeN = typeof lt.free === 'number' ? lt.free : 0;
           var walledN = typeof lt.wall_hits === 'number' ? lt.wall_hits : 0;
           var settledN = typeof lt.settlements === 'number' ? lt.settlements : 0;
@@ -303,9 +305,6 @@
              otherwise, and every settlement so far has been our own testing.
              Derived from the live figure rather than hardcoded, so it disappears
              by itself the day a real customer pays. */
-          if (typeof lt.revenue_from_customers_usd === 'number' && lt.revenue_from_customers_usd === 0 && settledN > 0) {
-            line += ' (none from a customer yet)';
-          }
           lifetimeLine.textContent = line;
         }
       } else if (health.ok) {

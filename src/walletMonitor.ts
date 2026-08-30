@@ -29,8 +29,20 @@ import { client } from './rpc.js';
 
 /** Receives revenue. Any decrease at all is an incident: nothing spends from it. */
 const PAYOUT: Address = '0xc41c4fed450674169af002b8b3cb47bd70a1958f';
-/** Funds agent spending. A decrease is expected, but must match a logged expense. */
-const BUDGET: Address = '0x2E31f33744e26f3093Bc748f2B4eA1c5e3D06FC7';
+/**
+ * Funds agent spending. A decrease is expected, but must match a logged expense.
+ *
+ * FROM THE ENVIRONMENT, not from source. The payout address above is public by
+ * design — it ships in every payment challenge and a buyer cannot pay without
+ * it. This one is not. It is funded personally, so publishing it alongside a
+ * label saying what it does lets anyone walk its funding history backwards
+ * toward whoever tops it up. Set BUDGET_WALLET_ADDRESS as a Fly secret.
+ *
+ * Unset does NOT mean unmonitored-and-quiet: checkWallets reports the budget
+ * wallet as `unknown` with an alert, per this file's own rule that a monitor
+ * reporting calm when it is blind is worse than no monitor.
+ */
+const BUDGET: Address | null = (process.env.BUDGET_WALLET_ADDRESS as Address | undefined) ?? null;
 
 const USDC: Address = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
 const BALANCE_ABI = [
@@ -180,7 +192,23 @@ async function readOne(role: WalletRole, address: Address): Promise<WalletReadin
  * process it monitors is worse than no monitor.
  */
 export async function checkWallets(): Promise<WalletMonitorSnapshot> {
-  const wallets = await Promise.all([readOne('payout', PAYOUT), readOne('budget', BUDGET)]);
+  const wallets = await Promise.all([
+    readOne('payout', PAYOUT),
+    BUDGET
+      ? readOne('budget', BUDGET)
+      : Promise.resolve<WalletReading>({
+          role: 'budget',
+          address: '0x0000000000000000000000000000000000000000',
+          usdc: null,
+          previous_usdc: null,
+          status: 'unknown',
+          change_usd: null,
+          last_success_at: null,
+          alert:
+            'BUDGET_WALLET_ADDRESS is not set, so the spend wallet is NOT being monitored. ' +
+            'This is UNKNOWN, not steady: a drain would not be detected. Set the Fly secret.',
+        }),
+  ]);
   persist();
 
   const readable = wallets.filter((w) => w.usdc !== null);
