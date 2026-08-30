@@ -1475,7 +1475,7 @@ function send402(res: express.Response): void {
   // base64 header a strict subset of the JSON body, and under x402 v2 the
   // header is the canonical carrier — so the client doing the conforming thing,
   // reading the header alone, was the only one that lost the free-tier notice.
-  // Backwards, and reported by Circadian who found it by running their own
+  // Backwards, and reported by an external conformance tester who found it by running their own
   // conformance checker over our envelope.
   //
   // Measured rather than assumed: the hint adds roughly 950 base64 bytes, for a

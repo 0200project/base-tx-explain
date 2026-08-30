@@ -57,7 +57,7 @@ export const KNOWN_NON_REVENUE: KnownNonRevenue[] = [
     booked: false,
   },
   {
-    // Circadian evaluated the pass and declined to buy, with numbers: 24 hashes
+    // An external evaluator assessed the pass and declined to buy, with numbers:
     // in 24 days, roughly $7.30/year at per-call, "the answer is no, with no
     // hedging." They then offered twice, unprompted, to run one paid call as a
     // technical probe of the in-band MCP path, which had never carried a real
@@ -65,7 +65,7 @@ export const KNOWN_NON_REVENUE: KnownNonRevenue[] = [
     // first sale a transaction the payer explicitly said was not one.
     tx: '0x6ce5e3948c9c6b8e0ef8413f3c29623163bb7b58155eda90a67464f3bb119110',
     amount_usd: 0.02,
-    why: 'Pre-arranged technical probe by Circadian, who declined to buy. A favour, not a sale.',
+    why: 'Pre-arranged technical probe by an external evaluator, who declined to buy. A favour, not a sale.',
     // Settled through the normal path, so the ledger did book it as revenue.
     booked: true,
   },
@@ -100,7 +100,7 @@ export const KNOWN_NON_REVENUE: KnownNonRevenue[] = [
     // sale — the human ruling, written down, exactly like the $0.02 above.
     //
     // Booked the same day the FIRST REAL customer settlement was promoted
-    // (kindrat86, $0.02, tx 0x325557e1...). Kept scrupulously apart: that $0.02
+    // (an external payer, $0.02, tx 0x325557e1...). Kept scrupulously apart: that $0.02
     // is customer revenue; this $9.00 is ours. Conflating them would have put
     // the founder's own money on the board as a sale, which is the precise
     // failure this list exists to prevent.

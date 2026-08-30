@@ -74,7 +74,7 @@ Its own comment reads: *"Per MCP transport spec, supports: 1. structuredContent
 (`x402/payment`) and the settlement receipt back (`x402/payment-response`).
 Expecting the challenge there conflates the receipt with the challenge.
 
-**Empirical proof it is not blocking:** Circadian, an external party with their
+**Empirical proof it is not blocking:** an external party with their
 own client, completed a real settled payment through this exact path.
 
 **What IS true, and worth saying:** a *plain* MCP client with no x402 wrapper
@@ -112,7 +112,7 @@ isError, which is per spec"** — not "we have a bug here."
 ## If they engage technically
 
 Loop in Platform rather than explaining the flow. A working artifact beats an
-accurate description: Circadian verified our decode field by field before saying
+accurate description: An external evaluator verified our decode field by field before saying
 anything, and a technical prospect will do the same.
 
 ---
@@ -174,7 +174,7 @@ recipient-and-amount history:
 
 ### Two honesty constraints on using this
 
-**Do not call it a customer payment.** It is Circadian's pre-arranged technical
+**Do not call it a customer payment.** It is an external evaluator's pre-arranged technical
 probe by a party who evaluated us and declined to buy. It is a real, settled,
 on-chain payment and fine as a decode example — it is not a sale, and
 `knownNonRevenue.ts` says so.

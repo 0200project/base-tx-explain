@@ -1,7 +1,7 @@
 /**
  * Make the in-band MCP payment path forgiving about how a payment arrives.
  *
- * Circadian ran the first real funded payment ever to cross this path and
+ * An external party ran the first real funded payment ever to cross this path and
  * reported three usability defects from the payer's side. Two are fixed here.
  *
  * THE EXPENSIVE ONE. The payment at `_meta["x402/payment"]` must be a JSON

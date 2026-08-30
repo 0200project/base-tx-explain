@@ -207,7 +207,7 @@ describe('settlement attribution in the ledger', () => {
    */
   it('a documented non-revenue arrival is RESOLVED, not awaiting anyone', async () => {
     const { usage } = await load();
-    // The real Circadian probe hash, as it appears in the production ledger.
+    // The real external-probe hash, as it appears in the production ledger.
     settle(usage, {
       amount_usd: 0.02,
       tx: '0x6ce5e3948c9c6b8e0ef8413f3c29623163bb7b58155eda90a67464f3bb119110',

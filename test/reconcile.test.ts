@@ -244,7 +244,7 @@ describe('known non-revenue must not read as unbooked revenue', () => {
    * bug was found by curling /stats and reading the sentence rather than by any
    * test going red.
    *
-   * balance $0.04 · booked $0.02 (the Circadian probe) · nothing swept. Every
+   * balance $0.04 · booked $0.02 (the external probe) · nothing swept. Every
    * cent is accounted for and nothing is missing, yet the reconciler reported
    * `overbooked` with "USDC was swept out of the payout wallet without being
    * declared" — a permanent, self-inflicted drain alarm on the surface that is
@@ -260,7 +260,7 @@ describe('known non-revenue must not read as unbooked revenue', () => {
     // time the re-reasoning records a milestone. Two settlements landed since
     // the last one: the founder's $9 buy_pass self-test (tx 0x5606d4f2...,
     // booked known-non-revenue) and — the first REAL customer payment in the
-    // company's life — kindrat86's $0.02 (tx 0x325557e1..., promoted to
+    // company's life — an external payer's $0.02 (tx 0x325557e1..., promoted to
     // attributed revenue). Known-non-revenue is now $9.06; customer revenue is
     // $0.02; the payout wallet holds $9.08, which is exactly those two sums with
     // nothing swept. The property is unchanged — every cent accounted for, so

@@ -2,7 +2,7 @@
  * Per-engagement x402 resources: a service sale (a diagnosis, an integration) paid
  * at a CUSTOM amount over the same challenge -> pay -> on-chain-settlement flow
  * the product uses. The settlement transaction IS the invoice — the same
- * cryptographic receipt kindrat86 self-verified, priced to a quote instead of a
+ * cryptographic receipt an external payer self-verified, priced to a quote instead of a
  * per-call rate.
  *
  * WHY A COMMITTED REGISTRY rather than an open "pay any amount" endpoint:
@@ -17,7 +17,7 @@
  *    arithmetic between the quote and the challenge.
  *  - the challenge is reachable by anyone who guesses the slug, so an id or a
  *    title must NEVER carry the customer's identity: use an OPAQUE slug
- *    (e.g. `pa-7f3c91`, not `payai-divergence`) and keep the buyer's name out of
+ *    (e.g. `pa-7f3c91`, not a buyer-named slug) and keep the buyer's name out of
  *    the title. The unpaid wire already omits title and summary; opaque slugs
  *    keep the URL itself from naming who bought.
  *  - once paid, an engagement is CLOSED: its route refuses a second charge and
@@ -51,7 +51,7 @@ const SLUG = /^[a-z0-9][a-z0-9-]{1,62}[a-z0-9]$/;
  * `demo` is the standing acceptance-test target: a $1 proof the founder can pay
  * spend-wallet -> payout-wallet to demonstrate the whole flow (marked
  * non-revenue), and the artifact a pitch can point at — "here is exactly what
- * paying us looks like, receipt and all." Real engagements (PayAI, Agent402)
+ * paying us looks like, receipt and all." Real engagements
  * are added when they close, at their quoted amount.
  */
 export const ENGAGEMENTS: Engagement[] = [

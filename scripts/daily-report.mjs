@@ -38,11 +38,11 @@ const PRE_MARKER_CLIENTS = 6;
  */
 /** Our own test payments: never count these as customer revenue. */
 const KNOWN_PAYMENT_TXS = new Set([
-  '0x2a2aaa3a79c3a394081df1a642046c88349a1397b27d97d8cb2292d71e61939f', // founder's $0.02 PayAI test, 2026-08-20 17:08 (pre-ledger)
+  '0x2a2aaa3a79c3a394081df1a642046c88349a1397b27d97d8cb2292d71e61939f', // founder's own $0.02 facilitator test, 2026-08-20 17:08 (pre-ledger)
 ]);
 /**
  * Real, externally-funded payments that are still not revenue: a known
- * counterparty running a deliberate technical favor (e.g. Circadian-agent
+ * counterparty running a deliberate technical favor (e.g. an external evaluator
  * exercising the in-band settlement path unprompted, 2026-08-21 - see
  * the private finance ledger, booked at $0.00 there for the same reason). These arrive
  * from a genuine external address, so they must NOT be lumped into
@@ -52,7 +52,7 @@ const KNOWN_PAYMENT_TXS = new Set([
  * settles, with the same comment discipline as above.
  */
 const KNOWN_FAVOR_TXS = new Set([
-  '0x6ce5e3948c9c6b8e0ef8413f3c29623163bb7b58155eda90a67464f3bb119110', // Circadian-agent in-band settlement probe, 2026-08-21 17:14:49Z, unprompted, not a sale - confirmed by them directly
+  '0x6ce5e3948c9c6b8e0ef8413f3c29623163bb7b58155eda90a67464f3bb119110', // external evaluator's in-band settlement probe, 2026-08-21 17:14:49Z, unprompted, not a sale - confirmed by them directly
 ]);
 
 const today = new Date().toISOString().slice(0, 10);

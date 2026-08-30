@@ -67,6 +67,18 @@ if [ "$WHOAMI" != "$IDENTITY_NAME" ]; then
   pseudonymous org. Run: gh auth switch --user $IDENTITY_NAME"
 fi
 
+# ---- 3b. company state on a public surface
+#
+# THIS IS A SECOND PUBLISHING PATH. It rsyncs site/ into a DIFFERENT repo and
+# pushes there, so base-tx-explain's pre-push hook never sees it. A gate on one
+# push path is not a gate on publishing — which is the whole failure this check
+# exists to stop, repeated one level up.
+if [ -x scripts/public-surface-check.sh ]; then
+  sh scripts/public-surface-check.sh || die "company state would be published to the public site.
+  Fix the hits above. If a term is genuinely product, take it off the denylist
+  deliberately rather than working around this check."
+fi
+
 # ---- 4. a fresh clone every time. A stale one silently deploys against an old
 #         base and can revert somebody else's push on top of it.
 rm -rf "$WORK"
