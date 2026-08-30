@@ -29,10 +29,13 @@ const PAGE_CAP = 1_000;
 
 // --- Outbound request discipline for the one flaky upstream this check rides on ---
 //
-// Blockscout's public keyless API is the only working source of Base account
-// history (Etherscan's Base account endpoints need a paid tier, so the fallback
-// below is inert unless ETHERSCAN_API_KEY is a paid key). Measured behaviour on
-// 2026-08-30: it rate-limits us (HTTP 429) the moment we burst, and the 429
+// Blockscout is our source of Base account history (Etherscan's Base account
+// endpoints need a paid tier, so that fallback is inert unless ETHERSCAN_API_KEY
+// is a paid key). WHICH Blockscout depends on whether a key is configured — see
+// blockscoutRequest below; the keyless legacy host allows only 3 requests per
+// MINUTE per IP, the keyed PRO host is orders of magnitude higher.
+//
+// Either way the upstream rate-limits (HTTP 429) when we burst, and the 429
 // window is CORRELATED — retrying inside it keeps failing until the window
 // resets. It also returns transient 500s. Left unmanaged this made this check
 // the only one dark ~half the time, because a single decode fires up to CHECK_CAP
@@ -94,9 +97,9 @@ export async function isFirstInteraction(
   const cached = cache.get(cacheKey);
   if (cached !== undefined) return cached;
 
+  const req = blockscoutRequest(sender, beforeBlock);
   const history =
-    (await fetchTxListResilient(blockscoutUrl(sender, beforeBlock))) ??
-    (await fetchEtherscan(sender, beforeBlock));
+    (await fetchTxListResilient(req.url, req.headers)) ?? (await fetchEtherscan(sender, beforeBlock));
 
   let verdict: FirstInteractionResult;
   if (history === null) {
@@ -120,17 +123,39 @@ interface TxEntry {
   to?: string;
 }
 
-function blockscoutUrl(sender: Address, beforeBlock: bigint): string {
-  // An optional Blockscout API key lifts the per-key rate limit. It is not
-  // required — the endpoint is keyless — but when BLOCKSCOUT_API_KEY is set the
-  // burst ceiling that makes this check flaky rises with it. No key: same call,
-  // subject to the shared public limit the scheduling above is built to respect.
+/**
+ * Where to ask, and with what credentials.
+ *
+ * TWO DIFFERENT SERVICES, and picking the wrong one is why the first attempt at
+ * this fix did nothing. `base.blockscout.com/api` is the legacy per-instance
+ * endpoint: keyless, and rate-limited to THREE REQUESTS PER MINUTE per IP —
+ * below what a single decode needs, since one decode can fire up to CHECK_CAP
+ * counterparty lookups. Blockscout's current product is the multichain PRO API on
+ * a DIFFERENT HOST (`api.blockscout.com`), whose keys are free and which their
+ * own docs say does not work with the old routes. Measured from production
+ * 2026-08-31: a PRO key against the legacy host changed nothing (still 429s); the
+ * same key against `api.blockscout.com/v2/api?chain_id=8453` returned 200 with
+ * the identical Etherscan-shaped `result` array this module already parses.
+ *
+ * So: with a key we use the PRO host, and the response shape is unchanged. With
+ * no key we fall back to the legacy host, which still answers — just rarely —
+ * rather than failing closed and pretending the check ran.
+ *
+ * The key goes in a HEADER, never the query string: URLs end up in logs, traces
+ * and error messages, and a credential does not belong in any of them.
+ */
+function blockscoutRequest(sender: Address, beforeBlock: bigint): { url: string; headers: Record<string, string> } {
   const key = process.env.BLOCKSCOUT_API_KEY;
-  return (
-    `https://base.blockscout.com/api?module=account&action=txlist&address=${sender}` +
-    `&startblock=0&endblock=${(beforeBlock - 1n).toString()}&page=1&offset=${PAGE_CAP}&sort=asc` +
-    (key ? `&apikey=${key}` : '')
-  );
+  const query =
+    `module=account&action=txlist&address=${sender}` +
+    `&startblock=0&endblock=${(beforeBlock - 1n).toString()}&page=1&offset=${PAGE_CAP}&sort=asc`;
+  if (key) {
+    return {
+      url: `https://api.blockscout.com/v2/api?chain_id=8453&${query}`,
+      headers: { authorization: `Bearer ${key}` },
+    };
+  }
+  return { url: `https://base.blockscout.com/api?${query}`, headers: {} };
 }
 
 /**
@@ -144,9 +169,9 @@ interface Attempt {
   transient: boolean;
 }
 
-async function attemptTxList(url: string): Promise<Attempt> {
+async function attemptTxList(url: string, headers: Record<string, string>): Promise<Attempt> {
   try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(PER_ATTEMPT_TIMEOUT_MS) });
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(PER_ATTEMPT_TIMEOUT_MS) });
     if (!res.ok) {
       // 429 (rate limited) and 5xx (server wobble) may clear on a spaced retry;
       // any other non-2xx is a permanent no from this source.
@@ -174,10 +199,10 @@ async function attemptTxList(url: string): Promise<Attempt> {
  * list, [] for an empty history, or null when every attempt failed (the caller
  * reports that as `unreachable`). Never throws.
  */
-async function fetchTxListResilient(url: string): Promise<TxEntry[] | null> {
+async function fetchTxListResilient(url: string, headers: Record<string, string> = {}): Promise<TxEntry[] | null> {
   const deadline = Date.now() + OVERALL_DEADLINE_MS;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const { result, transient } = await schedule(() => attemptTxList(url));
+    const { result, transient } = await schedule(() => attemptTxList(url, headers));
     if (!transient) return result; // a definite answer: array, empty, or permanent no
     if (attempt >= MAX_ATTEMPTS || Date.now() >= deadline) break;
     // Spaced backoff with jitter so concurrent lookups do not retry in lockstep.

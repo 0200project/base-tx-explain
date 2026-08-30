@@ -644,6 +644,17 @@ function getServer(charge: boolean, ip: string, passToken: string | null = null)
       title: 'Explain Base transaction',
       description: TOOL_DESCRIPTION,
       inputSchema: INPUT_SHAPE,
+      // Behaviour hints an agent (and the connector catalogs) read BEFORE calling.
+      // readOnly: we decode an already-mined transaction and return JSON; nothing
+      // in the caller's world changes. idempotent: a mined transaction is
+      // immutable, so the same hash returns the same decode — safe to retry, which
+      // matters because our upstreams degrade and a retry is the honest response.
+      // openWorld: we read external systems (Base RPC, Sourcify, Blockscout).
+      annotations: {
+        readOnlyHint: true,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
     },
     handler as Parameters<typeof server.registerTool>[2],
   );
@@ -683,6 +694,27 @@ function getServer(charge: boolean, ip: string, passToken: string | null = null)
           : `Buy a ${PASS_DAYS}-day pass`,
         description,
         inputSchema: {},
+        // NOT read-only: this mints a pass and settles a $9 USDC payment.
+        //
+        // idempotentHint FALSE is the load-bearing one, and it is a money-safety
+        // statement, not a formality: passes DO NOT STACK (see the description
+        // above), so a second call buys a SECOND pass and charges another $9. An
+        // agent that assumes idempotency and retries a timeout would double-charge
+        // a real customer — the exact front-door overcharge the pass description
+        // was rewritten to prevent. Say it in the annotations too, because an
+        // agent reads these before it reads prose.
+        //
+        // destructiveHint FALSE: the MCP default for a non-read-only tool is TRUE,
+        // and that default would be wrong here. This CREATES a pass; it overwrites
+        // and deletes nothing, and we never hold the caller's keys or move their
+        // funds ourselves — the caller signs their own USDC authorization.
+        // openWorld: it talks to the x402 facilitator and settles on chain.
+        annotations: {
+          readOnlyHint: false,
+          destructiveHint: false,
+          idempotentHint: false,
+          openWorldHint: true,
+        },
       },
       buyPassHandler as Parameters<typeof server.registerTool>[2],
     );
