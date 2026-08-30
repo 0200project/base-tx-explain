@@ -56,6 +56,17 @@ check "first 10 calls|10 free calls|10 calls per client|ten free calls|first ten
       "^site/changelog/index.html$|^src/freeTier.ts$|^scripts/site-check.sh$|^scripts/retired-facts.sh$" \
       "trial is 50/24h, not 10 (changelog history and the freeTier WHY-comment are exempt by job)"
 
+# Free tier was described as per-NETWORK until 2026-08-29. It was ALWAYS metered
+# per IP address (IPv6 /64); "per network" was a misdescription, never a rule we
+# had. This entry is late: the fact retired on 2026-08-26 and nobody added it
+# here, so this sweep ran clean for three days while /terms/ (a legal page), the
+# README's bolded headline, the changelog, and the 402 body the server sends a
+# blocked visitor all stated it. The mechanism was sound and the entry was never
+# made -- which is the failure mode this file is most exposed to.
+check "(each|per|every) network|network gets" \
+      "^scripts/site-check.sh$|^scripts/retired-facts.sh$" \
+      "the allowance is per IP address (IPv6 /64), never per network"
+
 # Registry entry renamed 2026-08-27; the old name is DELETED from the registry.
 check "io.github.0200project/base-tx-explain" \
       "^site/changelog/index.html$|^scripts/retired-facts.sh$" \

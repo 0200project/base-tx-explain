@@ -100,7 +100,7 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
             // claim to. It says what is actually true — this address is out —
             // and names the reason they might not recognise, and when it lifts.
             free_tier:
-              `The first ${freeCalls} calls from each network are free, and this network has used them. ` +
+              `The first ${freeCalls} calls from each IP address are free, and this address has used them. ` +
               'If you have not called us before, someone sharing your IP address, office network, VPN ' +
               'or mobile carrier likely has. The allowance resets within 24 hours.',
             price_usd: priceUsd,
