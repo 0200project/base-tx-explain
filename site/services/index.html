@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>document.documentElement.classList.add('js')</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Engagements — 0200project</title>
+<meta name="description" content="Two fixed-price x402 engagements: a settlement diagnosis delivered in 72 hours, and an integration where acceptance is a real settlement landing on your own payout wallet. Paid on delivery, in USDC.">
+<meta name="theme-color" content="#050505">
+<meta property="og:title" content="Engagements — 0200project">
+<meta property="og:description" content="Fixed price, fixed scope, paid on delivery. Acceptance is a real settlement on your wallet, not our opinion.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="0200project">
+<meta property="og:image" content="https://0200project.com/assets/og.png">
+<meta property="og:url" content="https://0200project.com/services/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://0200project.com/services/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+  /* "What this is not" is a list of DENIALS. The .checks class draws an
+     affirmative blue tick, so every line rendered as "yes: not a review that
+     issues a verdict" -- the mark contradicting the sentence it sits beside.
+     A dash reads as what it is: a boundary, not an endorsement. */
+  .nots { list-style: none; }
+  .nots li {
+    position: relative;
+    padding-left: 1.75rem;
+    color: var(--fg-muted);
+  }
+  .nots li + li { margin-top: 0.625rem; }
+  .nots li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.72em;
+    width: 0.75rem;
+    height: 1px;
+    background: var(--border-strong);
+  }
+  .pr-faq { margin-top: 3rem; }
+
+.pay-steps { list-style: none; counter-reset: pay; }
+  .pay-steps li {
+    counter-increment: pay;
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    gap: 0.875rem;
+    padding-block: 0.875rem;
+  }
+  .pay-steps li + li { border-top: 1px solid var(--border); }
+  .pay-steps li::before {
+    content: "0" counter(pay);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--fg-faint);
+    padding-top: 0.2rem;
+  }
+  .pay-steps strong { display: block; color: var(--fg); font-weight: 500; }
+  .pay-steps span { color: var(--fg-muted); font-size: 0.875rem; }
+
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="0200project home">
+      <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+      0200project
+    </a>
+    <button class="nav-toggle" aria-expanded="false" aria-label="Menu" aria-controls="site-menu">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/playground/">Playground</a></li>
+      <li><a href="/docs/">Docs</a></li>
+      <li><a href="/pricing/">Pricing</a></li>
+      <li class="nav-cta"><a class="btn btn-ghost btn-sm" href="https://github.com/0200project">GitHub</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/playground/">Try it free</a></li>
+    </ul></nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="page-hero">
+    <div class="container">
+      <span class="eyebrow">Engagements</span>
+      <h1 class="h-section">We run an x402 seller in production. Sometimes that&rsquo;s worth renting.</h1>
+      <p class="lead">Two fixed-price engagements, both paid on delivery. What&rsquo;s for sale is time and a production vantage point &mdash; not expertise you couldn&rsquo;t assemble yourself, and not an opinion about whether your system is sound.</p>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0">
+    <div class="container">
+
+      <div class="panel pr-callout">
+        <p><strong>The arrangement, before the detail:</strong> fixed scope, fixed price, and you pay after you have the thing. If we don&rsquo;t deliver what the engagement describes, you owe nothing and there is nothing to cancel &mdash; no deposit, no payment method held, nothing that recurs. <a href="/pay/">How payment works &rarr;</a></p>
+      </div>
+
+      <h2 class="h-card" style="margin-top:3rem">Settlement diagnosis</h2>
+      <p class="pg-note" style="max-width:44rem;margin-top:0.5rem">$250&ndash;$500 in USDC &middot; delivered within 72 hours of a yes</p>
+
+      <div class="panel" style="margin-top:1rem">
+        <div class="panel-head"><span>what you get</span><span>a written document</span></div>
+        <div style="padding:1.25rem">
+          <p class="muted" style="max-width:44rem">Everything we have observed about a specific failure, written up in one place: the payload class that gets rejected and the exact rejection as the SDK surfaces it, the divergences between facilitators that only a merchant running more than one would ever see, and the failure shapes we&rsquo;ve learned to tell apart in production &mdash; verify-stage rejection, settle-stage failure, and the quiet one where a call is served but never settles.</p>
+          <p class="muted" style="max-width:44rem;margin-top:0.75rem">It includes the dead ends. What we ruled out, what we tried that didn&rsquo;t work, and where our own instrumentation was blind. <strong style="color:var(--fg)">These are observations with the evidence attached, not a judgement about whether your integration is correct</strong> &mdash; and the absence of an observation is not a statement that nothing is there.</p>
+        </div>
+      </div>
+
+      <p class="pg-note" style="max-width:44rem;margin-top:1rem">A fair objection, pre-answered: some of this resembles bug reports you&rsquo;d expect for free. The free version is the issues we file as a merchant anyway, and those keep coming either way. <strong style="color:var(--fg)">What&rsquo;s for sale is the whole record in one document</strong> &mdash; payload-level, with the dead ends and the mitigations &mdash; which nobody writes up as an issue.</p>
+
+      <h2 class="h-card" style="margin-top:3.5rem">Integration, proven by settlement</h2>
+      <p class="pg-note" style="max-width:44rem;margin-top:0.5rem">$1,500&ndash;$2,000 fixed &middot; one week</p>
+
+      <div class="panel" style="margin-top:1rem">
+        <div class="panel-head"><span>what you get</span><span>your API, selling over x402</span></div>
+        <div style="padding:1.25rem">
+          <p class="muted" style="max-width:44rem">Your existing API sells over x402: the challenge, the facilitator wiring, settlement, reconciliation, and a payer harness so you can prove it yourself afterwards without asking us.</p>
+          <p class="muted" style="max-width:44rem;margin-top:0.75rem"><strong style="color:var(--fg-strong)">Acceptance is unfakeable and it isn&rsquo;t ours to declare.</strong> The engagement is done when a real settlement lands on your own payout wallet. The receipt is the acceptance test. If that never happens, you owe nothing.</p>
+        </div>
+      </div>
+
+      <h2 class="h-card" style="margin-top:2.5rem">How the work reaches you</h2>
+      <ul class="checks" style="margin-top:1rem">
+        <li><strong>As pull requests you review and deploy yourself</strong>, wherever it touches your code</li>
+        <li><strong>We never deploy to your production.</strong> A payment path carrying your settled revenue should stay under exactly one party&rsquo;s control, and that party is not us</li>
+        <li>With a rollback note, because a change you can&rsquo;t reverse isn&rsquo;t one you should merge</li>
+      </ul>
+
+      <h2 class="h-card" style="margin-top:2.5rem">What this is not</h2>
+      <ul class="nots" style="margin-top:1rem">
+        <li><strong>Not a review that issues a verdict.</strong> We report what we observed with the evidence for each observation. Nothing here certifies that a system is correct, safe, or compliant, and no absence of a finding should be read as clearance</li>
+        <li><strong>Not a retainer, and not ongoing.</strong> Each engagement is one agreed amount, once. Nothing renews, because nothing is held that could renew it</li>
+        <li><strong>Not a promise of availability.</strong> We don&rsquo;t offer response times or uptime commitments on this work, and we&rsquo;d rather say so than imply otherwise</li>
+        <li><strong>Not something you couldn&rsquo;t do yourself.</strong> You could. What&rsquo;s for sale is it being done this week while you build product &mdash; and if that isn&rsquo;t worth the money right now, that&rsquo;s a complete answer</li>
+      </ul>
+
+      <div class="pr-faq">
+        <h3>Who is doing this?</h3>
+        <p>The people who run <a href="/">base-transaction-decoder</a> &mdash; a live x402 seller on Base, settling through a keyless facilitator with a second configured as fallback, in production since August. The vantage point is the product: things only visible to a merchant actually taking payments through more than one stack. We are a small operation and we don&rsquo;t pretend otherwise.</p>
+
+        <h3>Can I see evidence of how you work?</h3>
+        <p>Yes, on request. A third party ran our public payer harness end to end against us and published their own report of the experience with the on-chain settlement; separately, an independent conformance tester published a case study of our fix turnaround after putting us through their conformance pass. We&rsquo;ll send both links if you ask &mdash; we&rsquo;d rather hand them to you directly than point the whole internet at someone else&rsquo;s thread.</p>
+
+        <h3>How do I pay?</h3>
+        <p>USDC on Base, settled on-chain over x402 &mdash; the settlement receipt is the invoice. Payment is due on delivery, never before. <a href="/pay/">The mechanics are here</a>, including the part that actually takes time if you&rsquo;ve never held USDC on Base.</p>
+
+        <h3>What if it goes wrong?</h3>
+        <p>You owe nothing for work you didn&rsquo;t receive, on either engagement. If money has moved and you didn&rsquo;t get what you paid for, that&rsquo;s ours to fix &mdash; email <a href="mailto:contact@0200project.com">contact@0200project.com</a>.</p>
+      </div>
+
+      <div class="pr-actions" style="margin-top:2.5rem">
+        <a class="btn btn-primary" href="mailto:contact@0200project.com?subject=Engagement%20enquiry">Start a conversation</a>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/" aria-label="0200project home">
+          <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+          0200project
+        </a>
+      </div>
+      <nav aria-label="Product">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/tools/">Tools</a></li>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/docs/#request-format">API reference</a></li>
+          <li><a href="/pricing/">Pricing</a></li>
+          <li><a href="/changelog/">Changelog</a></li>
+          <li><a href="/faq/">FAQ</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Developers">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="/playground/">Playground</a></li>
+          <li><a href="https://github.com/0200project">GitHub</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-transaction-decoder">MCP Registry</a></li>
+          <li><a href="/status/">Status</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Company">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/#about">About</a></li>
+          <li><a href="/security/">Security</a></li>
+          <li><a href="https://github.com/0200project/base-tx-explain/issues">Support</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 0200project <span class="faint">&middot;</span> <span class="mono">base-transaction-decoder v0.1.3 &middot; Base mainnet</span></span>
+      <a class="pill footer-status" href="/status/"><span class="dot"></span><span id="ft-status">Checking status&hellip;</span></a>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/site.js" defer></script>
+</body>
+</html>
