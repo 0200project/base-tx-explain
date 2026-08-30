@@ -96,9 +96,13 @@ for label, pat, why in CHECKS:
 sys.exit(1 if bad else 0)
 PYEOF
 
-# 4. USDC must lead. A card/fiat mention above $600 breaks pseudonymity.
+# 4. USDC must LEAD. What is banned is a fiat RAIL on the page -- a Stripe
+#    link or a "pay with card" CTA -- not the honest sentence that fiat can be
+#    arranged. The original rule said "never above $600"; ruling B (named
+#    counterparties, ~$2k) superseded it, and this comment was itself stale
+#    within hours of being written.
 if ! grep -qi 'USDC' "$f"; then
-  bad "no USDC path on the page" "Fiat above \$600 triggers W-9/KYC/MSA. Lead with on-chain."
+  bad "no USDC path on the page" "USDC should lead: it settles in seconds and needs no account with us."
 else ok "USDC path present"; fi
 if python3 -c "
 import re,sys
@@ -108,7 +112,11 @@ b=re.sub(r'<(script|style)\\b[^>]*>.*?</\\1>',' ',b,flags=re.S|re.I)
 t=re.sub(r'<[^>]+>',' ',b)
 sys.exit(0 if re.search(r'stripe|pay with card|credit card',t,re.I) else 1)
 "; then
-  bad "fiat rail referenced" "Allowed only below \$600 and never as the lead. Check the price."
+  bad "fiat rail referenced" "A fiat RAIL (a Stripe link, a card CTA) must not be offered on the page.
+        Saying fiat can be arranged on request is fine and is now policy --
+        the founder ruled identity exposure acceptable for named
+        counterparties at ~\$2k, which superseded the blanket \$600 line this
+        check was written under. Our own gates go stale too."
 else ok "no fiat rail referenced"; fi
 
 # 5. every slot filled
