@@ -16,6 +16,17 @@
 # silently skipping the half that matters most.
 set -e
 FAIL=0
+# GUARD THE INVOCATION. `git grep` is relative to the current repo, so running
+# this from the PRIVATE repo scans the private tree — where every denylisted
+# term legitimately lives — and produces a screenful of false BLOCKs. A gate
+# that cries wolf when misinvoked gets distrusted, so refuse instead.
+ORIGIN=$(git remote get-url origin 2>/dev/null || echo '')
+case "$ORIGIN" in
+  *base-tx-explain*) : ;;
+  *) echo "  REFUSED: this checks the PUBLIC base-tx-explain repo, but origin is"
+     echo "           '${ORIGIN:-<none>}'. cd there and run it again."
+     exit 2 ;;
+esac
 DENY="${NEVER_PUBLISH_FILE:-$HOME/Projects/project-0200/ops/never-publish.txt}"
 say() { printf '  %-7s %s\n' "$1" "$2"; }
 
