@@ -257,6 +257,47 @@ else
   done
 fi
 
+# ------------------------------------------------------- our own dead links
+#
+# A rename updates the CLAIM and leaves the THING behind. The 2026-08-27 rename
+# repointed the site at apify.com/0200project/base-transaction-decoder while the
+# Apify actor was never renamed and still lives at .../base-tx-explain. The site
+# then shipped a 404 for three days on the PRICING page -- specifically the
+# "have a card and no wallet at all?" button, which is the only fiat door for a
+# buyer without USDC. Nothing checked it, because the internal-link checks only
+# look at paths under site/ and a self-owned URL on another host is neither
+# internal nor a stranger's problem.
+#
+# Scope is deliberately OUR properties only. A gate that pings every external
+# link on the site flakes on someone else's downtime and gets ignored; these are
+# the links that rot from our OWN actions, and they are the ones a buyer follows.
+# 403 counts as alive: hosts cloak from scripted clients, and a cloak is not a
+# missing page.
+
+OURS="$(grep -rhoE 'https://(apify\.com|github\.com)/0200project[A-Za-z0-9/._-]*' $SURFACES 2>/dev/null \
+        | sed 's/[.,)]*$//' | sort -u || true)"
+if [ -z "$OURS" ]; then
+  pass "no self-owned external links to verify"
+else
+  DEAD=""
+  for u in $OURS; do
+    code="$(curl -s -o /dev/null -w '%{http_code}' -L --max-time 15 -A 'Mozilla/5.0' "$u" || echo 000)"
+    case "$code" in
+      200|301|302|403) ;;
+      *) DEAD="$DEAD
+        $code  $u" ;;
+    esac
+  done
+  if [ -n "$DEAD" ]; then
+    fail "the site links one of our own pages that does not resolve" "$DEAD
+        A rename that updates the site without renaming the thing ships a 404
+        to a buyer. Repoint the link, or rename the listing to match."
+  else
+    pass "every self-owned link resolves ($(printf '%s' "$OURS" | wc -l | tr -d ' ') checked)"
+  fi
+fi
+
+
 # ----------------------------------------------------------------- JSON-LD
 #
 # The FAQ publishes a FAQPage schema. Google requires the structured answer to
