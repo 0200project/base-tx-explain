@@ -66,14 +66,21 @@ printf 'site-check: does the site still tell the truth about the server?\n\n'
 # move the drift to a third place and make this check the thing that lies.
 
 HEALTH="$(curl -s --max-time 15 "$API/healthz" || true)"
+# Whitespace-normalised copy for value extraction. The sed patterns below match
+# `"key":value` with no spaces, so a pretty-printed or reserialised /healthz --
+# exactly what a rewrite of that endpoint tends to produce -- made every
+# extraction return empty. Proven: indent=2 output failed this gate with a
+# misleading "no readable free_tier block". None of the values we read (a
+# semver, two integers) can contain whitespace, so stripping it is safe here.
+HEALTH_FLAT="$(printf '%s' "$HEALTH" | tr -d '[:space:]')"
 if [ -z "$HEALTH" ]; then
   fail "could not reach $API/healthz" \
     "The check cannot verify anything without the server's own numbers. If the
         server is genuinely down that is the finding; if this is a network
         blip, rerun. Do NOT hardcode the expected value to get past this."
 else
-  CALLS="$(printf '%s' "$HEALTH" | sed -n 's/.*"free_tier":{[^}]*"calls":\([0-9]*\).*/\1/p')"
-  HOURS="$(printf '%s' "$HEALTH" | sed -n 's/.*"free_tier":{[^}]*"window_hours":\([0-9]*\).*/\1/p')"
+  CALLS="$(printf '%s' "$HEALTH_FLAT" | sed -n 's/.*"free_tier":{[^}]*"calls":\([0-9]*\).*/\1/p')"
+  HOURS="$(printf '%s' "$HEALTH_FLAT" | sed -n 's/.*"free_tier":{[^}]*"window_hours":\([0-9]*\).*/\1/p')"
 
   if [ -z "$CALLS" ] || [ -z "$HOURS" ]; then
     fail "/healthz has no readable free_tier block" \
@@ -166,7 +173,7 @@ fi
 # the server served 0.1.4. Both times it was fixed by hand and both times the
 # hand-fix is what failed next. /healthz already tells us the truth.
 
-SRV_VER="$(printf '%s' "$HEALTH" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')"
+SRV_VER="$(printf '%s' "$HEALTH_FLAT" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')"
 if [ -n "$SRV_VER" ]; then
   # Keep the FILENAME (-n, not -h): without it there is nothing to exclude the
   # changelog by, and history's own v0.1.0 / v0.1.1 entries trip a check that is
@@ -184,6 +191,15 @@ if [ -n "$SRV_VER" ]; then
   else
     pass "version stamp agrees with the server (${SRV_VER})"
   fi
+else
+  # NOT a silent skip. This branch was `if [ -n "$SRV_VER" ]` with no else, so a
+  # /healthz that stopped publishing `version` deleted the entire version check
+  # -- no pass, no fail, nothing printed, gate green. Found 2026-08-29 while
+  # Platform was mid-rewrite of that endpoint. Not being able to verify is a
+  # finding, never a pass.
+  fail "/healthz publishes no version, so no page version stamp can be checked" \
+    "Every vX.Y.Z on the site is unverified while this is true.
+        Restore version in /healthz, or teach this branch the new shape."
 fi
 
 # ------------------------------------------------------------------ hostname
