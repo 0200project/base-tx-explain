@@ -297,7 +297,7 @@
       <div class="demo-grid reveal">
         <div class="demo-side">
           <div class="panel">
-            <div class="panel-head"><span>input</span><span>tx_hash</span></div>
+            <div class="panel-head"><span>POST api.0200project.com/explain</span><span>tx_hash</span></div>
             <pre style="padding:1rem 1.125rem; font-size:0.8125rem; overflow-x:auto"><code>0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c</code></pre>
           </div>
           <ul class="checks" style="padding:0.25rem 0.25rem 0">
@@ -306,6 +306,13 @@
             <li>Counterparties, labeled where known</li>
             <li>Risk signals with evidence</li>
           </ul>
+          <div class="codeblock" style="margin-top:0.75rem">
+            <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#home-curl">Copy</button></div>
+            <pre><code id="home-curl">curl -s -X POST https://api.0200project.com/explain \
+  -H 'Content-Type: application/json' \
+  -d '{"tx_hash":"0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c"}'</code></pre>
+          </div>
+          <p class="small faint" style="margin-top:0.625rem">No key, no signup. 50 free calls per IP address each day, shared by everyone behind one address; then $0.02 per call in USDC on Base.</p>
           <div class="hero-actions" style="margin-top:0.5rem">
             <a class="btn btn-primary" href="/playground/">Open playground</a>
             <a class="btn btn-ghost" href="/docs/">Read the docs</a>

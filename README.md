@@ -67,7 +67,7 @@ Raw transaction + receipt from Base RPC → builtin decoders for ~40 event forma
 
 ## Pricing
 
-- **50 free calls per network, every 24 hours**, no signup. Metered per IP (IPv6 collapses to the /64), so everyone behind one address — a household, an office, a VPN exit, a mobile carrier's NAT — draws from the same allowance, and it resets the next day.
+- **50 free calls per IP address, every 24 hours**, no signup. Metered per IP (IPv6 collapses to the /64), so everyone behind one address — a household, an office, a VPN exit, a mobile carrier's NAT — draws from the same allowance, and it resets the next day.
 - After that: **$0.02 per call in USDC on Base via [x402](https://x402.org)** — the payment-required response contains everything an x402-capable agent needs to pay and retry autonomously. No account, no API key.
 - Also available marketplace-hosted (marketplace billing applies there instead).
 

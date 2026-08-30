@@ -52,19 +52,19 @@
     <div class="page-hero">
       <span class="eyebrow">Legal</span>
       <h1 class="h-section">Terms of Service</h1>
-      <p class="updated">Last updated: August 20, 2026</p>
+      <p class="updated">Last updated: August 29, 2026</p>
     </div>
 
     <div class="prose">
       <p>These terms cover the hosted tools 0200project operates. They are written to be read, not skimmed past. By calling the service, you agree to them.</p>
 
       <h2>The service</h2>
-      <p>0200project provides paid, metered API tools intended for programmatic use — by AI agents, scripts, and applications. Today that is <code class="inline">base-transaction-decoder</code>, a tool that returns a structured explanation of a Base mainnet transaction. Tools are accessed over MCP; there are no accounts and no API keys.</p>
+      <p>0200project provides paid, metered API tools intended for programmatic use — by AI agents, scripts, and applications. Today that is <code class="inline">base-transaction-decoder</code>, a tool that returns a structured explanation of a Base mainnet transaction. Tools are callable two ways &mdash; a plain HTTPS POST to <code class="inline">api.0200project.com/explain</code>, or over MCP at <code class="inline">/mcp</code>. There are no accounts and no API keys.</p>
 
       <h2>Pricing and payment</h2>
       <ul>
-        <li>Each network gets 50 free calls per day. No signup is required for them.</li>
-        <li>After that, calls cost $0.02 each, paid in USDC on Base via the x402 protocol. The payment challenge is embedded in the tool response; a capable client pays and retries on its own.</li>
+        <li>Each IP address gets 50 free calls per rolling 24 hours, shared by everyone behind that address (an office, a VPN exit, a CI runner all draw from the same allowance). No signup is required for them.</li>
+        <li>After that, calls cost $0.02 each, or $9 for a 30-day pass covering 10,000 calls, paid in USDC on Base via the x402 protocol. The payment challenge is embedded in the tool response; a capable client pays and retries on its own.</li>
         <li>Marketplace-hosted deployments are billed through the marketplace at its rates. The marketplace's billing terms apply there.</li>
       </ul>
 

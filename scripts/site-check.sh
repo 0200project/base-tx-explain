@@ -122,20 +122,39 @@ else
     # a file-wide grep while the actual price copy said nothing about sharing.
     # The qualifier has to sit with the claim to be read with it.
     #
-    # Any phrasing that conveys sharing counts: "per network", "Every network
-    # gets", "counted per network", "metered per client IP". An earlier draft
-    # demanded the literal "per network" and flagged two pages that do say it,
-    # phrased differently. A check that cries wolf is one people learn to skip.
+    # Any phrasing that conveys sharing counts: "per IP address", "Every IP
+    # address gets", "counted per client IP", "/64". An earlier draft demanded
+    # one literal phrase and flagged two pages that do say it, phrased
+    # differently. A check that cries wolf is one people learn to skip.
+    #
+    # 2026-08-29: "network" used to be in the accepted list, because the tier
+    # was believed to be per-network when this branch was written. When that
+    # fact was retired the list was never updated, so a line reading "50 free
+    # calls per network" PASSED -- certified by containing the very word that
+    # made it wrong. /terms/ and the README carried the retired fact under a
+    # green check. A qualifier list is a second copy of the fact and goes stale
+    # exactly like prose does. "network" is now DISQUALIFYING, checked below.
     UNQUAL="$(grep -rnE "${CALLS} (free calls|calls)" $SURFACES 2>/dev/null \
               | grep -v '/changelog/' \
-              | grep -vE 'network|per IP|client IP|/64|shared' || true)"
+              | grep -vE 'per IP|IP address|client IP|/64|shared' || true)"
+
+            # Separate, louder failure: prose that actively states the retired rule.
+            # Not merely unqualified -- affirmatively wrong, wherever it appears.
+            PERNET="$(grep -rniE '(each|per|every) network|network gets|network.{0,25}free (call|tier)' \
+                      $SURFACES 2>/dev/null || true)"
+            if [ -n "$PERNET" ]; then
+              fail "a surface states the RETIRED per-network free tier" \
+                "$(printf '%s' "$PERNET" | sed "s|$ROOT/||" | sed 's/^/        /')
+                The allowance is per IP address (IPv6 /64), never per network.
+                Rewrite the claim; do not add a qualifier beside it."
+            fi
     if [ -n "$UNQUAL" ]; then
-      fail "a free-tier claim does not say the allowance is shared per network" \
+      fail "a free-tier claim does not say the allowance is shared per IP address" \
         "$(printf '%s' "$UNQUAL" | sed "s|$ROOT/||" | sed 's/^/        /')
         Reads as a personal allowance. It is shared by everyone behind one
         address, which is exactly what walled a real first-time visitor."
     else
-      pass "every free-tier claim is qualified per network, on its own line"
+      pass "every free-tier claim is qualified per IP address, on its own line"
     fi
   fi
 fi
