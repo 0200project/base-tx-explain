@@ -19,7 +19,7 @@ import { ENGAGEMENTS } from './engagements.js';
 import { initSettledEngagements } from './settledEngagements.js';
 import { declaredWithdrawn, reconcile } from './reconcile.js';
 import { getTreasury } from './treasury.js';
-import { FREE_CALLS, FREE_WINDOW_HOURS, consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
+import { FREE_CALLS, FREE_WINDOW_HOURS, consumeFreeCall, freeCallsRemaining, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
 import { passFromHeaders, passFromPath, passUrl } from './passUrl.js';
 import { isInternalRequest } from './internal.js';
 import { attribute, attributionSnapshot, initAttribution, unattribute } from './attribution.js';
@@ -66,6 +66,7 @@ import {
   initUsageLedger,
   recordEvent,
   usageSnapshot,
+  publicHealthLifetime,
   flushCheckHealth,
   onChainBookedFromCustomersUsd,
   onChainSettlementCount,
@@ -1145,7 +1146,12 @@ app.get('/healthz', (_req, res) => {
       // against instead of drifting silently the way it did on 2026-08-26.
       free_tier: { calls: FREE_CALLS, window_hours: FREE_WINDOW_HOURS, per: 'ip' },
       metrics: publicMetrics,
-      lifetime: snapshot.lifetime,
+      // Operational demand only — the full ledger (revenue, settlements,
+      // customer/self splits, client counts, the revenue_note prose) is on
+      // token-gated /stats. Shipping snapshot.lifetime whole leaked
+      // revenue_from_customers_usd and the revenue_note on this unauthenticated
+      // endpoint that llms.txt points machines at.
+      lifetime: publicHealthLifetime(snapshot.lifetime),
       check_health: checkHealthSnapshot(24),
     });
 });
@@ -1907,6 +1913,7 @@ function registerPaidRoutes(): void {
         freeCalls: FREE_CALLS,
         tryFreeCall: (req) => consumeFreeCall(clientIpOf(req)),
         refundFreeCall: (req) => refundFreeCall(clientIpOf(req)),
+        freeCallsRemaining: (req) => freeCallsRemaining(clientIpOf(req)),
         tryPass: (req) => {
           const token = req.headers['x-btx-pass'];
           if (typeof token !== 'string' || !token) return null;

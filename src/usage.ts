@@ -493,6 +493,32 @@ export function flushCheckHealth(): void {
 }
 
 /** Aggregates for /stats: lifetime totals plus a recent daily series. */
+/**
+ * The subset of the lifetime counters that is safe to publish UNAUTHENTICATED
+ * on /healthz.
+ *
+ * An ALLOWLIST, not a denylist — a counter added to the ledger later is hidden
+ * here by default rather than leaked. /healthz is public and llms.txt points
+ * machines at it, so nothing revenue-, settlement-, customer- or client-shaped
+ * may appear; the full ledger lives on token-gated /stats. Shipping the whole
+ * lifetime object once put revenue_from_customers_usd and the revenue_note prose
+ * on an open endpoint, so any prospect could read the company's exact revenue at
+ * maximum scrutiny — the same class of bug the `metrics` buyers_* filter six
+ * lines up already guards against, applied to the object beside it.
+ *
+ * Operational demand only: total calls, free calls, paywall hits, degraded
+ * calls. Deliberately NO paid/pass split (that infers sales volume) and no
+ * revenue or counts of who paid. site-check.sh reads version + free_tier from
+ * the /healthz top level, not from here, so trimming this does not touch the
+ * deploy gate.
+ */
+export function publicHealthLifetime(lifetime: Record<string, unknown>): Record<string, unknown> {
+  const keep = ['calls', 'free', 'wall_hits', 'degraded_calls'] as const;
+  const out: Record<string, unknown> = {};
+  for (const k of keep) if (k in lifetime) out[k] = lifetime[k];
+  return out;
+}
+
 export function usageSnapshot(daysBack = 30): Record<string, unknown> {
   const series: Array<Record<string, unknown>> = [];
   const today = new Date();

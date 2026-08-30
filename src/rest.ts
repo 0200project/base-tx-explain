@@ -38,6 +38,8 @@ export interface RestDeps {
   tryFreeCall: (req: express.Request) => boolean;
   /** Give a free call back when the failure was ours. */
   refundFreeCall: (req: express.Request) => void;
+  /** How many free calls this caller's IP has left right now (does NOT consume one). For the X-Free-Calls-Remaining header. */
+  freeCallsRemaining: (req: express.Request) => number;
   /**
    * Checks the X-BTX-Pass header and consumes one pass call when valid.
    * Runs BEFORE the free tier so a pass holder never burns free calls they
@@ -86,6 +88,18 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
           contentType: 'application/json',
           body: {
             error: 'Payment required',
+            // WHAT $0.02 BUYS, not just that it costs $0.02. An agent reading a
+            // challenge is CHOOSING whether to call; the price alone can't tell it
+            // whether the decode is worth it. This names the differentiation an
+            // evaluator asked for: the action-type breadth, the reverted-tx
+            // correctness free explorers get wrong, and three checks that report
+            // their own status. Price/free-count templated so it cannot drift.
+            what_you_get:
+              'Deterministic decode of Base mainnet transactions: one of ~30 action types ' +
+              '(swap, bridge_in, bridge_out, lending_supply, lending_borrow, lending_repay, nft_sale, stake, and more), ' +
+              'correct handling of reverted transactions (no phantom asset movements), and three per-address ' +
+              'observations — contract_verification, first_interaction, drainer_blacklist — each reporting whether it ' +
+              `actually ran; absence of a flag is not a clean result. $${priceUsd} per call via x402 after ${freeCalls} free calls per 24h per IP.`,
             // "YOU HAVE USED YOURS" WAS A LIE TO THE PERSON MOST LIKELY TO READ IT.
             //
             // The free tier is keyed on IP address, so everyone behind one
@@ -193,7 +207,15 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
     }
   };
 
-  app.post('/explain', gate, handler);
+  // Tell every caller where it stands in the shared per-IP free pool, on the
+  // 200 AND the 402. An agent that cannot see its position must treat every call
+  // as maybe-paid — the exact posture that makes it escalate to a human instead
+  // of just calling. Set before the gate so it rides the 402 the gate emits too.
+  const setFreeCallsHeader: express.RequestHandler = (req, res, next) => {
+    res.set('X-Free-Calls-Remaining', String(deps.freeCallsRemaining(req)));
+    next();
+  };
+  app.post('/explain', setFreeCallsHeader, gate, handler);
 
   // A GET is what a curious human tries first. Tell them how to use it rather
   // than 404ing, and do not bill anyone for reading the instructions.

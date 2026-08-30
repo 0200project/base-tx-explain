@@ -34,6 +34,12 @@ async function load(balances: Record<string, number | Error>) {
   }));
   // Keep the baseline in memory: no volume in tests.
   process.env.DATA_DIR = `/tmp/wm-${Math.random().toString(36).slice(2)}`;
+  // The spend wallet address now comes from BUDGET_WALLET_ADDRESS (off the
+  // public source, d5c0465). Point it at the FIXTURE, not the real wallet, so
+  // these tests exercise the monitored path; the unset-is-`unknown` path has its
+  // own coverage. Without this the monitor sees no budget wallet and every
+  // budget assertion reads `unknown`.
+  process.env.BUDGET_WALLET_ADDRESS = BUDGET;
   return import('../src/walletMonitor.js');
 }
 
