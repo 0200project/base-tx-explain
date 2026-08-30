@@ -16,6 +16,7 @@ import { withAcceptedFieldRepair } from './cdpCompat.js';
 import { buildOpenApiDocument } from './openapi.js';
 import { registerEngagementRoutes, registerPassRoutes, registerRestRoutes } from './rest.js';
 import { ENGAGEMENTS } from './engagements.js';
+import { initSettledEngagements } from './settledEngagements.js';
 import { declaredWithdrawn, reconcile } from './reconcile.js';
 import { getTreasury } from './treasury.js';
 import { FREE_CALLS, FREE_WINDOW_HOURS, consumeFreeCall, initFreeTier, refundFreeCall, withinRateLimit } from './freeTier.js';
@@ -1687,6 +1688,7 @@ initUsageLedger();
 initFreeTier();
 initPasses();
 initStripeDeliveries();
+initSettledEngagements();
 initWalletMonitor();
 // Persisted, so a deploy does not erase the memory of a rejected delivery —
 // deploys are frequent here, which makes that the common case, not an edge one.

@@ -1,5 +1,5 @@
 /**
- * Per-engagement x402 resources: a service sale (an audit, an integration) paid
+ * Per-engagement x402 resources: a service sale (a diagnosis, an integration) paid
  * at a CUSTOM amount over the same challenge -> pay -> on-chain-settlement flow
  * the product uses. The settlement transaction IS the invoice — the same
  * cryptographic receipt kindrat86 self-verified, priced to a quote instead of a
@@ -15,6 +15,15 @@
  *  - the price is the payment requirement verbatim (see rest.ts), so what the
  *    buyer is asked to sign is exactly what was quoted, with no server-side
  *    arithmetic between the quote and the challenge.
+ *  - the challenge is reachable by anyone who guesses the slug, so an id or a
+ *    title must NEVER carry the customer's identity: use an OPAQUE slug
+ *    (e.g. `pa-7f3c91`, not `payai-divergence`) and keep the buyer's name out of
+ *    the title. The unpaid wire already omits title and summary; opaque slugs
+ *    keep the URL itself from naming who bought.
+ *  - once paid, an engagement is CLOSED: its route refuses a second charge and
+ *    answers like an unknown id (see settledEngagements.ts), because the buyers
+ *    are companies whose finance systems retry by design and a double charge is
+ *    a terrible first impression from a payments vendor.
  *
  * ATTRIBUTION: an engagement settlement books like any sale and is then
  * attributed the normal way — a real buyer's payment is customer revenue; the
@@ -24,13 +33,13 @@
  */
 
 export interface Engagement {
-  /** URL slug: the id in /engagement/<id>. Lowercase, digits and hyphens only. */
+  /** URL slug in /engagement/<id>. Lowercase, digits, hyphens. For a real deal use an OPAQUE slug (pa-7f3c91), NEVER the customer's name. */
   id: string;
   /** The quoted price in whole USD. The payment challenge asks for exactly this. */
   amountUsd: number;
-  /** Customer-facing name of the engagement, shown on the challenge and receipt. */
+  /** Shown on the PAID receipt only (kept off the unpaid challenge). Never the customer's name — the reader already knows who they are. */
   title: string;
-  /** One line naming what the buyer is paying for. */
+  /** One line naming what the buyer is paying for. Receipt-only like the title; never customer-identifying. */
   summary: string;
 }
 

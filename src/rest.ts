@@ -4,6 +4,7 @@ import type { x402ResourceServer } from '@x402/core/server';
 import type express from 'express';
 import { ExplainError, explainTransaction } from './explain.js';
 import type { Engagement } from './engagements.js';
+import { isEngagementSettled, markEngagementSettled } from './settledEngagements.js';
 
 /**
  * Plain REST access to the same decode the MCP tool serves.
@@ -380,6 +381,18 @@ export interface EngagementRouteDeps {
 export function registerEngagementRoutes(app: express.Express, deps: EngagementRouteDeps): void {
   const { resourceServer, payTo, network, publicUrl, engagements } = deps;
 
+  // One 404 answer, used for BOTH an unknown/malformed id AND a settled one, so
+  // a prober cannot distinguish "no such engagement" from "this customer already
+  // paid" — which would reopen the confidentiality the opaque slug + no-title
+  // wire closes. Byte-identical by construction, not by intent.
+  const notFound = (res: express.Response): void => {
+    res.status(404).json({
+      error: 'No such engagement.',
+      how: 'Engagements are issued by 0200project for a specific agreed deal. If you were quoted one, use the exact URL you were given.',
+      contact: 'contact@0200project.com',
+    });
+  };
+
   for (const engagement of engagements) {
     const routePath = `/engagement/${engagement.id}`;
     const price = `$${engagement.amountUsd}`;
@@ -390,9 +403,12 @@ export function registerEngagementRoutes(app: express.Express, deps: EngagementR
           // exactly what was quoted, no arithmetic between the two.
           accepts: { scheme: 'exact', network, payTo, price },
           resource: `${publicUrl}${routePath}`,
-          description:
-            `${engagement.title} — ${engagement.summary} Priced at ${price}, paid once over x402; ` +
-            'the on-chain settlement transaction is the receipt.',
+          // NO title or summary on the wire: this challenge is reachable by
+          // anyone who guesses the slug, and an engagement named for its buyer
+          // would tell a prober who paid whom for how much. The price is
+          // unavoidable (it is the payment amount), so slugs are opaque (see
+          // engagements.ts) and identity stays off every unpaid surface.
+          description: `A private 0200project engagement, priced at ${price}, paid once over x402; the on-chain settlement transaction is the receipt.`,
           mimeType: 'application/json',
           serviceName: '0200project-engagement',
           tags: ['0200project', 'engagement', 'x402', 'invoice'],
@@ -400,10 +416,9 @@ export function registerEngagementRoutes(app: express.Express, deps: EngagementR
             contentType: 'application/json',
             body: {
               error: 'Payment required',
-              engagement: engagement.id,
-              title: engagement.title,
-              amount_usd: engagement.amountUsd,
-              what_this_is: engagement.summary,
+              // Deliberately no engagement id, title, or summary (see above): the
+              // buyer was quoted this link out of band and knows what it is; the
+              // wire says only "pay to proceed".
               how: 'This endpoint speaks x402. Pay the quoted amount in USDC on Base and retry with the payment attached, or use an x402-capable HTTP client which does it automatically.',
               the_receipt:
                 'The on-chain settlement transaction IS your invoice — publicly verifiable on BaseScan, no separate document issued.',
@@ -417,12 +432,27 @@ export function registerEngagementRoutes(app: express.Express, deps: EngagementR
       resourceServer,
     );
 
-    app.post(routePath, gate, (_req, res) => {
+    // Refuse a SECOND charge on an already-settled engagement, BEFORE the gate
+    // can take money. A company's AP system retries by design and the x402 nonce
+    // does not stop a fresh authorization; this does. Answered as a 404 identical
+    // to an unknown id, so it confirms nothing about a past sale.
+    const guardSettled: express.RequestHandler = (_req, res, next) => {
+      if (isEngagementSettled(engagement.id)) {
+        notFound(res);
+        return;
+      }
+      next();
+    };
+
+    app.post(routePath, guardSettled, gate, (_req, res) => {
       let resolved = false;
       const finish = (): void => {
         if (resolved) return;
         resolved = true;
         if (res.statusCode >= 200 && res.statusCode < 300) {
+          // MARK settled + persist BEFORE booking, so a crash between the two
+          // leaves the engagement closed (no second charge) rather than payable.
+          markEngagementSettled(engagement.id);
           deps.recordSale(engagement);
           return;
         }
@@ -450,25 +480,23 @@ export function registerEngagementRoutes(app: express.Express, deps: EngagementR
     });
 
     app.get(routePath, (_req, res) => {
+      // Once settled, 404 like an unknown id so GET cannot confirm a past sale
+      // either. Otherwise a generic "use POST" with no title or identity on it.
+      if (isEngagementSettled(engagement.id)) {
+        notFound(res);
+        return;
+      }
       res.status(405).json({
         error: 'Use POST.',
-        engagement: engagement.id,
-        title: engagement.title,
-        amount_usd: engagement.amountUsd,
-        example: `curl -X POST ${publicUrl}${routePath} (x402 payment required; an x402-capable client handles it automatically)`,
+        how: `x402 payment required. POST ${publicUrl}${routePath} with an x402-capable client.`,
       });
     });
   }
 
-  // An id we have not committed is not for sale, and the answer is identical
-  // whether the id is unknown or malformed, so a probe cannot enumerate live
-  // engagements by watching which ids answer differently. Registered after the
-  // concrete routes so a defined engagement always wins.
+  // An id we have not committed is not for sale; identical answer to a settled
+  // one (above) so a probe can enumerate nothing. Registered after the concrete
+  // routes so a defined, unsettled engagement always wins.
   app.all('/engagement/:id', (_req, res) => {
-    res.status(404).json({
-      error: 'No such engagement.',
-      how: 'Engagements are issued by 0200project for a specific agreed deal. If you were quoted one, use the exact URL you were given.',
-      contact: 'contact@0200project.com',
-    });
+    notFound(res);
   });
 }
