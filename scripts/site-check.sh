@@ -140,6 +140,26 @@ else
   fi
 fi
 
+# ------------------------------------------------------------------- version
+#
+# The footer stamps a version on every page. It has drifted twice: v0.1.2 while
+# the server served 0.1.3, then thirteen pages on 0.1.3 and one on 0.1.0 while
+# the server served 0.1.4. Both times it was fixed by hand and both times the
+# hand-fix is what failed next. /healthz already tells us the truth.
+
+SRV_VER="$(printf '%s' "$HEALTH" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')"
+if [ -n "$SRV_VER" ]; then
+  STAMPS="$(grep -rhoE 'base-transaction-decoder v[0-9][0-9.]*' $SURFACES 2>/dev/null | sort -u || true)"
+  BADV="$(printf '%s\n' "$STAMPS" | grep -v "^base-transaction-decoder v${SRV_VER}$" | grep . || true)"
+  if [ -n "$BADV" ]; then
+    fail "a page stamps a version the server is not serving (server: $SRV_VER)" \
+      "$(printf '%s' "$BADV" | sed 's/^/        /')
+        Pages were stamping each other instead of the server."
+  else
+    pass "version stamp agrees with the server (${SRV_VER})"
+  fi
+fi
+
 # ------------------------------------------------------------------ hostname
 #
 # The Fly hostname was replaced by api.0200project.com because a customer
