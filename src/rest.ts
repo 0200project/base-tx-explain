@@ -1,6 +1,6 @@
 import { passUrl } from './passUrl.js';
 import { paymentMiddleware } from '@x402/express';
-import type { x402ResourceServer } from '@x402/core/server';
+import type { HTTPRequestContext, x402ResourceServer } from '@x402/core/server';
 import type express from 'express';
 import { ExplainError, explainTransaction } from './explain.js';
 import type { Engagement } from './engagements.js';
@@ -87,7 +87,26 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
     // the spec. A person gets the pass, a card option, and a link. The card
     // rail is the one proven end-to-end under the current configuration, so
     // it is named rather than left implicit.
-    unpaidResponseBody: () => ({
+    unpaidResponseBody: (context: HTTPRequestContext) => {
+      // A BARE GET IS A DISCOVERY PROBE, AND IT NEVER SPENT A FREE CALL.
+      //
+      // POST and GET?tx_hash= only reach a 402 by falling THROUGH the gate,
+      // which is to say after the free tier is genuinely gone — so the
+      // exhausted-allowance copy is true for them. A bare GET is answered with
+      // the challenge unconditionally (that is the point: crawlers must see a
+      // live priced endpoint), so telling that caller "this address has used
+      // them" is false, and false in the direction that suppresses our own free
+      // trial: the same response carried X-Free-Calls-Remaining: 20 while the
+      // body said the allowance was spent. Whoever believes the body pays for
+      // calls they could have made for nothing, or leaves.
+      //
+      // The probe copy therefore ASSERTS NO STATE. It points at the header,
+      // which is computed per request and cannot drift out of agreement with
+      // itself — so this text stays true whether the caller has 50 left or 0.
+      const txHash = context.adapter.getQueryParam?.('tx_hash');
+      const isDiscoveryProbe =
+        context.method.toUpperCase() === 'GET' && !(typeof txHash === 'string' && txHash.trim().length > 0);
+      return {
       contentType: 'application/json',
       body: {
         error: 'Payment required',
@@ -116,10 +135,16 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
             // We cannot tell the two apart from here, so the copy must not
             // claim to. It says what is actually true — this address is out —
             // and names the reason they might not recognise, and when it lifts.
-            free_tier:
-              `The first ${freeCalls} calls from each IP address are free, and this address has used them. ` +
-              'If you have not called us before, someone sharing your IP address, office network, VPN ' +
-              'or mobile carrier likely has. The allowance resets within 24 hours.',
+            free_tier: isDiscoveryProbe
+              ? `The first ${freeCalls} calls from each IP address are free. This 402 is the ` +
+                "endpoint's standing payment challenge, not a statement that your allowance is " +
+                'gone: a bare GET advertises the paid path and spends nothing. Read the ' +
+                'X-Free-Calls-Remaining header for where this address actually stands, then ' +
+                'GET ?tx_hash=0x... or POST {"tx_hash":"0x..."} to decode — an allowance is ' +
+                'only spent by a real decode.'
+              : `The first ${freeCalls} calls from each IP address are free, and this address has used them. ` +
+                'If you have not called us before, someone sharing your IP address, office network, VPN ' +
+                'or mobile carrier likely has. The allowance resets within 24 hours.',
             price_usd: priceUsd,
             pay_per_call: `This endpoint speaks x402: pay $${priceUsd} in USDC on Base and retry with the payment attached, or use an x402-capable HTTP client which does it automatically.`,
             // THE FUNDING CLIFF, named. An agent that finds us but holds no USDC on
@@ -158,7 +183,8 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
             docs: `${siteUrl}/docs/`,
             openapi: `${publicUrl}/openapi.json`,
           },
-        }),
+      };
+    },
   };
 
   const payGate = paymentMiddleware(
