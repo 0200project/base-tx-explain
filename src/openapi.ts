@@ -245,7 +245,15 @@ export function buildOpenApiDocument(
             },
             required: ['tx_hash'],
           },
-          example: { tx_hash: '0x' + 'ab'.repeat(32) },
+          // A REAL Base mainnet transaction, not a placeholder. The previous example
+          // was '0x' + 'ab'.repeat(32), which returns 404 not_found. This spec is the
+          // most machine-consumed artifact we publish: a codegen tool or agent that
+          // runs the example verbatim got "Transaction not found" and had every
+          // reason to conclude the service was broken. Base transactions are
+          // immutable, so this hash resolves permanently. It is the same one the
+          // homepage, docs, playground, /tools and the README already use -- keep
+          // them identical, and do not "tidy" this back into a synthetic hash.
+          example: { tx_hash: '0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c' },
         },
       },
     },
