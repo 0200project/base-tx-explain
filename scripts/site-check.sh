@@ -57,6 +57,35 @@ fail() {
   printf '        %s\n\n' "$2"
   fails=$((fails + 1))
 }
+# UNVERIFIED is not FAILED. A check that could not run has produced no evidence
+# that anything is wrong, and treating "I could not look" as "it is broken"
+# froze a deploy on 2026-08-30: the published-sample branch spends free calls to
+# run, our own address exhausted its allowance, and a correction that REMOVED a
+# weak claim could not ship because a check could not be performed. That is the
+# gate failing safe in the wrong direction -- it kept a less accurate page live.
+#
+# So this is loud, it is counted, and it does NOT block. The distinction that
+# matters is preserved: a sample proven broken still calls fail() and still
+# blocks. Only "could not look" lands here.
+#
+# THE TRADEOFF, STATED BECAUSE IT IS REAL AND NOT CLEAN. When the allowance is
+# spent, a genuinely broken sample ALSO reports as unverified -- the paywall
+# answers before the sample's own error can, so a 404ing hash and a correct one
+# are indistinguishable from here. Proven by replanting a 404ing hash on a spent
+# tier: it lands in UNVERIFIED, not FAIL, and does not block.
+#
+# That is not a misclassification, it is the honest state: we cannot tell. The
+# choice is between freezing all publishing whenever we spend our own allowance,
+# and shipping unverified with a loud banner. Freezing lost, because it kept a
+# WORSE page live -- but the residual risk is that a broken sample can ship
+# during an exhausted window. Anyone reading UNVERIFIED should treat those
+# samples as unchecked, not as fine.
+unverified=0
+unverif() {
+  printf '\n  UNVERIFIED  %s\n' "$1"
+  printf '              %s\n\n' "$2"
+  unverified=$((unverified + 1))
+}
 
 printf 'site-check: does the site still tell the truth about the server?\n\n'
 
@@ -439,7 +468,7 @@ else
         A published example is a promise that it runs. Fix the sample, or add
         it to SAMPLE_ALLOW with the reason it is expected to fail."
   elif [ -s "$SAMP_SPENT" ]; then
-    fail "could not verify the published samples: this IP's free tier is spent" \
+    unverif "could not verify the published samples: this IP's free tier is spent" \
       "$(cat "$SAMP_SPENT")
         These samples were NOT proven broken. This machine has used its 50 free
         calls for the current 24h window, so every sample returns the
@@ -455,5 +484,11 @@ fi
 if [ "$fails" -gt 0 ]; then
   printf 'site-check: %s FAILED. The site is telling a prospect something the server will not honour.\n\n' "$fails"
   exit 1
+fi
+if [ "$unverified" -gt 0 ]; then
+  printf 'site-check: OK, with %s check(s) UNVERIFIED -- see above. Nothing was found\n' "$unverified"
+  printf '            wrong; something could not be looked at. Do not read this as a pass\n'
+  printf '            for what went unchecked.\n'
+  exit 0
 fi
 printf 'site-check: OK\n'
