@@ -82,3 +82,19 @@ MSG
   fi
 done
 exit $status
+
+# ---- 4. company state on a public surface
+#
+# The identity handle, the spend wallet, the internal docs and the revenue
+# figures were each removed by a separate one-off cleanup, and each cleanup left
+# the others in place because none of them was a gate. This is the gate.
+# Denylist is private on purpose; see the script's header.
+if [ -x scripts/public-surface-check.sh ]; then
+  sh scripts/public-surface-check.sh || {
+    echo ""
+    echo "PUSH REFUSED: company state would go public."
+    echo "Fix the hits above, or if a term is genuinely product, take it off the"
+    echo "denylist deliberately rather than working around this check."
+    exit 1
+  }
+fi
