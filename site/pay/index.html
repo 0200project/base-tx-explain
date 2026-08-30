@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>document.documentElement.classList.add('js')</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paying for an engagement — 0200project</title>
+<meta name="description" content="What happens after you accept an engagement: you get the work first, then pay in USDC on Base. Funding a wallet, how payment settles, and what the receipt is.">
+<meta name="theme-color" content="#050505">
+<meta property="og:title" content="Paying for an engagement — 0200project">
+<meta property="og:description" content="You get the work first, then pay in USDC on Base. Step by step, including the part that actually takes time.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="0200project">
+<meta property="og:image" content="https://0200project.com/assets/og.png">
+<meta property="og:url" content="https://0200project.com/pay/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://0200project.com/pay/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+.pay-steps { list-style: none; counter-reset: pay; }
+  .pay-steps li {
+    counter-increment: pay;
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    gap: 0.875rem;
+    padding-block: 0.875rem;
+  }
+  .pay-steps li + li { border-top: 1px solid var(--border); }
+  .pay-steps li::before {
+    content: "0" counter(pay);
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    color: var(--fg-faint);
+    padding-top: 0.2rem;
+  }
+  .pay-steps strong { display: block; color: var(--fg); font-weight: 500; }
+  .pay-steps span { color: var(--fg-muted); font-size: 0.875rem; }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="0200project home">
+      <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+      0200project
+    </a>
+    <button class="nav-toggle" aria-expanded="false" aria-label="Menu" aria-controls="site-menu">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/playground/">Playground</a></li>
+      <li><a href="/docs/">Docs</a></li>
+      <li><a href="/pricing/">Pricing</a></li>
+      <li class="nav-cta"><a class="btn btn-ghost btn-sm" href="https://github.com/0200project">GitHub</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/playground/">Try it free</a></li>
+    </ul></nav>
+  </div>
+</header>
+
+<main id="main">
+
+  <section class="page-hero">
+    <div class="container">
+      <span class="eyebrow">Engagements</span>
+      <h1 class="h-section">You get the work first.</h1>
+      <p class="lead">Then you pay. This page is the whole mechanic — what happens after you say yes, how the payment actually fires, and what to do if anything looks wrong. If you have to ask us how to pay, this page has failed.</p>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0">
+    <div class="container">
+
+      <div class="panel">
+        <div class="panel-head"><span>the order of things</span><span>work &rarr; then payment</span></div>
+        <div style="padding:1.25rem">
+          <p class="muted" style="max-width:44rem">Every engagement is paid on delivery. We do the work, you receive it, you look at it, and <strong style="color:var(--fg-strong)">only then</strong> does any money move. If we don&rsquo;t deliver what the offer described, you owe nothing and there is nothing to cancel &mdash; no deposit was taken, no card is on file, and nothing recurs.</p>
+          <p class="muted" style="max-width:44rem;margin-top:0.75rem">We don&rsquo;t hold a payment method. We can&rsquo;t charge you. The only way money moves is you sending it.</p>
+        </div>
+      </div>
+
+      <h2 class="h-card" style="margin-top:3rem">The three steps</h2>
+      <ol class="pay-steps" style="margin-top:1rem">
+        <li><div><strong>You accept</strong><span>Reply to the offer. We confirm the scope and the deadline in writing, in the same thread, before starting. Nothing is ambiguous by the time work begins.</span></div></li>
+        <li><div><strong>We deliver</strong><span>Within the window the offer states. You get the artifact itself &mdash; the written findings, or the pull requests, depending on which engagement you accepted.</span></div></li>
+        <li><div><strong>You pay, in USDC on Base</strong><span>We send a payment request for the agreed amount. The on-chain settlement is the receipt, and the receipt is the invoice. There is no account to create and nothing to cancel afterwards.</span></div></li>
+      </ol>
+
+      <h2 class="h-card" style="margin-top:3rem">The part that actually takes time</h2>
+      <div class="panel pr-callout" style="margin-top:1rem">
+        <p><strong>If you have never held USDC on Base, budget for that and not for us.</strong> The payment itself takes seconds. Acquiring the USDC for the first time is the slow step, and it is slow for reasons entirely outside this transaction &mdash; exchange identity checks, funding a wallet, and a bridge or a withdrawal to Base. The one external party who has completed a payment to us reported exactly this: our side was frictionless, and theirs was several manual compliance and funding steps. <strong>We would rather you know that before you say yes than discover it against a deadline.</strong></p>
+      </div>
+
+      <h2 class="h-card" style="margin-top:2.5rem">What you need</h2>
+      <ul class="checks" style="margin-top:1rem">
+        <li>A wallet that holds <strong>USDC on Base</strong> (chain id 8453) &mdash; any EVM wallet works; there is nothing to install from us</li>
+        <li>Enough USDC for the agreed amount, plus a few cents of ETH on Base for gas</li>
+        <li>Nothing else. No account with us, no API key, no signup, no card</li>
+      </ul>
+
+      <h2 class="h-card" style="margin-top:2.5rem">What the receipt is</h2>
+      <p class="pg-note" style="max-width:44rem">The settlement is a public, timestamped, on-chain record of a transfer from your address to ours for a stated amount. <strong style="color:var(--fg)">That record is your invoice</strong> &mdash; it is verifiable by you, by us, and by your accountant, without any of us having to trust the others&rsquo; bookkeeping. If you need a written document referencing it for your own records, ask and we&rsquo;ll send one; the chain is still the source of truth.</p>
+
+      <h2 class="h-card" style="margin-top:2.5rem">If something looks wrong</h2>
+      <div class="panel" style="margin-top:1rem">
+        <div class="panel-head"><span>recovery</span><span>contact@0200project.com</span></div>
+        <div style="padding:1.25rem">
+          <p class="muted" style="max-width:44rem"><strong style="color:var(--fg-strong)">If money left your wallet and you did not get what you paid for, tell us and we will sort it out.</strong> That is a failure on our side to fix, not a mistake on yours to explain. Email <a href="mailto:contact@0200project.com">contact@0200project.com</a> with the address you paid from and roughly when &mdash; that is enough for us to find it.</p>
+          <p class="muted" style="max-width:44rem;margin-top:0.75rem">Two specific cases, so you know they are expected rather than alarming: a payment that <strong style="color:var(--fg)">settles on-chain but doesn&rsquo;t produce working access</strong> is recoverable &mdash; the on-chain record is proof, and we reconcile against it. And a payment that appears to hang is worth reporting rather than repeating: <strong style="color:var(--fg)">do not send a second payment to fix a first one that looks stuck.</strong> Ask us first.</p>
+        </div>
+      </div>
+
+      <div class="pr-faq">
+        <h3>Can I pay by card or bank transfer instead?</h3>
+        <p>Ask. For smaller engagements it is sometimes workable. Above a few hundred dollars it usually is not, and we would rather say that plainly up front than start a payment method we have to abandon halfway.</p>
+
+        <h3>Do you take a deposit?</h3>
+        <p>No. Nothing is due before delivery, on any engagement. That is the whole point of the arrangement &mdash; you are never out of pocket for work you haven&rsquo;t seen.</p>
+
+        <h3>Is this a subscription?</h3>
+        <p>No. Each engagement is a single agreed amount, paid once. Nothing renews, because there is nothing holding your payment details to renew with.</p>
+
+        <h3>What if I want to stop partway through?</h3>
+        <p>Say so and we stop. You pay for nothing you haven&rsquo;t received.</p>
+      </div>
+
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/" aria-label="0200project home">
+          <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+          0200project
+        </a>
+      </div>
+      <nav aria-label="Product">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/tools/">Tools</a></li>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/docs/#request-format">API reference</a></li>
+          <li><a href="/pricing/">Pricing</a></li>
+          <li><a href="/changelog/">Changelog</a></li>
+          <li><a href="/faq/">FAQ</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Developers">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="/playground/">Playground</a></li>
+          <li><a href="https://github.com/0200project">GitHub</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-transaction-decoder">MCP Registry</a></li>
+          <li><a href="/status/">Status</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Company">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/#about">About</a></li>
+          <li><a href="/security/">Security</a></li>
+          <li><a href="https://github.com/0200project/base-tx-explain/issues">Support</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 0200project <span class="faint">&middot;</span> <span class="mono">base-transaction-decoder v0.1.3 &middot; Base mainnet</span></span>
+      <a class="pill footer-status" href="/status/"><span class="dot"></span><span id="ft-status">Checking status&hellip;</span></a>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/site.js" defer></script>
+</body>
+</html>
