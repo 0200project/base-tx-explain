@@ -187,7 +187,7 @@ export function buildOpenApiDocument(
       },
       '402': {
         description:
-          'Payment Required. The x402 v2 challenge is returned both in the JSON body and base64-encoded in the PAYMENT-REQUIRED response header.',
+          'Payment Required. The x402 v2 challenge is returned both in the JSON body and base64-encoded in the PAYMENT-REQUIRED response header. No USDC on Base yet? x402 uses EIP-3009, so you need USDC but NOT ETH for gas (the facilitator submits and pays the gas); acquire USDC on Base via a Coinbase withdrawal to the Base network, a fiat on-ramp supporting Base, or bridging at bridge.base.org.',
         content: {
           'application/json': {
             schema: {
@@ -229,7 +229,7 @@ export function buildOpenApiDocument(
     summary: 'Explain a Base mainnet transaction in plain English',
     tags: ['Blockchain'],
     description:
-      'Plain HTTP alternative to the MCP tool, for x402 clients that speak ordinary REST. Same decode, same price, same free tier.',
+      'Plain HTTP alternative to the MCP tool, for x402 clients that speak ordinary REST. POST {"tx_hash":"0x..."} or GET ?tx_hash=0x...; a bare GET returns the x402 402 challenge so crawlers and scanners read a live endpoint rather than a dead one. Same decode, same price, same free tier.',
     requestBody: {
       required: true,
       content: {
@@ -263,7 +263,10 @@ export function buildOpenApiDocument(
         content: { 'application/json': { schema: EXPLAIN_RESULT_SCHEMA } },
       },
       '400': { description: 'tx_hash missing or malformed' },
-      '402': { description: 'Payment Required (x402; challenge in the PAYMENT-REQUIRED header and the body)' },
+      '402': {
+        description:
+          'Payment Required (x402; challenge in the PAYMENT-REQUIRED header and the body). No USDC on Base yet? x402 uses EIP-3009, so you need USDC but NOT ETH for gas — the facilitator submits the transfer and pays the gas. Acquire USDC on Base by withdrawing from an exchange such as Coinbase directly to the Base network, using a fiat on-ramp that supports Base, or bridging from another chain at bridge.base.org.',
+      },
       '404': { description: 'No such transaction on Base mainnet' },
     },
   };

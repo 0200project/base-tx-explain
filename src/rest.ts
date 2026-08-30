@@ -57,37 +57,40 @@ const HASH_RE = /^0x[0-9a-fA-F]{64}$/;
 export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
   const { resourceServer, payTo, priceUsd, network, publicUrl, siteUrl, passPriceUsd, passDays, passCallCap, freeCalls } = deps;
 
-  const payGate = paymentMiddleware(
-    {
-      'POST /explain': {
-        accepts: { scheme: 'exact', network, payTo, price: `$${priceUsd}` },
-        resource: `${publicUrl}/explain`,
-        description:
-          'Explain a Base mainnet transaction in plain English. POST {"tx_hash":"0x..."} and receive strict JSON: summary, action type, assets moved, labeled counterparties, risk flags, gas in USD. Deterministic decode, no LLM in the response path.',
-        mimeType: 'application/json',
-        serviceName: 'base-transaction-decoder',
-        tags: ['base', 'transaction', 'decoder', 'blockchain', 'risk'],
-        // What an unpaid caller sees. Standard clients read the 402 headers,
-        // but a human with curl gets something they can act on.
-        // THE HIGHEST-INTENT MOMENT IN THE FUNNEL, and it used to be a dead end
-        // for anyone without a wallet.
-        //
-        // Whoever reads this tried the product, liked it enough to spend all
-        // their free calls, and wants more. That is the closest thing we have to
-        // a buyer. The previous body described the x402 flow, never mentioned
-        // the pass, offered no URL a person could click, and pointed `docs` at
-        // openapi.json — a machine-readable spec handed to a human asking how to
-        // pay. The comment above it already claimed a human "gets something they
-        // can act on"; it did not.
-        //
-        // So: both audiences, explicitly. An agent gets the x402 instruction and
-        // the spec. A person gets the pass, a card option, and a link. The card
-        // rail is the one proven end-to-end under the current configuration, so
-        // it is named rather than left implicit.
-        unpaidResponseBody: () => ({
-          contentType: 'application/json',
-          body: {
-            error: 'Payment required',
+  // One challenge config, shared by POST and GET so the two rails cannot drift.
+  // GET matters for discovery: x402 scanners and crawlers probe with a bare GET,
+  // and a 405 there reads as a dead endpoint. Emitting the same 402 challenge on
+  // GET catalogs us as a live, priced x402 service (see the GET route below,
+  // which also serves a real ?tx_hash= decode so a payer is never sent to a 404).
+  const explainChallenge = {
+    accepts: { scheme: 'exact' as const, network, payTo, price: `$${priceUsd}` },
+    resource: `${publicUrl}/explain`,
+    description:
+      'Explain a Base mainnet transaction in plain English. POST {"tx_hash":"0x..."} (or GET ?tx_hash=0x...) and receive strict JSON: summary, action type, assets moved, labeled counterparties, risk flags, gas in USD. Deterministic decode, no LLM in the response path.',
+    mimeType: 'application/json',
+    serviceName: 'base-transaction-decoder',
+    tags: ['base', 'transaction', 'decoder', 'blockchain', 'risk'],
+    // What an unpaid caller sees. Standard clients read the 402 headers,
+    // but a human with curl gets something they can act on.
+    // THE HIGHEST-INTENT MOMENT IN THE FUNNEL, and it used to be a dead end
+    // for anyone without a wallet.
+    //
+    // Whoever reads this tried the product, liked it enough to spend all
+    // their free calls, and wants more. That is the closest thing we have to
+    // a buyer. The previous body described the x402 flow, never mentioned
+    // the pass, offered no URL a person could click, and pointed `docs` at
+    // openapi.json — a machine-readable spec handed to a human asking how to
+    // pay. The comment above it already claimed a human "gets something they
+    // can act on"; it did not.
+    //
+    // So: both audiences, explicitly. An agent gets the x402 instruction and
+    // the spec. A person gets the pass, a card option, and a link. The card
+    // rail is the one proven end-to-end under the current configuration, so
+    // it is named rather than left implicit.
+    unpaidResponseBody: () => ({
+      contentType: 'application/json',
+      body: {
+        error: 'Payment required',
             // WHAT $0.02 BUYS, not just that it costs $0.02. An agent reading a
             // challenge is CHOOSING whether to call; the price alone can't tell it
             // whether the decode is worth it. This names the differentiation an
@@ -119,6 +122,19 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
               'or mobile carrier likely has. The allowance resets within 24 hours.',
             price_usd: priceUsd,
             pay_per_call: `This endpoint speaks x402: pay $${priceUsd} in USDC on Base and retry with the payment attached, or use an x402-capable HTTP client which does it automatically.`,
+            // THE FUNDING CLIFF, named. An agent that finds us but holds no USDC on
+            // Base cannot pay, and nothing here told it how — the last gap on the
+            // only rail with a real machine at the other end. Two facts do the work:
+            // x402 rides EIP-3009, so the payer needs USDC but NOT ETH for gas (the
+            // facilitator submits and pays gas); and there are concrete, keyless-free
+            // ways to get USDC onto Base. No testnet faucet is named because mainnet
+            // USDC has none — naming one would be the exact over-claim we guard against.
+            funding:
+              'No USDC on Base yet? x402 uses EIP-3009 (transferWithAuthorization): you sign the payment ' +
+              'off-chain and the facilitator submits it on-chain and pays the gas, so you need USDC but NOT ' +
+              'ETH. Get USDC onto Base by withdrawing from an exchange such as Coinbase directly to the Base ' +
+              'network, using a fiat on-ramp that supports Base, or bridging from Ethereum or another chain ' +
+              'at bridge.base.org.',
             pass: `Better value for repeated use: $${passPriceUsd} buys ${passDays} days and up to ${passCallCap.toLocaleString('en-US')} calls with no per-call payment. POST ${publicUrl}/pass over x402, or pay by card.`,
             buy_with_card: `${siteUrl}/pricing/`,
             // THE ONLY MOMENT A HIGH-INTENT VISITOR IS STILL LISTENING.
@@ -143,8 +159,10 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
             openapi: `${publicUrl}/openapi.json`,
           },
         }),
-      },
-    },
+  };
+
+  const payGate = paymentMiddleware(
+    { 'POST /explain': explainChallenge, 'GET /explain': explainChallenge },
     resourceServer,
   );
 
@@ -169,8 +187,10 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
   const handler: express.RequestHandler = async (req, res) => {
     const passToken = (req as express.Request & { btxPass?: string }).btxPass;
     const free = Boolean((req as express.Request & { btxFree?: boolean }).btxFree);
-    const body = (req.body ?? {}) as { tx_hash?: unknown };
-    const raw = typeof body.tx_hash === 'string' ? body.tx_hash.trim() : '';
+    // tx_hash arrives in the JSON body on POST and in the query string on GET,
+    // so one decode handler serves both rails without duplicating the logic.
+    const src = (req.method === 'GET' ? req.query : (req.body ?? {})) as { tx_hash?: unknown };
+    const raw = typeof src.tx_hash === 'string' ? src.tx_hash.trim() : '';
 
     if (!HASH_RE.test(raw)) {
       // Refund a bad request: a typo is the caller's mistake, but charging a
@@ -217,16 +237,24 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
   };
   app.post('/explain', setFreeCallsHeader, gate, handler);
 
-  // A GET is what a curious human tries first. Tell them how to use it rather
-  // than 404ing, and do not bill anyone for reading the instructions.
-  app.get('/explain', (_req, res) => {
-    res.status(405).json({
-      error: 'Use POST.',
-      example: `curl -X POST ${publicUrl}/explain -H 'Content-Type: application/json' -d '{"tx_hash":"0x..."}'`,
-      price_usd: priceUsd,
-      docs: `${publicUrl}/openapi.json`,
-    });
-  });
+  // A GET serves two very different callers, and 405 failed both. A crawler or
+  // x402 scanner (PulseFeed, x402scan, nohumans) probes with a bare GET; a 405
+  // reads as a dead endpoint, so those catalogs listed us as broken. We now emit
+  // the SAME 402 challenge POST does — via payGate's 'GET /explain' entry —
+  // which catalogs us as a live, priced x402 service. A caller that actually
+  // wants a decode over GET passes ?tx_hash=0x..., and that runs the real
+  // free/pass/pay gate and the shared handler. Neither path 404s, and a bare
+  // discovery probe is never billed (payGate only emits the challenge; the free
+  // tier is not spent unless a real tx_hash is present and the gate runs).
+  const getExplain: express.RequestHandler = (req, res, next) => {
+    const raw = typeof req.query.tx_hash === 'string' ? req.query.tx_hash.trim() : '';
+    if (HASH_RE.test(raw)) {
+      gate(req, res, next); // real decode: free, then pass, then pay
+      return;
+    }
+    void payGate(req, res, next); // discovery probe: advertise the 402, unbilled
+  };
+  app.get('/explain', setFreeCallsHeader, getExplain, handler);
 }
 
 export interface PassRouteDeps {
@@ -254,11 +282,11 @@ export interface PassRouteDeps {
 export function registerPassRoutes(app: express.Express, deps: PassRouteDeps): void {
   const { resourceServer, payTo, priceUsd, network, publicUrl, siteUrl, callCap, days } = deps;
 
-  const passGate = paymentMiddleware(
-    {
-      'POST /pass': {
-        accepts: { scheme: 'exact', network, payTo, price: `$${priceUsd}` },
-        resource: `${publicUrl}/pass`,
+  // One challenge config for POST and GET, so a discovery probe on GET sees the
+  // real 402 instead of a dead 405. Buying stays POST-only (see the GET route).
+  const passChallenge = {
+    accepts: { scheme: 'exact' as const, network, payTo, price: `$${priceUsd}` },
+    resource: `${publicUrl}/pass`,
         description:
           `${days}-day pass for base-transaction-decoder: up to ${callCap.toLocaleString('en-US')} explain_transaction calls, no account. ` +
           'Returns a bearer token; present it as the X-BTX-Pass header on POST /explain or at _meta["btx/pass"] on MCP calls. ' +
@@ -314,8 +342,10 @@ export function registerPassRoutes(app: express.Express, deps: PassRouteDeps): v
 
           },
         }),
-      },
-    },
+  };
+
+  const passGate = paymentMiddleware(
+    { 'POST /pass': passChallenge, 'GET /pass': passChallenge },
     resourceServer,
   );
 
@@ -360,12 +390,18 @@ export function registerPassRoutes(app: express.Express, deps: PassRouteDeps): v
     });
   });
 
-  app.get('/pass', (_req, res) => {
-    res.status(405).json({
-      error: 'Use POST.',
+  // GET is the discovery probe: emit the real 402 challenge (via passGate's
+  // 'GET /pass' entry) so scanners see a live paid endpoint, not a 405. Buying a
+  // pass is a state change, so it is POST-only: if a scanner actually paid a GET
+  // challenge, the middleware settles only on a 2xx, and this 4xx means it is not
+  // charged — it is pointed at POST /pass instead of being silently minted a pass
+  // on a GET.
+  app.get('/pass', passGate, (_req, res) => {
+    res.status(400).json({
+      error: 'To buy a pass, POST /pass — a purchase is not a GET. This GET only advertises the pass.',
       price_usd: priceUsd,
       what_you_get: `${callCap.toLocaleString('en-US')} calls over ${days} days, no account.`,
-      example: `curl -X POST ${publicUrl}/pass (x402 payment required; an x402-capable client handles it automatically)`,
+      buy: `POST ${publicUrl}/pass over x402, or pay by card at ${siteUrl}/pricing/`,
     });
   });
 }
