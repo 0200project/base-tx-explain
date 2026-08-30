@@ -701,7 +701,31 @@
     signed: 'Submitting payment…'
   };
 
+  /* ONE SIGNATURE AT A TIME. Same guard as the $9 flow on /pricing/, same
+     reason: every payChallenge mints a fresh nonce (assets/pay.js), so two
+     signatures are two independent authorisations and BOTH settle. Two
+     clicks on a slow wallet pays twice for one call. Smaller stake here
+     ($0.02 vs $9) but identical mechanism, and it would be strange to
+     protect the expensive surface and leave this one open.
+  
+     Guards SIGNATURE ACQUISITION, never the relay -- gating the relay is
+     exactly the bug fixed above. Fails open after three minutes so a
+     wallet promise that never settles cannot lock the payer out. */
+  var pgSigning = false;
+  var pgSigningTimer = null;
+  function pgBeginSigning() {
+    if (pgSigning) return false;
+    pgSigning = true;
+    pgSigningTimer = setTimeout(function () { pgSigning = false; pgSigningTimer = null; }, 180000);
+    return true;
+  }
+  function pgEndSigning() {
+    pgSigning = false;
+    if (pgSigningTimer) { clearTimeout(pgSigningTimer); pgSigningTimer = null; }
+  }
+  
   function runPayment(el, challenge, hash) {
+    if (!pgBeginSigning()) return;
     el.innerHTML = '<p id="pay-status">Connecting wallet&hellip;</p>';
     window.x402Pay.payChallenge(challenge, {
       onState: function (state) {
@@ -710,6 +734,7 @@
         if (s && PAY_STATE_LABEL[state]) s.textContent = PAY_STATE_LABEL[state];
       }
     }).then(function (result) {
+      pgEndSigning();          /* the signature step has settled either way */
       /* THE RELAY IS NOT OPTIONAL. By this point a signature exists: the user
          authorised a USDC transfer in their wallet, and x402 only moves those
          funds once WE hand that authorisation to the facilitator. Returning
@@ -724,6 +749,7 @@
       }
       retryWithPayment(hash, result.payment);
     }).catch(function (err) {
+      pgEndSigning();          /* released before any early return below */
       /* A rejection means NO payment payload was produced -- declined, wallet
          error, or insufficient funds -- so no money is at risk and there is
          nothing to relay. Still not silent: if the panel moved on we cannot
@@ -770,12 +796,12 @@
       if (!env || env.error) {
         meta.textContent = 'error · payment_retry_failed';
         body.innerHTML = '<p class="pg-err-note">The paid retry did not go through. If USDC left your wallet, ' +
-          '<a href="mailto:security@0200project.com">contact us</a> with the transaction hash you paid for — nothing here should take payment without delivering the result.</p>';
+          '<a href="mailto:security@0200project.com">contact us</a> with the wallet address you paid from and roughly when — we can match that against our records. You never broadcast a transaction yourself, so there is no hash for you to send. Nothing here should take payment without delivering the result.</p>';
         return;
       }
       var result = env.result || {};
       var payload = payloadFrom(result);
-      if (isX402(payload)) { showPaywall(payload, hash); return; }
+      if (isX402(payload)) { showPaywall(payload, hash, true); return; }
       if (result.isError) { showToolError(payload || { code: 'error', message: 'The tool returned an error with no readable body.' }); return; }
       if (payload) {
         meta.textContent = 'explain_transaction · ' + (payload.action_type || 'result') + ' · paid';
@@ -789,7 +815,7 @@
       if (my !== seq) return;
       meta.textContent = 'error · network';
       body.innerHTML = '<p class="pg-err-note">The paid retry could not reach the server. If USDC left your wallet, ' +
-        '<a href="mailto:security@0200project.com">contact us</a> with the transaction hash you paid for.</p>';
+        '<a href="mailto:security@0200project.com">contact us</a> with the wallet address you paid from and roughly when. You never broadcast a transaction yourself, so there is no hash for you to send.</p>';
     });
   }
 
@@ -800,7 +826,12 @@
     body.appendChild(note);
   }
 
-  function showPaywall(challenge, hash) {
+  /* afterPayment: this 402 answers a retry that already carried a signed
+     payment. Saying "your free calls are used up" there is false -- the
+     free tier is not why they are seeing it -- and the panel below then
+     offers a fresh Sign & pay, inviting a SECOND charge while hiding
+     the reason we already hold in challenge.error. */
+  function showPaywall(challenge, hash, afterPayment) {
     meta.textContent = 'x402 · payment required';
     var a = (challenge.accepts && challenge.accepts[0]) || {};
     var amt = (a.maxAmountRequired != null) ? a.maxAmountRequired : a.amount;
@@ -815,8 +846,13 @@
     if (a.scheme) rows += kvRow('scheme', esc(String(a.scheme)));
     body.innerHTML =
       '<div class="pg-pay">' +
-      '<p class="pg-pay-title">Payment required — this browser’s free calls are used up.</p>' +
-      '<p>This is the paywall working, not an error. The response below is an x402 challenge: an agent reads it, attaches a signed USDC payment at <code class="inline">_meta["x402/payment"]</code>, and retries the same call — the same thing you can do below, by hand. <a href="/docs/#x402-payments">How agents pay →</a></p>' +
+      (afterPayment
+        ? '<p class="pg-pay-title">Your payment did not settle — do not pay again yet.</p>' +
+          '<p>The signature went through, but the server answered with another payment challenge, so the call was not delivered. ' +
+          (challenge && challenge.error ? 'It said: <code class="inline">' + esc(String(challenge.error)) + '</code>. ' : '') +
+          'If USDC left your wallet, <a href="mailto:security@0200project.com">contact us</a> with the wallet address you paid from and roughly when, rather than signing a second time.</p>'
+        : '<p class="pg-pay-title">Payment required — this browser’s free calls are used up.</p>' +
+          '<p>This is the paywall working, not an error. The response below is an x402 challenge: an agent reads it, attaches a signed USDC payment at <code class="inline">_meta["x402/payment"]</code>, and retries the same call — the same thing you can do below, by hand. <a href="/docs/#x402-payments">How agents pay →</a></p>') +
       '<div id="pay-panel"></div>' +
       (rows ? '<dl class="pg-kv">' + rows + '</dl>' : '') +
       '</div>' +
