@@ -158,6 +158,29 @@ describe('delivery lookup', () => {
   it('returns null for an unknown subscription', () => {
     expect(passForSubscription('sub_doesnotexist')).toBeNull();
   });
+
+  it('keeps a subscription pass past the 48h window, so the day-30 renewal still finds it', () => {
+    // THE BUG this guards: one constant (RETRIEVAL_WINDOW_MS = 48h) governed
+    // two lifetimes — the one-time retrieval window AND the subscription->pass
+    // mapping. The first renewal fires ~day 30, so age-pruning that mapping
+    // left every subscriber charged with no working pass (index.ts "RENEWAL
+    // PAID ... but no pass found"). The renewal tests above prove we DECIDE to
+    // renew; this proves we still CAN, thirty days out.
+    const id = `cs_test_${Math.random().toString(36).slice(2, 12)}`;
+    const sub = `sub_${Math.random().toString(36).slice(2, 12)}`;
+    recordDelivery(id, mk({ kind: 'subscription', subscription_id: sub, delivered_at: Date.now() - 30 * 24 * 60 * 60 * 1000 }));
+    passForSession('cs_test_prune_trigger_a'); // any later lookup runs prune(); pre-fix this deleted the aged mapping
+    expect(passForSubscription(sub)?.kind).toBe('subscription');
+  });
+
+  it('still prunes an aged one-time pass — the exemption is subscription-only', () => {
+    // The fix must not stop pruning one-time checkout sessions, whose 48h
+    // window is correct; only subscription mappings are exempt.
+    const id = `cs_test_${Math.random().toString(36).slice(2, 12)}`;
+    recordDelivery(id, mk({ delivered_at: Date.now() - 49 * 60 * 60 * 1000 }));
+    passForSession('cs_test_prune_trigger_b'); // triggers prune
+    expect(passForSession(id)).toBeNull();
+  });
 });
 
 describe('sessionKind', () => {
@@ -279,5 +302,32 @@ describe('delivery retrieval survives a restart', () => {
     m2.initStripeDeliveries();
     // Aged out honestly: same answer a live prune would have given.
     expect(m2.passForSession('cs_live_ancient')).toBeNull();
+  });
+
+  it('keeps a subscription mapping across a restart, past the window — the renewal needs it at day 30', async () => {
+    // The mirror of the test above, and the reason a subscription cannot share
+    // the 48h rule: a restart 30 days in must NOT drop the mapping, or the
+    // renewal that follows finds no pass and the subscriber is charged for
+    // nothing. Only one-time sessions age out on reload.
+    vi.resetModules();
+    const dir = mkdtempSync(join(tmpdir(), 'stripe-deliv-sub-'));
+    process.env.DATA_DIR = dir;
+    const m1 = await import('../src/stripe.js');
+    m1.initStripeDeliveries();
+    const sub = 'sub_persist_across_restart';
+    m1.recordDelivery('cs_live_sub_persist', {
+      token: 'btxp_' + 'c'.repeat(48),
+      expires_at: new Date(Date.now() + 40 * 24 * 60 * 60 * 1000).toISOString(),
+      call_cap: 10000,
+      kind: 'subscription',
+      subscription_id: sub,
+      delivered_at: Date.now() - 30 * 24 * 60 * 60 * 1000, // past 48h, but the day-30 renewal is due
+    });
+
+    vi.resetModules();
+    process.env.DATA_DIR = dir;
+    const m2 = await import('../src/stripe.js');
+    m2.initStripeDeliveries();
+    expect(m2.passForSubscription(sub)?.token).toBe('btxp_' + 'c'.repeat(48));
   });
 });

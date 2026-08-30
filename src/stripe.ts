@@ -84,7 +84,10 @@ export function initStripeDeliveries(now = Date.now()): void {
       const raw = JSON.parse(readFileSync(deliveryPath, 'utf8')) as Record<string, DeliveredPass>;
       for (const [id, p] of Object.entries(raw)) {
         if (!p || typeof p.delivered_at !== 'number' || typeof p.token !== 'string') continue;
-        if (now - p.delivered_at > RETRIEVAL_WINDOW_MS) continue; // aged out honestly
+        // Same two-lifetimes split as prune(): a restart must not drop a
+        // subscription->pass mapping (needed at renewal ~day 30). Only one-time
+        // sessions age out at the 48h retrieval window.
+        if (!p.subscription_id && now - p.delivered_at > RETRIEVAL_WINDOW_MS) continue; // aged out honestly
         bySession.set(id, p);
         if (p.subscription_id) sessionBySubscription.set(p.subscription_id, id);
       }
@@ -113,9 +116,17 @@ function flushDeliveries(): void {
 
 function prune(now: number): void {
   for (const [id, p] of bySession) {
+    // A subscription->pass mapping MUST outlive the subscription: the first
+    // renewal fires ~day 30, far past RETRIEVAL_WINDOW_MS (48h, right only for
+    // one-time checkout-session retrieval). Age-pruning it leaves a paying
+    // subscriber charged with no working pass on every renewal — the else at
+    // index.ts "RENEWAL PAID ... but no pass found". So only one-time sessions
+    // age out here; subscription records persist. (Cleanup on CANCELLATION,
+    // not age, is the correct disposal for these — a Track C follow-up once a
+    // cancellation handler exists; until then they are few and tiny.)
+    if (p.subscription_id) continue;
     if (now - p.delivered_at > RETRIEVAL_WINDOW_MS) {
       bySession.delete(id);
-      if (p.subscription_id) sessionBySubscription.delete(p.subscription_id);
     }
   }
 }
