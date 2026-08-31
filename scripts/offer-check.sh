@@ -127,9 +127,32 @@ else ok "no unfilled slots"; fi
 
 # 6. offer pages only: the facts a buyer needs to say yes in one read.
 if [ "$MODE" = "offer" ]; then
-  for need in "You get" "Deliver" "USDC"; do
+  for need in "You get" "Deliver"; do
     grep -qiE "$need" "$f" || bad "missing required element: $need" "A buyer cannot say yes in one read without it."
   done
+
+  # A NAMED PAYMENT RAIL, not one specific rail.
+  #
+  # This list required the literal string "USDC" until 2026-08-31. That was the
+  # same defect as the risk-reversal hardcoding directly below, caught in the
+  # same sweep and BEFORE it failed anything: it encoded the rail base-tx-explain
+  # happens to use as a requirement on every offer we will ever write.
+  #
+  # We already know the rail changes per buyer -- it is the RAIL, not the price,
+  # that decides pseudonymity, so a bank or card rail is chosen deliberately for
+  # some deals. A correct card-settled or invoiced offer would have failed this
+  # gate for naming its actual terms, which is the "pass by making the copy
+  # false" trap this file exists to prevent.
+  #
+  # The PROPERTY a buyer needs is: I can see how I am expected to pay. Any named
+  # rail satisfies it. NO rail named is still a failure, because "we will sort
+  # payment out later" is how a yes turns into a second negotiation.
+  grep -qiE "USDC|\bcard\b|credit card|invoice[ds]?|bank transfer|wire|ACH|Stripe|x402" "$f" \
+    && ok "a payment rail is named" \
+    || bad "no payment rail named" \
+      "A buyer must see how they are expected to pay before they say yes.
+        Any rail counts -- USDC, card, invoice, bank transfer, wire, ACH.
+        Naming none turns a yes into a second negotiation."
   # RISK REVERSAL: enforce the PROPERTY, not the implementation that happened to
   # embody it when this was written.
   #
