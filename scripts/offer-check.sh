@@ -130,12 +130,44 @@ if [ "$MODE" = "offer" ]; then
   for need in "You get" "Deliver" "USDC"; do
     grep -qiE "$need" "$f" || bad "missing required element: $need" "A buyer cannot say yes in one read without it."
   done
-  # The risk reversal is the load-bearing claim; accept ANY phrasing of it
-  # rather than one blessed sentence. Demanding a literal string once failed a
-  # page that said "Payment is due on delivery, never before".
-  grep -qiE "before you pay|pay after|paid on delivery|never before|after you have|owe nothing" "$f" \
-    && ok "risk reversal (pay-on-artifact) stated" \
-    || bad "no risk reversal stated" "Pay-on-artifact is why a stranger with no reason to trust us starts."
+  # RISK REVERSAL: enforce the PROPERTY, not the implementation that happened to
+  # embody it when this was written.
+  #
+  # A stranger with no reason to trust us needs a reason the downside is bounded.
+  # This check originally demanded PAY-ON-ARTIFACT ("owe nothing until we
+  # deliver") because that is the engagement model it was written against. On
+  # 2026-08-31 that hardcoding failed a CORRECT offer: a $1,000/mo PREPAID
+  # monitoring subscription, where payment necessarily comes first. Satisfying
+  # the old pattern would have required copy that CONTRADICTED the terms the
+  # buyer had already accepted -- i.e. passing the gate by making the page false,
+  # which is the exact failure this file exists to prevent.
+  #
+  # Fourth instance that week of a gate scoped to the shape of past work. It
+  # matters more than the others because PAYDAY.2 abandons the old market, buyer,
+  # technology AND BUSINESS MODEL, so this would have misfired on every correct
+  # new-model offer we write from here.
+  #
+  # THE COMMERCIAL DEFINITION (Revenue, 2026-08-31, so the next reader gets the
+  # reasoning and not just a regex): risk reversal under a PREPAID model at this
+  # company means ASSESS-BEFORE-RENEWAL plus the no-argue clause -- the buyer
+  # judges the first period against their own data before there is any renewal
+  # ask, and we do not argue them into a second one. It is deliberately NOT a
+  # refund right; no money moves backward. A refund right is a founder sentence.
+  #
+  # Either shape satisfies the property. Neither present is still a failure.
+  RR_PREPAID="assess(ed)? (it )?against your own|before there.s any renewal|before renewal|judge what that was worth|argue you into a second"
+  RR_ARTIFACT="before you pay|pay after|paid on delivery|never before|after you have|owe nothing"
+  if grep -qiE "$RR_ARTIFACT" "$f"; then
+    ok "risk reversal stated (pay-on-artifact)"
+  elif grep -qiE "$RR_PREPAID" "$f"; then
+    ok "risk reversal stated (assess-before-renewal)"
+  else
+    bad "no risk reversal stated in either accepted shape" \
+      "A stranger needs the downside bounded before they start. Accepted:
+        pay-on-artifact (owe nothing until we deliver), OR assess-before-renewal
+        (they judge the first period against their own data before any renewal
+        ask, and we do not argue them into a second). One or the other, always."
+  fi
 else
   # A mechanics page must still make the order of events unmistakable, since
   # pay-on-artifact is the whole reason a stranger is willing to start.
