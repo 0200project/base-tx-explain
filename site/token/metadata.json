@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "name": "0200",
+  "symbol": "0200",
+  "network": "Base Mainnet",
+  "chainId": 8453,
+  "assetId": "eip155:8453/erc20:0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6",
+  "address": "0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6",
+  "decimals": 18,
+  "totalSupply": "1000000000",
+  "totalSupplyAtomic": "1000000000000000000000000000",
+  "website": "https://0200project.com",
+  "tokenPage": "https://0200project.com/token/",
+  "logoURI": "https://0200project.com/assets/0200-logo.png",
+  "tokenListURI": "https://0200project.com/token/tokenlist.json",
+  "description": "0200 is economic infrastructure for autonomous machines.",
+  "extendedDescription": "0200 is building open infrastructure for autonomous machine commerce, focused on machine-readable economic state, resolution, and finality across payments and fulfillment.",
+  "explorer": "https://basescan.org/token/0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6",
+  "sourceVerification": "https://repo.sourcify.dev/8453/0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6",
+  "deploymentTransaction": "0xdf138fa2f961637dcb04870b80fb17cef7a14cf86fd26c0a1c0e3e3a35f1c586",
+  "runtimeBytecodeHash": "0xc788bf1411246729903073d1c13475ebac81f613a1d3565ab54a7e91b36bbd47",
+  "verifiedAt": "2026-09-01T17:31:09Z"
+}

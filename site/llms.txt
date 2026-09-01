@@ -27,6 +27,13 @@
 
 - [Repository](https://github.com/0200project/base-tx-explain): server source, self-host instructions
 
+## 0200 token
+
+- [Canonical token page](https://0200project.com/token/): Base contract, fixed supply, official logo, and liquidity status
+- [Token metadata](https://0200project.com/token/metadata.json): canonical machine-readable token record
+- [Token list](https://0200project.com/token/tokenlist.json): Uniswap Token Lists-compatible JSON
+- Canonical Base contract: `0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6`
+
 ## Pricing
 
 - 50 free calls per IP address per 24h, shared by everyone behind one address (an

@@ -56,4 +56,16 @@
     <loc>https://0200project.com/llms.txt</loc>
     <lastmod>2026-08-30</lastmod>
   </url>
+  <url>
+    <loc>https://0200project.com/token/</loc>
+    <lastmod>2026-09-01</lastmod>
+  </url>
+  <url>
+    <loc>https://0200project.com/token/metadata.json</loc>
+    <lastmod>2026-09-01</lastmod>
+  </url>
+  <url>
+    <loc>https://0200project.com/token/tokenlist.json</loc>
+    <lastmod>2026-09-01</lastmod>
+  </url>
 </urlset>
