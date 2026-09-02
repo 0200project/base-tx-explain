@@ -1968,6 +1968,7 @@ function registerPaidRoutes(): void {
         tryFreeCall: (req) => consumeFreeCall(clientIpOf(req)),
         refundFreeCall: (req) => refundFreeCall(clientIpOf(req)),
         freeCallsRemaining: (req) => freeCallsRemaining(clientIpOf(req)),
+        passStatus,
         tryPass: (req) => {
           const token = req.headers['x-btx-pass'];
           if (typeof token !== 'string' || !token) return null;

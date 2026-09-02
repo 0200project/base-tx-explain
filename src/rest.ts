@@ -38,6 +38,11 @@ export interface RestDeps {
   tryFreeCall: (req: express.Request) => boolean;
   /** Give a free call back when the failure was ours. */
   refundFreeCall: (req: express.Request) => void;
+  /**
+   * Where a pass holder stands right now. Read AFTER the call is counted, so the
+   * number is what they have left going forward, not what they had on arrival.
+   */
+  passStatus: (token: string) => { valid: false } | { valid: true; remaining: number; expiresAt: string; daysLeft: number };
   /** How many free calls this caller's IP has left right now (does NOT consume one). For the X-Free-Calls-Remaining header. */
   freeCallsRemaining: (req: express.Request) => number;
   /**
@@ -199,6 +204,27 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
     const passToken = deps.tryPass(req);
     if (passToken) {
       (req as express.Request & { btxPass?: string }).btxPass = passToken;
+      // TELL A PASS HOLDER WHERE THEY STAND, ON EVERY CALL.
+      //
+      // A pass is 10,000 calls over 30 days and nothing ever told the holder how
+      // much of either was left. The only place that information surfaced was the
+      // "you already hold a pass" message shown when they tried to buy a SECOND
+      // one — so a customer on call 9,900, or on day 29, learned nothing, and
+      // their pass ended by silently falling back to the free tier.
+      //
+      // We do not need an outbound channel for this, which is why it is cheap: a
+      // pass holder is talking to us on every single call. We are already the
+      // channel; we were just not using it. Same pattern as
+      // X-Free-Calls-Remaining, which already proved a caller acts on a number
+      // it can see.
+      //
+      // Read AFTER tryPass has counted this call, so the figure is what remains
+      // going forward rather than what they had on arrival.
+      const status = deps.passStatus(passToken);
+      if (status.valid) {
+        res.set('X-Pass-Calls-Remaining', String(status.remaining));
+        res.set('X-Pass-Days-Left', String(status.daysLeft));
+      }
       next();
       return;
     }
