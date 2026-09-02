@@ -32,6 +32,7 @@
   .token-notes { display: grid; gap: 1rem; margin-top: 1.5rem; }
   .token-notes .card p { color: var(--fg-muted); }
   .token-links { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
+  .wallet-status { min-height: 1.5em; margin-top: 0.75rem; color: var(--fg-muted); font-size: 0.875rem; }
   @media (max-width: 47.9em) {
     .token-grid { grid-template-columns: minmax(0, 1fr); }
     .token-logo { max-width: 20rem; }
@@ -87,11 +88,9 @@
         <div class="token-links">
           <a class="btn btn-primary" href="https://basescan.org/token/0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6">View on BaseScan</a>
           <a class="btn btn-ghost" href="/token/metadata.json">Token metadata</a>
-          <a class="btn btn-ghost" href="/token/tokenlist.json">Token list JSON</a>
         </div>
 
         <div class="token-notes">
-          <div class="card"><p>0200 currently has no official liquidity pool. A pool, if one is created later, is a separate action and will be identified separately.</p></div>
           <div class="card"><p>Contract addresses—not ticker symbols or token names alone—identify canonical assets. Verify the complete Base contract address before interacting with any token represented as 0200.</p></div>
         </div>
       </div>
@@ -150,5 +149,31 @@
 </footer>
 
 <script src="/assets/site.js" defer></script>
+<script>
+  document.getElementById('watch-0200').addEventListener('click', async function () {
+    const status = document.getElementById('wallet-status');
+    if (!window.ethereum || !window.ethereum.request) {
+      status.textContent = 'Open this page in a compatible wallet browser to add 0200.';
+      return;
+    }
+    try {
+      const accepted = await window.ethereum.request({
+        method: 'wallet_watchAsset',
+        params: {
+          type: 'ERC20',
+          options: {
+            address: '0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6',
+            symbol: '0200',
+            decimals: 18,
+            image: 'https://0200project.com/assets/0200-logo.png'
+          }
+        }
+      });
+      status.textContent = accepted ? '0200 was added to your wallet.' : 'Wallet request was declined.';
+    } catch (error) {
+      status.textContent = 'The wallet could not add 0200. Search using the complete contract address instead.';
+    }
+  });
+</script>
 </body>
 </html>
