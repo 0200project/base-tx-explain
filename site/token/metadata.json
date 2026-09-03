@@ -7,17 +7,37 @@
   "assetId": "eip155:8453/erc20:0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6",
   "address": "0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6",
   "decimals": 18,
+
+  "status": "retired",
+  "retired": {
+    "retiredAt": "2026-09-02T00:00:00Z",
+    "summary": "The entire supply was transferred to the token's own contract address, which has no owner, no rescue function, no withdraw function and no proxy. There is no code path by which those tokens move again.",
+    "liquidityWithdrawalTx": "0xb365ca46b440c415cf3ec36d9a83eea4b89c6e1ccd2f58c6f1577f0ff8f1b887",
+    "supplyTransferTx": "0x742db31dd0dca7b00686354662cc0f7334fa65584b819c6f43511292cc494cb6",
+    "destination": "0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6",
+    "disclosure": "https://0200project.com/0200/",
+    "verify": "balanceOf(token, token) + balanceOf(token, pair) == totalSupply()",
+    "verifiedOnChainAt": "2026-09-03T15:39:00Z",
+    "observed": {
+      "totalSupply": "1000000000",
+      "heldByContract": "999999999.9999999",
+      "strandedInPair": "0.0000001",
+      "note": "The pair residue is UniswapV2's permanently locked minimum liquidity and cannot be withdrawn by anyone. It is why the check adds two balances rather than comparing one."
+    }
+  },
+
   "totalSupply": "1000000000",
   "totalSupplyAtomic": "1000000000000000000000000000",
+  "totalSupplyNote": "This contract has no burn function, so totalSupply still reads 1000000000 and always will. That number no longer describes anything movable. Any market capitalisation computed from it multiplies a supply that cannot move by a price that has no market.",
+  "circulatingSupply": "0",
+
   "website": "https://0200project.com",
-  "tokenPage": "https://0200project.com/token/",
+  "tokenPage": "https://0200project.com/0200/",
   "logoURI": "https://0200project.com/assets/logo-512.png",
-  "tokenListURI": "https://0200project.com/token/tokenlist.json",
-  "description": "0200 is economic infrastructure for autonomous machines.",
-  "extendedDescription": "0200 is building open infrastructure for autonomous machine commerce, focused on machine-readable economic state, resolution, and finality across payments and fulfillment.",
+  "description": "Retired. 0200 was deployed on Base on 2026-09-01 and retired on 2026-09-02. It has no utility, is not offered for sale, and is not required to use anything 0200project operates.",
   "explorer": "https://basescan.org/token/0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6",
   "sourceVerification": "https://repo.sourcify.dev/8453/0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6",
   "deploymentTransaction": "0xdf138fa2f961637dcb04870b80fb17cef7a14cf86fd26c0a1c0e3e3a35f1c586",
   "runtimeBytecodeHash": "0xc788bf1411246729903073d1c13475ebac81f613a1d3565ab54a7e91b36bbd47",
-  "verifiedAt": "2026-09-01T17:31:09Z"
+  "verifiedAt": "2026-09-03T15:39:00Z"
 }

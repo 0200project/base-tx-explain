@@ -386,6 +386,34 @@ else
 fi
 
 
+# ------------------------------------------------------------- sitemap targets
+#
+# The self-owned-link check walks HTML hrefs. sitemap.xml is not html, so a URL
+# advertised only there was never checked -- and on 2026-09-03 the sitemap
+# offered /token/tokenlist.json, which had been deleted the night before and
+# returned 404 to anything that followed it. A sitemap is read by exactly the
+# machines we are trying to be legible to.
+
+SMDEAD=""
+for u in $(grep -o '<loc>[^<]*</loc>' "$ROOT/site/sitemap.xml" | sed 's/<[^>]*>//g'); do
+  path="${u#https://0200project.com}"
+  case "$path" in
+    */) f="$ROOT/site${path}index.html" ;;
+    *)  f="$ROOT/site${path}" ;;
+  esac
+  [ -e "$f" ] || SMDEAD="$SMDEAD
+        $u"
+done
+if [ -n "$SMDEAD" ]; then
+  fail "sitemap advertises a location with no file behind it" "$SMDEAD
+        Every <loc> must exist in site/. A sitemap entry is a promise made
+        directly to crawlers and agents, and it is not covered by the html
+        link check."
+else
+  pass "every sitemap location exists ($(grep -c '<loc>' "$ROOT/site/sitemap.xml") checked)"
+fi
+
+
 # ----------------------------------------------------------------- JSON-LD
 #
 # The FAQ publishes a FAQPage schema. Google requires the structured answer to
