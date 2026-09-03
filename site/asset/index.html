@@ -108,8 +108,12 @@
       <p class="small faint">Review date for this section: <strong>2026-12-02</strong>. On that date
       each item becomes CURRENT with evidence, or is marked not pursued, and this page says which.</p>
 
-      <p><strong>The contracts exist on a test network only.</strong> They are source-verified and
-      have been checked at bytecode level for the absence of an admin surface. <strong>Testnet is
+      <p><strong>The contracts exist on a test network only.</strong> Their executable code has been
+      compared byte for byte against a fresh build and checked for the absence of an admin surface
+      &mdash; no owner, no rescue function, no setter, no upgrade path. We are not calling them
+      source-verified: one of the three has since had a source comment edited, which changes the
+      metadata a verifier compares even though the executable bytes did not move. That is benign and
+      it is also exactly the kind of detail that should not be smoothed over. <strong>Testnet is
       not mainnet</strong> &mdash; a testnet deployment demonstrates that code compiles and behaves,
       and demonstrates nothing about what will exist in production. Until mainnet addresses are
       published here, treat every property below as a design intention rather than a deployed fact.</p>

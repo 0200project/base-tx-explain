@@ -50,25 +50,12 @@
 
 <main id="main">
 
-  <section class="page-hero">
+  <section class="page-hero page-hero-statement">
     <div class="container">
-      <div class="page-hero-split">
-        <div class="reveal">
-          <span class="eyebrow">About 0200project</span>
-          <h1 class="h-section">We build tools agents can trust.</h1>
-          <p class="lead">Autonomous software needs to call something, get an answer, and act on it &mdash; with no human reading the output first. That only works if the tool behaves identically every time, costs a knowable amount, and says what it could not determine.</p>
-        </div>
-        <div class="reveal">
-          <div class="led reveal" id="live-panel">
-            <div class="panel-head"><span>api.0200project.com/healthz</span><span id="live-when">fetching&hellip;</span></div>
-            <div class="led-row"><span class="led-lbl">version</span><span class="led-val">Running in production</span><span class="led-amt" id="lv-ver">&mdash;</span></div>
-            <div class="led-row"><span class="led-lbl">calls</span><span class="led-val">Lifetime, all clients<small><span id="lv-free">&mdash;</span> served on the free tier</small></span><span class="led-amt" id="lv-calls">&mdash;</span></div>
-            <div class="led-row"><span class="led-lbl">wall hits</span><span class="led-val">Callers who reached the paywall<small>Every one of them is someone the free tier could not finish serving</small></span><span class="led-amt" id="lv-wall">&mdash;</span></div>
-            <div class="led-row"><span class="led-lbl">degraded</span><span class="led-val">Calls answered while a check was unavailable<small>Reported rather than hidden &mdash; this is the number most services do not publish</small></span><span class="led-amt" id="lv-deg">&mdash;</span></div>
-            <div class="led-foot" id="lv-checks">Loading per-check health&hellip;</div>
-          </div>
-          <p class="small faint" style="margin-top:0.875rem">Fetched from our own health endpoint when this page loads &mdash; not written into the page, and not editable without changing what the server reports. If it fails it says so: an empty panel and a broken one look identical, and only one of them is honest.</p>
-        </div>
+      <div class="reveal">
+        <span class="eyebrow">About 0200project</span>
+        <h1 class="statement">We build tools agents can trust.</h1>
+        <p class="lead">Autonomous software needs to call something, get an answer, and act on it &mdash; with no human reading the output first. That only works if the tool behaves identically every time, costs a knowable amount, and says what it could not determine.</p>
       </div>
     </div>
   </section>
@@ -141,7 +128,44 @@
     </div>
   </section>
 
-  
+  <section class="section">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">How it is built</span>
+        <h2 class="h-section">One person, and gates that fail loudly.</h2>
+        <p class="lead">0200project is operated by one person, with AI systems doing the majority of the engineering, review and analysis. Every claim is checked against a source before it ships, and the checks are automated wherever they can be.</p>
+      </div>
+      <div class="led reveal">
+        <div class="panel-head"><span>the site build fails if</span><span>on every deploy</span></div>
+        <div class="led-row"><span class="led-lbl">tier</span><span class="led-val">A page states a free-tier number the server does not report</span><span class="led-amt q">blocked</span></div>
+        <div class="led-row"><span class="led-lbl">registry</span><span class="led-val">A page names a registry entry that does not resolve</span><span class="led-amt q">blocked</span></div>
+        <div class="led-row"><span class="led-lbl">samples</span><span class="led-val">A published example does not execute against production</span><span class="led-amt q">blocked</span></div>
+        <div class="led-row"><span class="led-lbl">links</span><span class="led-val">A link to one of our own properties returns an error</span><span class="led-amt q">blocked</span></div>
+        <div class="led-foot">The company is small and the record is short. <b>We would rather it be short and accurate.</b></div>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">Live</span>
+        <h2 class="h-section">Read from production, right now.</h2>
+        <p class="lead">These numbers are fetched from our own health endpoint when this page loads. They are not written into the page and we cannot edit them without changing what the server reports.</p>
+      </div>
+      <div class="led reveal" id="live-panel">
+        <div class="panel-head"><span>api.0200project.com/healthz</span><span id="live-when">fetching&hellip;</span></div>
+        <div class="led-row"><span class="led-lbl">version</span><span class="led-val">Running in production</span><span class="led-amt" id="lv-ver">&mdash;</span></div>
+        <div class="led-row"><span class="led-lbl">calls</span><span class="led-val">Lifetime, all clients<small><span id="lv-free">&mdash;</span> served on the free tier</small></span><span class="led-amt" id="lv-calls">&mdash;</span></div>
+        <div class="led-row"><span class="led-lbl">wall hits</span><span class="led-val">Callers who reached the paywall<small>Every one of them is someone the free tier could not finish serving</small></span><span class="led-amt" id="lv-wall">&mdash;</span></div>
+        <div class="led-row"><span class="led-lbl">degraded</span><span class="led-val">Calls answered while a check was unavailable<small>Reported rather than hidden &mdash; this is the number most services do not publish</small></span><span class="led-amt" id="lv-deg">&mdash;</span></div>
+        <div class="led-foot" id="lv-checks">Loading per-check health&hellip;</div>
+      </div>
+      <p class="term-note">If this panel fails to load it will say so rather than showing nothing &mdash; an empty panel and a broken one look identical, and only one of them is honest.</p>
+    </div>
+  </section>
+
   <section class="section">
     <div class="container">
       <div class="section-head reveal" style="max-width:40rem">
