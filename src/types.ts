@@ -1,3 +1,4 @@
+import type { PriceBasis } from './price.js';
 export type ActionType =
   | 'eth_transfer'
   | 'erc20_transfer'
@@ -139,6 +140,15 @@ export interface ExplainResult {
   /** Which risk checks ran, so an empty risk_flags can be read correctly. */
   checks: ChecksPerformed;
   gas_paid_usd: number | null;
+  /**
+   * Where the ETH/USD rate behind `gas_paid_usd` came from.
+   *
+   * `source: 'at-block'` reproduces forever. `source: 'latest'` does NOT — it
+   * means archive state was unavailable and today's price was applied to a past
+   * transaction. Read this before treating `gas_paid_usd` as a point-in-time
+   * figure; the two fields are only meaningful together.
+   */
+  gas_price_basis: PriceBasis;
   timestamp: string;
   block_number: number;
   tx_hash: string;

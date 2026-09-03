@@ -67,6 +67,20 @@ const EXPLAIN_RESULT_SCHEMA = {
       required: ['contract_verification', 'first_interaction', 'drainer_blacklist', 'unchecked_addresses', 'note'],
     },
     gas_paid_usd: { type: ['number', 'null'] },
+    // Ships beside gas_paid_usd so a machine reader cannot take the number
+    // without the provenance. 'latest' means today's price was applied to a
+    // past transaction and the figure will not reproduce on another day.
+    gas_price_basis: {
+      type: 'object',
+      properties: {
+        source: { type: 'string', enum: ['at-block', 'latest', 'unavailable'] },
+        eth_usd: { type: ['number', 'null'] },
+        feed_block: { type: ['string', 'null'] },
+        round_id: { type: ['string', 'null'] },
+        note: { type: 'string' },
+      },
+      required: ['source', 'eth_usd', 'note'],
+    },
     timestamp: { type: 'string' },
     block_number: { type: 'number' },
     tx_hash: { type: 'string' },
@@ -83,7 +97,7 @@ const EXPLAIN_RESULT_SCHEMA = {
       required: ['untrusted_fields', 'note'],
     },
   },
-  required: ['summary', 'action_type', 'status', 'assets_moved', 'counterparties', 'risk_flags', 'checks', 'gas_paid_usd', 'timestamp', 'basescan_url', 'provenance'],
+  required: ['summary', 'action_type', 'status', 'assets_moved', 'counterparties', 'risk_flags', 'checks', 'gas_paid_usd', 'gas_price_basis', 'timestamp', 'basescan_url', 'provenance'],
 } as const;
 
 const PASS_OPERATION = (publicUrl: string): Record<string, unknown> => ({

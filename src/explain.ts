@@ -196,8 +196,11 @@ export async function explainTransaction(txHashRaw: string): Promise<ExplainResu
   // --- Gas in USD (execution fee + OP-stack L1 data fee) ---
   const l1Fee = (receipt as TransactionReceipt & { l1Fee?: bigint | null }).l1Fee ?? 0n;
   const totalFeeWei = receipt.gasUsed * receipt.effectiveGasPrice + l1Fee;
+  // The figure and the provenance of the figure travel together — a caller can
+  // never receive one without the other, which is what stops an unreproducible
+  // number from being read as a reproducible one.
   const gasPaidUsd =
-    ethUsd === null ? null : round6(Number.parseFloat(formatEther(totalFeeWei)) * ethUsd);
+    ethUsd.eth_usd === null ? null : round6(Number.parseFloat(formatEther(totalFeeWei)) * ethUsd.eth_usd);
 
   // --- Counterparties ---
   const counterparties = await buildCounterparties(tx.from, tx.to ?? null, movements, events);
@@ -298,6 +301,7 @@ export async function explainTransaction(txHashRaw: string): Promise<ExplainResu
     risk_flags: riskFlags,
     checks,
     gas_paid_usd: gasPaidUsd,
+    gas_price_basis: ethUsd,
     timestamp: new Date(Number(block.timestamp) * 1000).toISOString(),
     block_number: Number(receipt.blockNumber),
     tx_hash: hash,
