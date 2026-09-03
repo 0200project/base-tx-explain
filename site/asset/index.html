@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>document.documentElement.classList.add('js')</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The 0200 native asset — status, architecture and what does not exist yet | 0200project</title>
+<meta name="description" content="What 0200project has deployed, what is being built, and what is still a hypothesis. No canonical asset exists yet. Every claim is labelled and checkable on-chain.">
+<meta name="theme-color" content="#050505">
+<meta property="og:title" content="The 0200 native asset — current status">
+<meta property="og:description" content="Three tiers: what exists, what is being built, what is unproven. Nothing is claimed that cannot be checked.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="0200project">
+<meta property="og:image" content="https://0200project.com/assets/og.png">
+<meta property="og:url" content="https://0200project.com/asset/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://0200project.com/asset/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="0200project home">
+      <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+      0200project
+    </a>
+    <button class="nav-toggle" aria-expanded="false" aria-label="Menu" aria-controls="site-menu">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/playground/">Playground</a></li>
+      <li><a href="/docs/">Docs</a></li>
+      <li><a href="/pricing/">Pricing</a></li>
+      <li class="nav-cta"><a class="btn btn-ghost btn-sm" href="https://github.com/0200project">GitHub</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/playground/">Try it free</a></li>
+    </ul></nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="container">
+    <div class="page-hero">
+      <span class="eyebrow">Native asset</span>
+      <h1 class="h-section">What exists, what is being built, and what is still a hypothesis</h1>
+      <p class="updated">State as of 2026-09-02. Every claim on this page is labelled with which of those three it is.</p>
+    </div>
+
+    <div class="prose">
+      <p>This page exists so a reader can tell, without asking us, which of our claims describe
+      something that runs today and which describe an intention. <strong>Those are different kinds
+      of statement and mixing them is how a roadmap starts reading like a product.</strong></p>
+
+      <p>Three labels are used throughout, and nothing appears without one:</p>
+      <ul>
+        <li><strong>CURRENT</strong> &mdash; exists, runs, and can be checked right now.</li>
+        <li><strong>PROSPECTIVE</strong> &mdash; being built deliberately. Carries a review date. On
+        that date it becomes CURRENT with evidence, or is marked not pursued. It does not sit here
+        indefinitely.</li>
+        <li><strong>UNPROVEN</strong> &mdash; a hypothesis we hold and have not demonstrated. May
+        change or disappear.</li>
+      </ul>
+
+      <h2>CURRENT &mdash; what exists today</h2>
+
+      <p><strong>There is no canonical 0200 native asset.</strong> It has not been deployed. It has
+      no contract address, no name, no ticker, and no supply. Nothing on this page describes a token
+      you can hold, and there is nothing to buy.</p>
+
+      <p><strong>One product runs:</strong> base-transaction-decoder. It explains any Base mainnet
+      transaction as strict JSON, is priced in USDC, and requires no token to use. It has never
+      accepted any token as payment.</p>
+
+      <p><strong>One token exists and is being retired:</strong> the Genesis token,
+      <code class="inline">0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6</code>. As of this writing its
+      supply still sits in the deployer&rsquo;s wallet and the retirement transactions have not been
+      executed. Its full history, the risk disclosure, and the retirement notice are published
+      separately and are not summarised here.</p>
+
+      <p><strong>Control, stated plainly because it is the field that matters most:</strong> every
+      asset 0200project holds is controlled by a single private key held by one person. There is no
+      multisig, no timelock, and no on-chain constraint. <em>Who can move these tomorrow, and what
+      stops them?</em> Today the answer is: one person, and nothing.</p>
+
+      <h2>PROSPECTIVE &mdash; being built, not yet real</h2>
+
+      <p>Each item below is an intention. None of it is deployed. <strong>None of the numbers exist
+      yet, so none are published here</strong> &mdash; a figure describing an undeployed contract is
+      not a fact about anything.</p>
+
+      <ul>
+        <li><strong>A canonical native asset.</strong> Decided in principle. Not designed, not named,
+        not deployed.</li>
+        <li><strong>A rate-limited release mechanism.</strong> The design intent is that no holder,
+        including us, can move more than a fixed amount in any 30-day window, enforced by code that
+        nobody can alter. <strong>Until it is deployed and its parameters are readable on-chain, this
+        is an intention and not a bound.</strong> When it exists, this page will publish the maximum
+        that can reach a market in any 30-day window, what that amount does to the liquidity it
+        would land in, and the address of any portion held outside the mechanism &mdash; which would
+        have no ceiling at all.</li>
+        <li><strong>Custody architecture.</strong> Not designed. The single-key position described
+        above is the current state and changing it is a prerequisite, not a follow-up.</li>
+        <li><strong>Allocation.</strong> Not decided. No allocation percentages are published
+        anywhere by 0200project, and any that appear elsewhere are not ours.</li>
+      </ul>
+
+      <p class="small faint">Review date for every item in this section: <strong>2026-12-02</strong>.
+      On that date each becomes CURRENT with evidence, or is marked not pursued, and this page says
+      which.</p>
+
+      <h2>UNPROVEN &mdash; hypotheses</h2>
+
+      <p><strong>The thesis.</strong> That deterministic, machine-verifiable settlement state is
+      useful infrastructure for autonomous commerce. We have verified one mechanism on-chain and
+      built nothing on it. It may not be useful. It may not be needed.</p>
+
+      <p><strong>That the asset is necessary at all.</strong> We established separately that the
+      protocol functions without a native asset, and that finding stands. The asset exists because
+      the founder judged it strategically necessary; it is not presented as technically required.
+      <strong>This section exists so a reader does not have to infer which of those two things is
+      true.</strong></p>
+
+      <h2>What we do not do</h2>
+
+      <p>0200project does not market a native asset on the basis of expected price appreciation. We
+      publish no market capitalisation, no supply-multiplied-by-price figure, and no return
+      expectation of any kind. Where third-party tools display such numbers for tokens associated
+      with us, they are computed by those tools and not by us.</p>
+
+      <p class="small faint">This page is not overwritten. When a claim changes tier or turns out to
+      be wrong, the correction is added with a date and the previous text stays visible, so that a
+      reader in five years can see what we claimed in 2026 rather than only what we claim then.</p>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/" aria-label="0200project home">
+          <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+          0200project
+        </a>
+      </div>
+      <nav aria-label="Product">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/tools/">Tools</a></li>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/docs/#request-format">API reference</a></li>
+          <li><a href="/pricing/">Pricing</a></li>
+          <li><a href="/asset/">Native asset</a></li>
+          <li><a href="/changelog/">Changelog</a></li>
+          <li><a href="/faq/">FAQ</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Developers">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="/playground/">Playground</a></li>
+          <li><a href="https://github.com/0200project">GitHub</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-transaction-decoder">MCP Registry</a></li>
+          <li><a href="/llms.txt">llms.txt</a></li>
+          <li><a href="/status/">Status</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Company">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/#about">About</a></li>
+          <li><a href="/security/">Security</a></li>
+          <li><a href="https://github.com/0200project/base-tx-explain/issues">Support</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 0200project <span class="faint">&middot;</span> <span class="mono">base-transaction-decoder v0.1.4 &middot; Base mainnet</span></span>
+      <a class="pill footer-status" href="/status/"><span class="dot"></span><span id="ft-status">Checking status&hellip;</span></a>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/site.js" defer></script>
+</body>
+</html>
