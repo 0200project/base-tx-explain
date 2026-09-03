@@ -930,3 +930,58 @@ a.pill:hover .pill-arrow { transform: translateX(2px); color: var(--fg); }
     .led-row { grid-template-columns: 68px 1fr; }
     .led-amt { grid-column: 1 / -1; text-align: left; }
   }
+
+/* ---------- Mobile hardening ----------
+   Measured at 390px on 2026-09-03, not guessed. Three real faults:
+   the homepage scrolled sideways (scrollWidth 450 against a 390 viewport);
+   a 66-character tx hash and a 422-character JSON body were CLIPPED rather
+   than scrollable, because .panel is overflow:hidden and nothing inside it
+   scrolled -- so on a phone the reader simply could not see the rest;
+   and 31 of 38 tap targets sat under the 44px touch minimum, the footer
+   navigation at 17px tall. */
+
+@media (max-width: 40rem) {
+
+  /* 1. wide content scrolls inside its own panel instead of being cut off */
+  .panel pre,
+  .panel .term-body,
+  .codeblock pre {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  /* a hash is read, not scrolled -- let it wrap instead */
+  .panel code,
+  .led-val code,
+  code.inline { overflow-wrap: anywhere; }
+
+  /* 2. panel heads stop splitting a value across two lines */
+  .panel-head { flex-wrap: wrap; row-gap: 0.2rem; }
+  .panel-head > span { white-space: nowrap; }
+
+  /* 3. touch targets. 0.6rem of vertical padding takes a 17px link to 44px
+        without moving anything on a pointer device. */
+  .footer ul a,
+  .footer-bottom a {
+    display: inline-block;
+    padding-block: 0.6rem;
+    margin-block: -0.35rem;
+  }
+  .footer ul li + li { margin-top: 0.125rem; }
+  .nav-links a:not(.btn) { padding-block: 0.6rem; }
+  .btn { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  .copy-btn { min-height: 36px; padding-inline: 0.7rem; }
+
+  /* 4. nothing on a phone renders below 11.5px. Measured: .led-lbl was
+        9.6px and code.inline 9.79px -- readable on a 27in display, not in
+        a hand at arm's length. */
+  .small, .faint.small, .card-mini, .term-note, .led-foot,
+  .panel-head, .eyebrow { font-size: 0.72rem; }
+  .led-val small, .led-lbl, .led-amt { font-size: 0.72rem; }
+  code.inline { font-size: 0.75rem; }
+
+  /* 5. the two controls a thumb actually goes for */
+  .nav-toggle { min-width: 44px; min-height: 44px; }
+  .hero-try-input, input[type="text"] { min-height: 44px; }
+}
