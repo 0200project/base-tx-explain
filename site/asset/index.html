@@ -143,7 +143,13 @@
         <p class="small" style="font-family:var(--mono);font-size:0.66rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--fg-faint);margin:0 0 0.5rem">Read this before the table</p>
         <p style="margin:0 0 0.5rem"><strong style="font-size:1.1rem">All five locks release to one address.</strong></p>
         <p class="small" style="margin:0 0 0.5rem">Founder, Treasury, Ecosystem, Contributors and Undesignated are five names for five schedules. <strong>They are not five destinations.</strong> Every one of them releases to the same beneficiary address, held by one person.</p>
-        <p class="small" style="margin:0">A reader who sees five named buckets will infer five recipients. <strong>The buckets differ in WHEN, not in WHO.</strong> Whatever the schedules do, the supply arrives at one party, and the names above the schedules describe intended future uses rather than parties who currently receive anything.</p>
+        <p class="small" style="margin:0 0 0.5rem">A reader who sees five named buckets will infer five recipients. <strong>The buckets differ in WHEN, not in WHO.</strong> Treasury releases to the founder&rsquo;s address. So does Ecosystem. So does Contributors. The names describe intended future uses, not parties who receive anything.</p>
+        <p class="small" style="margin:0">This was read from the contracts rather than taken from a design document: <code class="inline">beneficiary()</code> on all five locks returns the same address. Distinct beneficiaries across five locks: <strong>one</strong>.</p>
+      </div>
+
+      <div class="card" style="border-left:2px solid var(--border-strong);margin:0 0 1.25rem">
+        <p class="small" style="font-family:var(--mono);font-size:0.66rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--fg-faint);margin:0 0 0.6rem">What is nonetheless different</p>
+        <p class="small" style="margin:0">The Genesis token could be moved in full, instantly, by one signature. This design cannot: every release is bounded per 30-day window, carries 30 days of notice before it completes, and the contracts have no admin function, no rescue function and no upgrade path. <strong>That constraint is real and it holds regardless of who the beneficiary is.</strong> What it does not do is make the table above mean what it looks like &mdash; a bound on speed is not a distribution, and one address remains one address at any rate.</p>
       </div>
 
       <div class="led" style="margin:0 0 1.25rem">
