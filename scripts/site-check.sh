@@ -327,6 +327,41 @@ else
 fi
 
 
+# ----------------------------------------------------------------- brand mark
+#
+# A logo rollout is the easiest thing in the world to half-finish: you check the
+# homepage, it looks right, and 404.html is still carrying the old mark because
+# it was not named index.html. That happened on 2026-09-03 and this check is why
+# it was caught before deploy rather than by someone hitting a dead URL.
+#
+# Every page with a nav carries the mark TWICE (top nav and footer). The one
+# exception is site/unnamed/, a redirect stub with no nav at all.
+
+PAGES="$(find "$ROOT/site" -name '*.html' -not -path '*/unnamed/*')"
+NEWMARK=0; OLDMARK=0; NOMARK=""
+for f in $PAGES; do
+  n=$(grep -c 'class="brand-mark"' "$f" || true)
+  o=$(grep -c 'viewBox="0 0 64 36"' "$f" || true)
+  NEWMARK=$((NEWMARK + n)); OLDMARK=$((OLDMARK + o))
+  # a page with a footer nav must carry the mark; one without is a stub
+  if grep -q '<h4>Company</h4>' "$f" && [ "$n" -lt 2 ]; then
+    NOMARK="$NOMARK
+        $(basename "$(dirname "$f")")/$(basename "$f")  has $n of 2"
+  fi
+done
+
+if [ "$OLDMARK" -ne 0 ]; then
+  fail "$OLDMARK page(s) still carry the retired brand mark" "
+        The old inline mark is still on the site. A logo that is current on the
+        homepage and stale three clicks in is not a rebrand, it is a bug that
+        looks finished from where you checked."
+elif [ -n "$NOMARK" ]; then
+  fail "a page with a nav is missing the brand mark" "$NOMARK"
+else
+  pass "brand mark is the current one on every page ($NEWMARK instances)"
+fi
+
+
 # ----------------------------------------------------------------- JSON-LD
 #
 # The FAQ publishes a FAQPage schema. Google requires the structured answer to
