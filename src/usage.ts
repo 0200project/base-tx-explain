@@ -219,7 +219,25 @@ function absorb(ev: LedgerEvent): void {
   if (ev.e === 'call') {
     agg.calls++;
     lifetime.calls++;
-    if (ev.pass) {
+    if (ev.internal) {
+      // Checked FIRST, above every funnel branch, for the same reason `degraded`
+      // is checked above the charge branches: the funnel answers "what did
+      // STRANGERS do", and our own traffic wearing a customer's shape is the
+      // failure this file already guards against twice — once for outages
+      // reading as demand, once for our testing resurrecting as acquisition.
+      //
+      // ⚠️ THIS WAS THE THIRD INSTANCE AND IT WAS OPEN. Internal calls were
+      // landing in `wall_hits`, so a day where we exhausted our own per-IP free
+      // tier reported 53 people hitting the paywall. That number was not
+      // misread — it was WRONG, and it was about to be quoted in commercial
+      // conversations about whether demand is real.
+      //
+      // Excluded from `free` and the paid buckets too, not just `wall_hits`:
+      // the funnel is one instrument, and an exclusion applied to one branch of
+      // it certifies the others without checking them.
+      agg.internal_calls++;
+      lifetime.internal_calls++;
+    } else if (ev.pass) {
       agg.pass_calls++;
       lifetime.pass_calls++;
     } else if (ev.degraded) {
@@ -239,10 +257,7 @@ function absorb(ev: LedgerEvent): void {
     }
     agg.clients.add(ev.client);
     lifetimeClients.add(ev.client);
-    if (ev.internal) {
-      agg.internal_calls++;
-      lifetime.internal_calls++;
-    } else {
+    if (!ev.internal) {
       agg.externalClients.add(ev.client);
       lifetimeExternalClients.add(ev.client);
       // EXTERNAL ONLY. The question this answers is "which listing brought a

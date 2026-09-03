@@ -85,7 +85,14 @@ export function buildSummary(ctx: SummaryContext): string {
     }
     case 'approval_revoked':
       if (reverted) return attempted('revoke an approval');
-      return `${sender} revoked a previously granted approval on ${nameOf(to)}. No assets moved.`;
+      // NOT "revoked a previously granted approval". We classify on an Approval
+      // event with value 0 and never read the prior allowance, so a prior grant
+      // is presupposed, not observed -- and approve(spender, 0) against an
+      // allowance that was already zero is a real pattern (pre-emptive safety
+      // revokes, the approve-0-then-approve-n dance, proof-of-control calls).
+      // Confirmed false on a live mainnet tx whose allowance was 0 before and
+      // after. The sentence below asserts only what the event proves.
+      return `${sender} set an approval on ${nameOf(to)} to zero — nothing is approved to move now. No assets moved.`;
     case 'approval_for_all':
       if (reverted) return attempted(`grant operator approval on ${nameOf(to)}`);
       return `${sender} granted an operator approval for ALL tokens in collection ${nameOf(to)} — the operator can move any of these tokens from now on. No assets moved yet.`;
