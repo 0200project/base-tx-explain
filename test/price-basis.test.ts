@@ -43,7 +43,8 @@ describe('gas price provenance travels with the figure', () => {
     const b = await ethUsdAtBlock(block);
     expect(b.source).toBe('at-block');
     expect(b.eth_usd).toBe(3000);
-    expect(b.feed_block).toBe(block.toString());
+    // The anchor, not the caller's block — see the anchoring test below.
+    expect(b.feed_block).toBe(((block / 300n) * 300n).toString());
     expect(b.note).toMatch(/reproducible/i);
   });
 
@@ -56,6 +57,22 @@ describe('gas price provenance travels with the figure', () => {
     // What must never happen is it arriving dressed as an at-block read.
     expect(b.feed_block).toBeNull();
     expect(b.note).toMatch(/NOT reproducible/i);
+  });
+
+  it('gives the SAME feed_block to two transactions in one bucket, cold or warm', async () => {
+    // The cache is keyed per ~300-block bucket. Before anchoring, whichever
+    // transaction populated a bucket left ITS block in feed_block, so a second
+    // transaction in the same bucket reported a block it never asked about and
+    // a cold server disagreed with a warm one about the identical request.
+    // Caught in production by decoding two real transactions ten minutes apart
+    // and seeing both claim the same feed block.
+    mode = 'ok';
+    const base = 60_000_000n;
+    const a = await ethUsdAtBlock(base + 10n);
+    const b = await ethUsdAtBlock(base + 290n); // same bucket, different block
+    expect(a.feed_block).toBe(b.feed_block);
+    expect(a.feed_block).toBe(((base + 10n) / 300n * 300n).toString());
+    expect(a.eth_usd).toBe(b.eth_usd);
   });
 
   it('distinguishes "price unknown" from "no gas paid"', async () => {

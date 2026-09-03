@@ -70,21 +70,35 @@ const priceCache = new TtlCache<PriceBasis>(2_000, 24 * HOUR);
  * carries the same provenance as a fresh one.
  */
 export async function ethUsdAtBlock(blockNumber: bigint): Promise<PriceBasis> {
-  const bucket = (blockNumber / 300n).toString();
-  return priceCache.getOrLoad(`eth-usd:${bucket}`, async () => {
+  // ⚠️ THE FEED IS READ AT A DETERMINISTIC ANCHOR, NOT AT THE CALLER'S BLOCK.
+  //
+  // The rate is cached per ~300-block bucket, which is fine for the NUMBER but
+  // was not fine for the LABEL: whichever transaction populated a bucket left
+  // its own block in `feed_block`, so a second transaction in the same bucket
+  // reported a block it had not asked about, and a cold server reported a
+  // different one than a warm server for the identical request. That is the
+  // exact non-reproducibility this whole field exists to eliminate, reintroduced
+  // by the cache — caught by decoding two real transactions ten minutes apart
+  // and seeing them claim the same feed block.
+  //
+  // Anchoring the read to the bucket's first block makes the answer a pure
+  // function of the transaction's block: same input, same rate, same
+  // `feed_block`, cold or warm, first caller or thousandth.
+  const anchor = (blockNumber / 300n) * 300n;
+  return priceCache.getOrLoad(`eth-usd:${anchor.toString()}`, async () => {
     try {
       const [roundId, answer] = await client.readContract({
         address: ETH_USD_FEED,
         abi: FEED_ABI,
         functionName: 'latestRoundData',
-        blockNumber,
+        blockNumber: anchor,
       });
       return {
         source: 'at-block',
         eth_usd: Number.parseFloat(formatUnits(answer, 8)),
-        feed_block: blockNumber.toString(),
+        feed_block: anchor.toString(),
         round_id: roundId.toString(),
-        note: `ETH/USD read from the Chainlink feed at block ${blockNumber}. Reproducible by anyone with archive access to that block.`,
+        note: `ETH/USD read from the Chainlink feed at block ${anchor}, the ~10-minute anchor for this transaction's block. Reproducible by anyone with archive access to that block.`,
       };
     } catch {
       try {
