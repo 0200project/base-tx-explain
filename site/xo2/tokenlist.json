@@ -1,0 +1,17 @@
+{
+  "name": "0200project",
+  "logoURI": "https://0200project.com/assets/xo2-256.png",
+  "keywords": ["base", "0200project", "xo2"],
+  "timestamp": "2026-09-03T20:00:00.000Z",
+  "version": { "major": 1, "minor": 0, "patch": 0 },
+  "tokens": [
+    {
+      "chainId": 8453,
+      "address": "0xdE906C748E56fD6F648eb8564532673257Ac414b",
+      "name": "0200 Protocol",
+      "symbol": "XO2",
+      "decimals": 18,
+      "logoURI": "https://0200project.com/assets/xo2-256.png"
+    }
+  ]
+}
