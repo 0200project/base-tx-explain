@@ -146,6 +146,26 @@
     </div>
   </section>
 
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">Live</span>
+        <h2 class="h-section">Read from production, right now.</h2>
+        <p class="lead">These numbers are fetched from our own health endpoint when this page loads. They are not written into the page and we cannot edit them without changing what the server reports.</p>
+      </div>
+      <div class="led reveal" id="live-panel">
+        <div class="panel-head"><span>api.0200project.com/healthz</span><span id="live-when">fetching&hellip;</span></div>
+        <div class="led-row"><span class="led-lbl">version</span><span class="led-val">Running in production</span><span class="led-amt" id="lv-ver">&mdash;</span></div>
+        <div class="led-row"><span class="led-lbl">calls</span><span class="led-val">Lifetime, all clients<small><span id="lv-free">&mdash;</span> served on the free tier</small></span><span class="led-amt" id="lv-calls">&mdash;</span></div>
+        <div class="led-row"><span class="led-lbl">wall hits</span><span class="led-val">Callers who reached the paywall<small>Every one of them is someone the free tier could not finish serving</small></span><span class="led-amt" id="lv-wall">&mdash;</span></div>
+        <div class="led-row"><span class="led-lbl">degraded</span><span class="led-val">Calls answered while a check was unavailable<small>Reported rather than hidden &mdash; this is the number most services do not publish</small></span><span class="led-amt" id="lv-deg">&mdash;</span></div>
+        <div class="led-foot" id="lv-checks">Loading per-check health&hellip;</div>
+      </div>
+      <p class="term-note">If this panel fails to load it will say so rather than showing nothing &mdash; an empty panel and a broken one look identical, and only one of them is honest.</p>
+    </div>
+  </section>
+
   <section class="section">
     <div class="container">
       <div class="section-head reveal" style="max-width:40rem">
@@ -217,6 +237,41 @@
     </div>
   </div>
 </footer>
+
+
+<script>
+(function(){
+  var el = function(id){ return document.getElementById(id); };
+  var fail = function(msg){
+    var w = el('live-when'); if (w) w.textContent = 'unreachable';
+    var f = el('lv-checks');
+    if (f) f.innerHTML = '<b>Could not reach the server.</b> That is what this panel shows when it cannot read production &mdash; not a blank space. ' + msg;
+  };
+  fetch('https://api.0200project.com/healthz', { cache: 'no-store' })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(d){
+      var lt = d.lifetime || {}, n = function(v){ return (v == null) ? '\u2014' : Number(v).toLocaleString('en-US'); };
+      el('lv-ver').textContent   = d.version || '\u2014';
+      el('lv-calls').textContent = n(lt.calls);
+      el('lv-free').textContent  = n(lt.free);
+      el('lv-wall').textContent  = n(lt.wall_hits);
+      el('lv-deg').textContent   = n(lt.degraded_calls);
+      el('live-when').textContent = 'read ' + new Date().toISOString().slice(0, 16).replace('T', ' ') + 'Z';
+      var ch = (d.check_health && d.check_health.checks) || {}, names = Object.keys(ch);
+      if (names.length) {
+        var dark = names.filter(function(k){ return (ch[k].unavailable_rate || 0) > 0; });
+        el('lv-checks').innerHTML = '<b>' + names.length + ' risk checks tracked over the last '
+          + (d.check_health.observed_hours || 0) + 'h.</b> '
+          + (dark.length
+              ? dark.length + ' had periods where a source was unavailable: <code class="inline">' + dark.join('</code>, <code class="inline">') + '</code>. A flag not raised during those periods means not checked, not clean.'
+              : 'None reported an unavailable period in that window.');
+      } else {
+        el('lv-checks').textContent = 'Per-check health not reported by this build.';
+      }
+    })
+    .catch(function(e){ fail(String(e.message || e)); });
+})();
+</script>
 
 <script src="/assets/site.js" defer></script>
 </body>
