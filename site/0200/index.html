@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>document.documentElement.classList.add('js')</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>$0200 (0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6) — retirement and risk disclosure | 0200project</title>
+<meta name="description" content="0200project is retiring the $0200 Genesis token, contract 0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6 on Base. What will happen, why, and the on-chain state behind it.">
+<meta name="theme-color" content="#050505">
+<meta property="og:title" content="Retiring the Genesis token">
+<meta property="og:description" content="Published before any transaction, so what follows can be compared against it.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="0200project">
+<meta property="og:url" content="https://0200project.com/0200/">
+<link rel="canonical" href="https://0200project.com/0200/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="0200project home">
+      <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+      0200project
+    </a>
+    <button class="nav-toggle" aria-expanded="false" aria-label="Menu" aria-controls="site-menu">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/playground/">Playground</a></li>
+      <li><a href="/docs/">Docs</a></li>
+      <li><a href="/pricing/">Pricing</a></li>
+      <li class="nav-cta"><a class="btn btn-ghost btn-sm" href="https://github.com/0200project">GitHub</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/playground/">Try it free</a></li>
+    </ul></nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="container">
+    <div class="page-hero">
+      <span class="eyebrow">Genesis token</span>
+      <h1 class="h-section">Retiring the Genesis token</h1>
+      <p class="updated">Published 2026-09-02, before any transaction.</p>
+    </div>
+    <div class="prose">
+      <p class="small faint" style="border-left:2px solid var(--border-strong);padding-left:0.9rem;margin-bottom:2rem">This page is not linked from anywhere on our site. It exists to be found by someone looking up this contract &mdash; not to introduce anyone to it.</p>
+
+      <p>We deployed a token called 0200 on Base on 2026-09-01. A third-party classifier flagged it as a scam. We investigated why, published what we found, and are now retiring it. <strong>This page is published before any transaction, so what follows can be compared against it.</strong></p>
+
+      <h2>What will happen, in order</h2>
+      <ol>
+        <li><strong>The entire liquidity pool is withdrawn.</strong> It holds $25.00 and 250,000 tokens. We hold effectively all of the LP tokens.</li>
+        <li><strong>The full balance &mdash; 1,000,000,000 tokens &mdash; is sent to the token&rsquo;s own contract address</strong>, <code class="inline">0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6</code>. That contract has no owner, no rescue function, no withdraw function and no proxy. There is no code path by which those tokens move again.</li>
+        <li><strong>Both transaction hashes are published here.</strong></li>
+      </ol>
+
+      <h2>The state that led to this, all of it checkable</h2>
+      <ul>
+        <li>One wallet holds 999,750,000 of 1,000,000,000 tokens: <code class="inline">0x3129b6525dbe86a0c61d3c8ad162a333a5ef1783</code>. It is a normal wallet &mdash; not a vesting contract, not a timelock. Nothing on-chain restricts it.</li>
+        <li>There are two holders: that wallet and the pool.</li>
+        <li>Liquidity is $25.00 and the LP is not locked.</li>
+      </ul>
+      <p><strong>The arithmetic that follows:</strong> a buyer who spends $100 receives about 200,000 tokens. If the majority holder then sells 1,000,000 tokens &mdash; 0.1% of their position &mdash; that buyer can recover <strong>$0.95</strong>. After the supply is sent to an address it cannot leave, the same buyer recovers approximately <strong>$99.40</strong>, the difference being pool fees.</p>
+      <p>Those are reproducible from chain state. Anyone can check them.</p>
+
+      <h2>What this does not change</h2>
+      <p>The contract is immutable and will exist permanently. <code class="inline">totalSupply</code> will continue to read 1,000,000,000, because this contract has no burn function. The pool contract also survives: UniswapV2 permanently locks a small amount of liquidity when a pair is created, so about 0.0000001 tokens remain in it and cannot be withdrawn by anyone. <strong>The contract is permissionless. Anyone can create a new pool for it using their own tokens.</strong></p>
+
+      <p><strong>Current holders:</strong> two &mdash; our wallet, and the pool. No external address holds this token.</p>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/" aria-label="0200project home">
+          <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+          0200project
+        </a>
+      </div>
+      <nav aria-label="Product">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/tools/">Tools</a></li>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/docs/#request-format">API reference</a></li>
+          <li><a href="/pricing/">Pricing</a></li>
+          <li><a href="/changelog/">Changelog</a></li>
+          <li><a href="/faq/">FAQ</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Developers">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="/playground/">Playground</a></li>
+          <li><a href="https://github.com/0200project">GitHub</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-transaction-decoder">MCP Registry</a></li>
+          <li><a href="/llms.txt">llms.txt</a></li>
+          <li><a href="/status/">Status</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Company">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/#about">About</a></li>
+          <li><a href="/security/">Security</a></li>
+          <li><a href="https://github.com/0200project/base-tx-explain/issues">Support</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 0200project <span class="faint">&middot;</span> <span class="mono">base-transaction-decoder v0.1.4 &middot; Base mainnet</span></span>
+      <a class="pill footer-status" href="/status/"><span class="dot"></span><span id="ft-status">Checking status&hellip;</span></a>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/site.js" defer></script>
+</body>
+</html>
