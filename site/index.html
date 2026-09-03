@@ -189,68 +189,7 @@
   .statement-band .h-section { margin-inline: auto; max-width: 22ch; }
   .statement-band p { margin: 1rem auto 0; max-width: 34rem; }
 
-  /* ---- hero ledger (direction B; team vote 3-0, 2026-08-31). Replaces the
-     terminal replay. The differentiator with no free substitute -- checks{}
-     run-status -- is rendered as visible ROWS, not described in copy.
-     Treatment: light falls from above (gradient hairline on the top edge),
-     numerals are the hero of their row, and the panel sits off the page
-     rather than on it. */
-  .led {
-    border: 1px solid var(--border-strong); border-radius: var(--radius);
-    background: var(--bg-panel); overflow: hidden;
-  }
-  .led .panel-head {
-    font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.09em;
-    text-transform: uppercase; color: var(--fg-faint);
-    padding: 0.8rem 1.05rem; border-bottom: 1px solid var(--border);
-    background: rgba(255,255,255,0.012);
-  }
-  /* the product, stated once, in the buyer's language before any figures */
-  .led-sum {
-    padding: 1.05rem 1.05rem 0.95rem; border-bottom: 1px solid var(--border);
-    font-size: 0.98rem; line-height: 1.5; color: var(--fg-strong);
-    letter-spacing: -0.012em;
-  }
-  .led-sum b { color: var(--accent-strong); font-weight: 500; font-family: var(--mono); font-size: 0.92rem; }
-  .led-row {
-    display: grid; grid-template-columns: 76px 1fr auto; gap: 1rem;
-    align-items: baseline; padding: 0.72rem 1.05rem;
-    border-bottom: 1px solid var(--border);
-    transition: background 0.16s ease;
-  }
-  .led-row:hover { background: rgba(255,255,255,0.022); }
-  .led-row:last-of-type { border-bottom: 0; }
-  .led-lbl {
-    font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.14em;
-    text-transform: uppercase; color: var(--fg-faint);
-  }
-  .led-val { font-size: 0.875rem; color: var(--fg); letter-spacing: -0.005em; }
-  .led-val small { display: block; color: var(--fg-faint); font-size: 0.72rem; margin-top: 0.2rem; letter-spacing: 0; }
-  .led-amt {
-    font-family: var(--mono); font-size: 1.02rem; font-weight: 500;
-    color: var(--fg-strong); font-variant-numeric: tabular-nums;
-    letter-spacing: -0.03em; text-align: right; white-space: nowrap;
-  }
-  .led-amt.q { font-size: 0.78rem; font-weight: 400; letter-spacing: 0; color: var(--fg-muted); }
-  .led-pill {
-    display: inline-flex; align-items: center; gap: 0.3rem; font-family: var(--mono);
-    font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase;
-    border: 1px solid var(--border-strong); border-radius: 999px;
-    padding: 0.12rem 0.44rem; color: var(--fg-muted); vertical-align: 1px;
-  }
-  .led-pill i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; display: block; }
-  .led-pill.ran { color: #3fb950; border-color: rgba(63,185,80,0.3); }
-  .led-pill.na  { color: #d29922; border-color: rgba(210,153,34,0.3); }
-  .led-foot {
-    padding: 0.85rem 1.05rem; border-top: 1px solid var(--border);
-    background: var(--bg-inset);
-    font-size: 0.78rem; color: var(--fg-muted); line-height: 1.55;
-  }
-  .led-foot b { color: var(--fg-strong); font-weight: 500; }
-  @media (max-width: 40rem) {
-    .led-row { grid-template-columns: 68px 1fr; }
-    .led-amt { grid-column: 1 / -1; text-align: left; }
-  }
+
 </style>
 </head>
 <body>
@@ -266,6 +205,8 @@
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
     </button>
     <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/about/">About</a></li>
+      <li><a href="/unnamed/">UNNAMED</a></li>
       <li><a href="/tools/">Tools</a></li>
       <li><a href="/playground/">Playground</a></li>
       <li><a href="/docs/">Docs</a></li>

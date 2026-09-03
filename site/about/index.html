@@ -36,6 +36,8 @@
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
     </button>
     <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/about/">About</a></li>
+      <li><a href="/unnamed/">UNNAMED</a></li>
       <li><a href="/tools/">Tools</a></li>
       <li><a href="/playground/">Playground</a></li>
       <li><a href="/docs/">Docs</a></li>
@@ -48,92 +50,82 @@
 
 <main id="main">
   <div class="container">
+
     <div class="page-hero">
       <span class="eyebrow">About</span>
-      <h1 class="h-section">Machine-native infrastructure for autonomous agents</h1>
-      <p class="updated">Last updated 2026-09-02.</p>
+      <h1 class="h-section">Machine-native infrastructure<br>for autonomous agents.</h1>
+      <p class="lead" style="max-width:52ch">AI agents need tools they can call without a human in the loop. Those tools have to behave the same way every time, cost a knowable amount, and report what they could not determine.</p>
+    </div>
+
+    <div class="cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:1rem;margin:0 0 4rem">
+      <div class="card">
+        <h3 style="margin-top:0">Deterministic by design</h3>
+        <p class="small">No model in the response path. The same transaction always produces the same JSON &mdash; nothing to hallucinate, nothing to drift.</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">No accounts, no keys</h3>
+        <p class="small">Paid per call in USDC over x402. An agent can discover, pay and retry entirely on its own.</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">Honest about gaps</h3>
+        <p class="small">Every response says which checks ran and which could not. An empty result is never mistaken for a clean one.</p>
+      </div>
     </div>
 
     <div class="prose">
-      <p>AI agents need tools they can call without a human in the loop &mdash; to read data, to
-      check something, to act on the result. Those tools have to behave the same way every time,
-      cost a knowable amount, and report what they could not determine. <strong>0200project
-      builds that kind of tool.</strong></p>
-
       <h2>What runs today</h2>
 
-      <p><strong>base-transaction-decoder</strong> explains any Base mainnet transaction as strict
-      JSON: what happened in plain English, a typed action, every asset that moved with amounts
-      already scaled, counterparties labelled where known, gas in dollars, and evidence-backed risk
-      flags. There is no model in the response path, so the same transaction always produces the same
-      output.</p>
+      <p><strong>base-transaction-decoder</strong> explains any Base mainnet transaction as strict JSON: what happened in plain English, a typed action, every asset that moved with amounts already scaled, counterparties labelled where known, gas in dollars, and evidence-backed risk flags.</p>
 
-      <p>Two things about it are unusual, and both exist because of how an agent fails rather than
-      how a demo looks. <strong>Its <code class="inline">checks</code> field reports whether each
-      safety check actually ran</strong> &mdash; when a source is unreachable no flag is emitted and
-      the check is marked unavailable, so an empty result is never mistaken for a clean one. And
-      <strong><code class="inline">provenance</code> names which returned strings are controlled by
-      the transaction&rsquo;s author</strong> &mdash; token symbols, contract names, the summary
-      derived from them &mdash; with a standing instruction to treat them as data and never as
-      instructions. A token that names itself with instruction-like text is a live injection route
-      into any agent reading a decoder&rsquo;s output.</p>
+      <p>Two things about it are unusual, and both exist because of how an agent fails rather than how a demo looks.</p>
+    </div>
 
-      <p>It costs $0.02 per call in USDC, has a free tier of 50 calls per IP address per day, and
-      requires no account, no signup and no API key.</p>
+    <div class="led" style="margin:0 0 2.5rem">
+      <div class="panel-head"><span>the two fields that matter</span><span>in every response</span></div>
+      <div class="led-row">
+        <span class="led-lbl">checks</span>
+        <span class="led-val">Reports whether each safety check actually ran<small>When a source is unreachable, no flag is emitted and the check is marked unavailable</small></span>
+        <span class="led-amt q"><span class="led-pill ran"><i></i>ran</span> <span class="led-pill na"><i></i>unavailable</span></span>
+      </div>
+      <div class="led-row">
+        <span class="led-lbl">provenance</span>
+        <span class="led-val">Names which strings the transaction&rsquo;s author controls<small>Token symbols, contract names, and the summary derived from them</small></span>
+        <span class="led-amt q">treat as data</span>
+      </div>
+      <div class="led-foot">A token that names itself with instruction-like text is a live injection route into any agent reading a decoder&rsquo;s output. <b>That is what <code class="inline">provenance</code> closes.</b></div>
+    </div>
 
-      <h2>What we have earned</h2>
-
-      <p><strong>One paying customer. Two cents, total.</strong> That is the entire commercial
-      history of this company and we publish it because everything else on this site is easier to
-      believe next to it. We have never had a second customer, a round, or revenue from any token.</p>
+    <div class="prose">
+      <p class="small faint">$0.02 per call in USDC. 50 free calls per IP address per day. No account, no signup, no API key.</p>
 
       <h2>What we deployed and retired</h2>
 
-      <p>On 2026-09-01 we deployed a token on Base. Within a day we examined its structure and
-      retired it: the liquidity pool was withdrawn and the entire supply sent to an address it
-      cannot leave. At the time it was retired there were two holders &mdash; our own wallet and the
-      pool &mdash; and no outside person held it.</p>
+      <p>On 2026-09-01 we deployed a token on Base. Within a day we examined its structure and retired it: the liquidity pool was withdrawn and the entire supply sent to an address it cannot leave. At the time it was retired there were two holders &mdash; our own wallet and the pool &mdash; and no outside person held it.</p>
 
-      <p>The reasons, the arithmetic, both transaction hashes and a verification anyone can run are
-      published in full and permanently. <strong>We did not remove the record of what was wrong with
-      it.</strong> The original text of that disclosure remains on the page, including two dated
-      corrections to things we got wrong, with the mistaken wording still visible above each fix.</p>
+      <p>The reasons, the arithmetic, both transaction hashes and a verification anyone can run are published in full and permanently. <strong>We did not remove the record of what was wrong with it.</strong> The original text of that disclosure remains, including two dated corrections to things we got wrong, with the mistaken wording still visible above each fix.</p>
 
       <h2>How we decide what to publish</h2>
-
-      <p>These are practices rather than principles, because a practice can be checked.</p>
-
-      <ul>
-        <li><strong>Claims carry the date they were verified.</strong> A fact that was true last week
-        is reported as a fact about last week.</li>
-        <li><strong>Pages are not overwritten.</strong> When something is wrong it is corrected with
-        a dated amendment and the original stays visible.</li>
-        <li><strong>Examples are executed before they are published.</strong> Every command shown on
-        this site is run against production; a documented call that fails is a promise we did not
-        keep.</li>
-        <li><strong>Unreachable is not clean.</strong> When a source cannot be checked, that is
-        reported as unknown rather than as an absence of problems.</li>
-        <li><strong>What could not be determined is stated alongside what was.</strong> This is the
-        same rule the decoder follows in its own output.</li>
+      <p>These are practices rather than principles, because a practice can be checked and a principle cannot.</p>
+      <ul class="checks">
+        <li><strong>Claims carry the date they were verified.</strong> A fact that was true last week is reported as a fact about last week.</li>
+        <li><strong>Pages are not overwritten.</strong> When something is wrong it is corrected with a dated amendment and the original stays visible.</li>
+        <li><strong>Examples are executed before they are published.</strong> Every command shown on this site is run against production.</li>
+        <li><strong>Unreachable is not clean.</strong> When a source cannot be checked, that is reported as unknown rather than as an absence of problems.</li>
+        <li><strong>What could not be determined is stated alongside what was.</strong> The same rule the decoder follows in its own output.</li>
       </ul>
 
       <h2>How it is built</h2>
 
-      <p>0200project is operated by one person with AI systems doing the majority of the
-      engineering, review and analysis. <strong>Every claim published here is checked against a
-      source before it ships</strong>, and the checks are automated where they can be: the site build
-      fails if a page states a free-tier number the server does not report, if it names a registry
-      entry that does not resolve, if a published example does not execute, or if a link to one of
-      our own properties returns an error.</p>
+      <p>0200project is operated by one person with AI systems doing the majority of the engineering, review and analysis. Every claim published here is checked against a source before it ships, and the checks are automated where they can be.</p>
+
+      <p><strong>The site build fails</strong> if a page states a free-tier number the server does not report, names a registry entry that does not resolve, publishes an example that does not execute, or links one of our own properties to an error.</p>
 
       <p>The company is small and the record is short. We would rather it be short and accurate.</p>
 
       <h2>Contact</h2>
-
-      <p>Issues, questions and corrections:
-      <a href="https://github.com/0200project/base-tx-explain/issues">GitHub Issues</a>. Security
-      reports: <a href="/security/">the security page</a>.</p>
+      <p>Issues, questions and corrections: <a href="https://github.com/0200project/base-tx-explain/issues">GitHub Issues</a>. Security reports: <a href="/security/">the security page</a>.</p>
     </div>
+
   </div>
 </main>
 
