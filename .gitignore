@@ -13,3 +13,4 @@ reports/
 
 # Internal company material. PUBLIC = PRODUCT, PRIVATE = COMPANY.
 private/
+.internal-pass-token
