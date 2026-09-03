@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>document.documentElement.classList.add('js')</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About 0200project — what we build, what we run, and what we retired | 0200project</title>
+<meta name="description" content="0200project builds machine-native tools for autonomous agents. One product runs, one token was deployed and retired within a day, and the record of both is published in full.">
+<meta name="theme-color" content="#050505">
+<meta property="og:title" content="About 0200project">
+<meta property="og:description" content="What we build, what runs today, what we retired, and how we decide what to publish.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="0200project">
+<meta property="og:image" content="https://0200project.com/assets/og.png">
+<meta property="og:url" content="https://0200project.com/about/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://0200project.com/about/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="0200project home">
+      <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+      0200project
+    </a>
+    <button class="nav-toggle" aria-expanded="false" aria-label="Menu" aria-controls="site-menu">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/playground/">Playground</a></li>
+      <li><a href="/docs/">Docs</a></li>
+      <li><a href="/pricing/">Pricing</a></li>
+      <li class="nav-cta"><a class="btn btn-ghost btn-sm" href="https://github.com/0200project">GitHub</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/playground/">Try it free</a></li>
+    </ul></nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="container">
+    <div class="page-hero">
+      <span class="eyebrow">About</span>
+      <h1 class="h-section">Machine-native infrastructure for autonomous agents</h1>
+      <p class="updated">Last updated 2026-09-02.</p>
+    </div>
+
+    <div class="prose">
+      <p>AI agents need tools they can call without a human in the loop &mdash; to read data, to
+      check something, to act on the result. Those tools have to behave the same way every time,
+      cost a knowable amount, and report what they could not determine. <strong>0200project
+      builds that kind of tool.</strong></p>
+
+      <h2>What runs today</h2>
+
+      <p><strong>base-transaction-decoder</strong> explains any Base mainnet transaction as strict
+      JSON: what happened in plain English, a typed action, every asset that moved with amounts
+      already scaled, counterparties labelled where known, gas in dollars, and evidence-backed risk
+      flags. There is no model in the response path, so the same transaction always produces the same
+      output.</p>
+
+      <p>Two things about it are unusual, and both exist because of how an agent fails rather than
+      how a demo looks. <strong>Its <code class="inline">checks</code> field reports whether each
+      safety check actually ran</strong> &mdash; when a source is unreachable no flag is emitted and
+      the check is marked unavailable, so an empty result is never mistaken for a clean one. And
+      <strong><code class="inline">provenance</code> names which returned strings are controlled by
+      the transaction&rsquo;s author</strong> &mdash; token symbols, contract names, the summary
+      derived from them &mdash; with a standing instruction to treat them as data and never as
+      instructions. A token that names itself with instruction-like text is a live injection route
+      into any agent reading a decoder&rsquo;s output.</p>
+
+      <p>It costs $0.02 per call in USDC, has a free tier of 50 calls per IP address per day, and
+      requires no account, no signup and no API key.</p>
+
+      <h2>What we have earned</h2>
+
+      <p><strong>One paying customer. Two cents, total.</strong> That is the entire commercial
+      history of this company and we publish it because everything else on this site is easier to
+      believe next to it. We have never had a second customer, a round, or revenue from any token.</p>
+
+      <h2>What we deployed and retired</h2>
+
+      <p>On 2026-09-01 we deployed a token on Base. Within a day we examined its structure and
+      retired it: the liquidity pool was withdrawn and the entire supply sent to an address it
+      cannot leave. At the time it was retired there were two holders &mdash; our own wallet and the
+      pool &mdash; and no outside person held it.</p>
+
+      <p>The reasons, the arithmetic, both transaction hashes and a verification anyone can run are
+      published in full and permanently. <strong>We did not remove the record of what was wrong with
+      it.</strong> The original text of that disclosure remains on the page, including two dated
+      corrections to things we got wrong, with the mistaken wording still visible above each fix.</p>
+
+      <h2>How we decide what to publish</h2>
+
+      <p>These are practices rather than principles, because a practice can be checked.</p>
+
+      <ul>
+        <li><strong>Claims carry the date they were verified.</strong> A fact that was true last week
+        is reported as a fact about last week.</li>
+        <li><strong>Pages are not overwritten.</strong> When something is wrong it is corrected with
+        a dated amendment and the original stays visible.</li>
+        <li><strong>Examples are executed before they are published.</strong> Every command shown on
+        this site is run against production; a documented call that fails is a promise we did not
+        keep.</li>
+        <li><strong>Unreachable is not clean.</strong> When a source cannot be checked, that is
+        reported as unknown rather than as an absence of problems.</li>
+        <li><strong>What could not be determined is stated alongside what was.</strong> This is the
+        same rule the decoder follows in its own output.</li>
+      </ul>
+
+      <h2>How it is built</h2>
+
+      <p>0200project is operated by one person with AI systems doing the majority of the
+      engineering, review and analysis. <strong>Every claim published here is checked against a
+      source before it ships</strong>, and the checks are automated where they can be: the site build
+      fails if a page states a free-tier number the server does not report, if it names a registry
+      entry that does not resolve, if a published example does not execute, or if a link to one of
+      our own properties returns an error.</p>
+
+      <p>The company is small and the record is short. We would rather it be short and accurate.</p>
+
+      <h2>Contact</h2>
+
+      <p>Issues, questions and corrections:
+      <a href="https://github.com/0200project/base-tx-explain/issues">GitHub Issues</a>. Security
+      reports: <a href="/security/">the security page</a>.</p>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/" aria-label="0200project home">
+          <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+          0200project
+        </a>
+      </div>
+      <nav aria-label="Product">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/tools/">Tools</a></li>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/docs/#request-format">API reference</a></li>
+          <li><a href="/pricing/">Pricing</a></li>
+          <li><a href="/about/">About</a></li>
+          <li><a href="/asset/">Native asset</a></li>
+          <li><a href="/changelog/">Changelog</a></li>
+          <li><a href="/faq/">FAQ</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Developers">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="/playground/">Playground</a></li>
+          <li><a href="https://github.com/0200project">GitHub</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-transaction-decoder">MCP Registry</a></li>
+          <li><a href="/llms.txt">llms.txt</a></li>
+          <li><a href="/status/">Status</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Company">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/#about">About</a></li>
+          <li><a href="/security/">Security</a></li>
+          <li><a href="https://github.com/0200project/base-tx-explain/issues">Support</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 0200project <span class="faint">&middot;</span> <span class="mono">base-transaction-decoder v0.1.4 &middot; Base mainnet</span></span>
+      <a class="pill footer-status" href="/status/"><span class="dot"></span><span id="ft-status">Checking status&hellip;</span></a>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/site.js" defer></script>
+</body>
+</html>
