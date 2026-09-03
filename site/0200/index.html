@@ -69,13 +69,27 @@
         <li>There are two holders: that wallet and the pool.</li>
         <li>Liquidity is $25.00 and the LP is not locked.</li>
       </ul>
-      <p><strong>The arithmetic that follows:</strong> a buyer who spends $100 receives about 200,000 tokens. If the majority holder then sells 1,000,000 tokens &mdash; 0.1% of their position &mdash; that buyer can recover <strong>$0.95</strong>. After the supply is sent to an address it cannot leave, the same buyer recovers approximately <strong>$99.40</strong>, the difference being pool fees.</p>
+      <p><strong>The arithmetic that follows:</strong> a buyer who spends $100 receives about 200,000 tokens. If the majority holder then sells 1,000,000 tokens &mdash; 0.1% of their position &mdash; that buyer can recover <strong>$0.95</strong>. That $0.95 is what the concentration costs a buyer: in the same pool with no majority holder able to sell into it, the round trip returns about <strong>$99.40</strong>, the difference being pool fees. <strong>After the steps above there is no pool at all, and no way to buy this token.</strong></p>
       <p>Those are reproducible from chain state. Anyone can check them.</p>
 
       <h2>What this does not change</h2>
       <p>The contract is immutable and will exist permanently. <code class="inline">totalSupply</code> will continue to read 1,000,000,000, because this contract has no burn function. The pool contract also survives: UniswapV2 permanently locks a small amount of liquidity when a pair is created, so about 0.0000001 tokens remain in it and cannot be withdrawn by anyone. <strong>The contract is permissionless. Anyone can create a new pool for it using their own tokens.</strong></p>
 
       <p><strong>Current holders:</strong> two &mdash; our wallet, and the pool. No external address holds this token.</p>
+
+      <h2>Amendments to this page</h2>
+      <div class="card" style="border-left:2px solid var(--accent)">
+        <p class="small"><strong>2026-09-02, shortly after publication.</strong> One sentence was
+        corrected. It originally read:</p>
+        <blockquote><p class="small faint">&ldquo;After the supply is sent to an address it cannot
+        leave, the same buyer recovers approximately $99.40, the difference being pool fees.&rdquo;</p></blockquote>
+        <p class="small">The arithmetic was correct and the framing was not: it described a buyer
+        making a round trip <em>after</em> retirement, and after the steps above there is no pool,
+        so no such buyer can exist. The corrected sentence uses the same figures to say what the
+        $0.95 measures &mdash; the cost of the concentration &mdash; and states the true end state.
+        The original is left here rather than removed, because a page whose claims are meant to be
+        checked against what happens should also show what it previously claimed.</p>
+      </div>
     </div>
   </div>
 </main>
