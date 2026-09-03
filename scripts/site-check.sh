@@ -362,6 +362,30 @@ else
 fi
 
 
+# ------------------------------------------------------------- css cache stamp
+#
+# Pages assets are served with max-age=600, so for ten minutes after a deploy a
+# returning visitor pairs NEW html with the OLD stylesheet. That shipped a
+# 1024px logo across the About page on 2026-09-03. The version stamp makes the
+# two impossible to separate; this check makes an unstamped page impossible to
+# deploy.
+
+CSSHASH="$(shasum -a 256 "$ROOT/site/assets/style.css" | cut -c1-8)"
+STALE=""
+for f in $(find "$ROOT/site" -name '*.html'); do
+  grep -q 'assets/style.css' "$f" || continue
+  grep -q "assets/style.css?v=$CSSHASH" "$f" || STALE="$STALE
+        ${f#$ROOT/}"
+done
+if [ -n "$STALE" ]; then
+  fail "stylesheet link is not stamped with the current css hash ($CSSHASH)" "$STALE
+        Run scripts/stamp-css.sh, then commit. Without the stamp these pages
+        can be served to a visitor holding a ten-minute-old stylesheet."
+else
+  pass "every page requests the current stylesheet (?v=$CSSHASH)"
+fi
+
+
 # ----------------------------------------------------------------- JSON-LD
 #
 # The FAQ publishes a FAQPage schema. Google requires the structured answer to
