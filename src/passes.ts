@@ -29,6 +29,23 @@ interface PassEntry {
   /** payer address from settlement, for support/forensics only */
   payer?: string;
   /**
+   * Per-pass call cap, defaulting to PASS_CALL_CAP when absent.
+   *
+   * Exists so a pass can be sized to its purpose. A self-issued internal pass
+   * needs tens of calls, not ten thousand, and a credential's grant should match
+   * the job rather than inherit the biggest number in the file.
+   */
+  cap?: number;
+  /**
+   * Self-issued by us, never sold. STRUCTURAL, not a label.
+   *
+   * A payer string reading "(NOT REVENUE)" describes an exclusion; this field
+   * CAUSES one. `passSnapshot()` filters on this so `active_passes` cannot count
+   * our own pass as a sale — the number means what its name says without anyone
+   * remembering how it was produced.
+   */
+  internal?: boolean;
+  /**
    * Set when a pass was activated WITHOUT a confirmed settlement (ambiguous or
    * missing settle response). Recorded on the entry, not just in the logs, so
    * an unpaid activation can be found by querying the store instead of grepping.
@@ -177,18 +194,20 @@ function reapPending(now: number): void {
  * token unless settlement already succeeded (REST rail).
  */
 export function mintPass(
-  opts: { payer?: string; pending?: boolean; nonce?: string } = {},
+  opts: { payer?: string; pending?: boolean; nonce?: string; days?: number; cap?: number; internal?: boolean } = {},
 ): { token: string; expires_at: string; call_cap: number } {
-  const { payer, pending = false, nonce } = opts;
+  const { payer, pending = false, nonce, days, cap, internal } = opts;
   const token = `btxp_${randomBytes(24).toString('hex')}`;
   const now = Date.now();
   const key = hashToken(token);
   const entry: PassEntry = {
     issued: now,
-    expires: now + PASS_DAYS * 86_400_000,
+    expires: now + (days ?? PASS_DAYS) * 86_400_000,
     calls_used: 0,
     payer,
     active: !pending,
+    ...(cap === undefined ? {} : { cap }),
+    ...(internal ? { internal: true } : {}),
   };
   passes.set(key, entry);
   if (pending && nonce) {
@@ -201,7 +220,7 @@ export function mintPass(
     `[pass] MINTED ${key.slice(0, 12)} ${pending ? 'PENDING (awaiting settlement)' : 'active'} ` +
       `payer=${payer ?? 'unknown'} expires=${new Date(entry.expires).toISOString()}`,
   );
-  return { token, expires_at: new Date(entry.expires).toISOString(), call_cap: PASS_CALL_CAP };
+  return { token, expires_at: new Date(entry.expires).toISOString(), call_cap: entry.cap ?? PASS_CALL_CAP };
 }
 
 /**
@@ -317,7 +336,8 @@ export function usePass(token: string): PassCheck {
     flush();
     return { ok: false, reason: 'expired' };
   }
-  if (entry.calls_used >= PASS_CALL_CAP) return { ok: false, reason: 'cap_exhausted' };
+  const cap = entry.cap ?? PASS_CALL_CAP;
+  if (entry.calls_used >= cap) return { ok: false, reason: 'cap_exhausted' };
 
   const rw = rateWindows.get(key);
   if (!rw || now - rw.windowStart > 60_000) {
@@ -328,7 +348,7 @@ export function usePass(token: string): PassCheck {
 
   entry.calls_used++;
   flush();
-  return { ok: true, remaining: PASS_CALL_CAP - entry.calls_used };
+  return { ok: true, remaining: cap - entry.calls_used };
 }
 
 /**
@@ -344,6 +364,38 @@ export function revokePass(token: string): boolean {
   flush();
   console.error(`[pass] REVOKED ${key.slice(0, 12)} - payment did not settle`);
   return true;
+}
+
+/**
+ * Delete every self-issued internal pass. Returns how many went.
+ *
+ * THIS IS WHAT BOUNDS THE INTERNAL GRANT, and it exists because the obvious
+ * bound does not work here. Security's review asked for idempotent minting —
+ * return the existing pass instead of issuing another — which is the right
+ * instinct and is impossible in this store: **only a hash of each token is
+ * kept, deliberately, so that the file cannot be used to mint access.** The
+ * token string is unrecoverable by construction, so an existing pass can never
+ * be handed back.
+ *
+ * Revoke-then-mint reaches the same bound from the other side: at most ONE
+ * internal pass exists at any moment, so repeated POSTs cannot accumulate
+ * grants. Without this, every request would mint a fresh cap and the cap would
+ * be decorative — an attacker holding the token would have unbounded service
+ * rather than one pass's worth.
+ */
+export function revokeInternalPasses(): number {
+  let gone = 0;
+  for (const [k, e] of passes) {
+    if (!e.internal) continue;
+    passes.delete(k);
+    rateWindows.delete(k);
+    gone++;
+  }
+  if (gone > 0) {
+    flush();
+    console.log(`[pass] revoked ${gone} prior internal pass(es) — only one may exist at a time`);
+  }
+  return gone;
 }
 
 /** Give back a consumed pass call when the failure was on our side. */
@@ -381,6 +433,10 @@ export function passSnapshot(): { active_passes: number; pass_calls_used: number
   let calls = 0;
   let active = 0;
   for (const e of passes.values()) {
+    // Self-issued passes are not sales. Excluded STRUCTURALLY so `active_passes`
+    // cannot read as a customer the way BUG-1's counter did — the disambiguating
+    // context lives in the data, not in a reader's memory of what shipped today.
+    if (e.internal) continue;
     if (e.expires > now && e.active) {
       active++;
       calls += e.calls_used;

@@ -56,7 +56,7 @@ import {
   initStripeDeliveries,
   type StripeEvent,
 } from './stripe.js';
-import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, renewPass, passSnapshot, refundPassUse, activatePass, revokePass, revokePendingPass, usePass,
+import { PASS_CALL_CAP, PASS_DAYS, PASS_PRICE_USD, initPasses, mintPass, renewPass, passSnapshot, refundPassUse, activatePass, revokePass, revokeInternalPasses, revokePendingPass, usePass,
   passStatus,
 } from './passes.js';
 import { HOUR, TtlCache } from './cache.js';
@@ -1522,10 +1522,26 @@ app.get('/stats', async (req, res) => {
  * grant call entitlement) and STATS_TOKEN (already a real credential, already gating our
  * own operational data). No new secret, no new trust assumption.
  *
- * ACCOUNTING: the minted pass carries an explicit non-revenue payer string so it can never
- * be misread as a sale in `passSnapshot()`. It settles nothing and books nothing — pass
- * minting only records revenue when a payment settles, which this does not.
+ * ACCOUNTING: the pass is marked `internal: true` — a STRUCTURAL field that `passSnapshot()`
+ * filters on, not a label. The payer string reading "(NOT REVENUE)" is forensic only and must
+ * never be cited as the control: nothing on a revenue path reads it. Revenue books solely from
+ * settled payments, and this settles nothing.
+ *
+ * MUST STAY POST — CSRF PROTECTION IS LOAD-BEARING ON THE VERB. The dashboard cookie carries
+ * `SameSite=Lax`, which withholds it on cross-site POST, so a hostile page cannot mint through
+ * the founder's browser. Lax DOES send the cookie on top-level GET navigation, so converting
+ * this to GET, or adding a GET alias for a tidier curl one-liner, opens CSRF immediately.
+ * The protection currently exists only as a property of the method. (Security review,
+ * 2026-09-03.)
+ *
+ * GRANT IS SIZED TO THE JOB, not inherited: 7 days and 100 calls rather than the sold pass's
+ * 30 days and 10,000. A leak of STATS_TOKEN then costs 100 decodes, not 10,000 — and because
+ * minting first revokes any prior internal pass, repeated POSTs cannot accumulate grants.
+ * Without that revoke the cap would be decorative and the grant unbounded.
  */
+const INTERNAL_PASS_DAYS = 7;
+const INTERNAL_PASS_CAP = 100;
+
 app.post('/pass/internal', (req, res) => {
   res.set('Cache-Control', 'no-store');
   if (!STATS_TOKEN) {
@@ -1540,9 +1556,22 @@ app.post('/pass/internal', (req, res) => {
     res.status(401).json({ error: 'bad token' });
     return;
   }
-  const pass = mintPass({ payer: 'internal:self-issued (NOT REVENUE)' });
-  console.log('[pass] INTERNAL self-issued pass minted — not a sale, books nothing');
-  res.status(200).json({ ...pass, note: 'Internal pass. Not a sale. Present as X-BTX-Pass.' });
+  const replaced = revokeInternalPasses();
+  const pass = mintPass({
+    payer: 'internal:self-issued (NOT REVENUE)',
+    internal: true,
+    days: INTERNAL_PASS_DAYS,
+    cap: INTERNAL_PASS_CAP,
+  });
+  console.log(
+    `[pass] INTERNAL self-issued pass minted — not a sale, books nothing` +
+      (replaced > 0 ? ` (replaced ${replaced})` : ''),
+  );
+  res.status(200).json({
+    ...pass,
+    replaced_prior_internal_passes: replaced,
+    note: 'Internal pass. Not a sale, excluded from active_passes. Present as X-BTX-Pass.',
+  });
 });
 
 // Canonical machine-readable contract for discovery indexers (x402scan et al.).

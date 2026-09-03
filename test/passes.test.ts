@@ -169,3 +169,49 @@ describe('passStatus', () => {
     expect(st.valid && typeof st.expiresAt).toBe('string');
   });
 });
+
+/**
+ * Internal self-issued passes. These assertions exist because every property
+ * below was, at first, enforced only by a comment — and a security property that
+ * lives in a comment is one refactor from being untrue with nothing failing.
+ */
+describe('internal self-issued passes', () => {
+  it('is EXCLUDED from active_passes, so our own pass cannot read as a sale', () => {
+    const before = passSnapshot().active_passes;
+    mintPass({ payer: 'internal:self-issued (NOT REVENUE)', internal: true, days: 7, cap: 100 });
+    // The whole point: minting one moves no customer-facing counter.
+    expect(passSnapshot().active_passes).toBe(before);
+  });
+
+  it('is still USABLE despite being invisible to the snapshot', () => {
+    const p = mintPass({ payer: 'internal:self-issued (NOT REVENUE)', internal: true, days: 7, cap: 100 });
+    expect(usePass(p.token).ok).toBe(true);
+  });
+
+  it('honours a per-pass cap rather than the sold pass cap', () => {
+    const p = mintPass({ payer: 'internal:self-issued (NOT REVENUE)', internal: true, days: 7, cap: 2 });
+    expect(p.call_cap).toBe(2);
+    expect(usePass(p.token)).toMatchObject({ ok: true, remaining: 1 });
+    expect(usePass(p.token)).toMatchObject({ ok: true, remaining: 0 });
+    expect(usePass(p.token)).toMatchObject({ ok: false, reason: 'cap_exhausted' });
+  });
+
+  it('BOUNDS THE GRANT: minting revokes prior internal passes, so POSTs cannot accumulate', async () => {
+    const { revokeInternalPasses } = await import('../src/passes.js');
+    const first = mintPass({ payer: 'internal:self-issued (NOT REVENUE)', internal: true, days: 7, cap: 100 });
+    expect(usePass(first.token).ok).toBe(true);
+    revokeInternalPasses();
+    const second = mintPass({ payer: 'internal:self-issued (NOT REVENUE)', internal: true, days: 7, cap: 100 });
+    // The old one is dead; only the newest internal pass is ever live.
+    expect(usePass(first.token)).toMatchObject({ ok: false, reason: 'invalid' });
+    expect(usePass(second.token).ok).toBe(true);
+  });
+
+  it('does not revoke SOLD passes when clearing internal ones', async () => {
+    const { revokeInternalPasses } = await import('../src/passes.js');
+    const sold = mintPass({ payer: '0xrealcustomer' });
+    mintPass({ payer: 'internal:self-issued (NOT REVENUE)', internal: true, days: 7, cap: 100 });
+    revokeInternalPasses();
+    expect(usePass(sold.token).ok).toBe(true);
+  });
+});
