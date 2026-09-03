@@ -49,84 +49,117 @@
 </header>
 
 <main id="main">
-  <div class="container">
 
-    <div class="page-hero">
-      <span class="eyebrow">About</span>
-      <h1 class="h-section">Machine-native infrastructure<br>for autonomous agents.</h1>
-      <p class="lead" style="max-width:52ch">AI agents need tools they can call without a human in the loop. Those tools have to behave the same way every time, cost a knowable amount, and report what they could not determine.</p>
-    </div>
-
-    <div class="cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:1rem;margin:0 0 4rem">
-      <div class="card">
-        <h3 style="margin-top:0">Deterministic by design</h3>
-        <p class="small">No model in the response path. The same transaction always produces the same JSON &mdash; nothing to hallucinate, nothing to drift.</p>
-      </div>
-      <div class="card">
-        <h3 style="margin-top:0">No accounts, no keys</h3>
-        <p class="small">Paid per call in USDC over x402. An agent can discover, pay and retry entirely on its own.</p>
-      </div>
-      <div class="card">
-        <h3 style="margin-top:0">Honest about gaps</h3>
-        <p class="small">Every response says which checks ran and which could not. An empty result is never mistaken for a clean one.</p>
+  <section class="hero">
+    <div class="container">
+      <div class="section-head reveal" style="max-width:44rem">
+        <span class="eyebrow">About 0200project</span>
+        <h1 class="display">We build tools<br>agents can trust.</h1>
+        <p class="lead">Autonomous software needs to call something, get an answer, and act on it &mdash; with no human reading the output first. That only works if the tool behaves identically every time, costs a knowable amount, and says what it could not determine.</p>
       </div>
     </div>
+  </section>
 
-    <div class="prose">
-      <h2>What runs today</h2>
-
-      <p><strong>base-transaction-decoder</strong> explains any Base mainnet transaction as strict JSON: what happened in plain English, a typed action, every asset that moved with amounts already scaled, counterparties labelled where known, gas in dollars, and evidence-backed risk flags.</p>
-
-      <p>Two things about it are unusual, and both exist because of how an agent fails rather than how a demo looks.</p>
-    </div>
-
-    <div class="led" style="margin:0 0 2.5rem">
-      <div class="panel-head"><span>the two fields that matter</span><span>in every response</span></div>
-      <div class="led-row">
-        <span class="led-lbl">checks</span>
-        <span class="led-val">Reports whether each safety check actually ran<small>When a source is unreachable, no flag is emitted and the check is marked unavailable</small></span>
-        <span class="led-amt q"><span class="led-pill ran"><i></i>ran</span> <span class="led-pill na"><i></i>unavailable</span></span>
+  <section class="section">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">How we build</span>
+        <h2 class="h-section">Three properties, chosen for how an agent fails.</h2>
       </div>
-      <div class="led-row">
-        <span class="led-lbl">provenance</span>
-        <span class="led-val">Names which strings the transaction&rsquo;s author controls<small>Token symbols, contract names, and the summary derived from them</small></span>
-        <span class="led-amt q">treat as data</span>
+      <div class="grid-3 reveal">
+        <div class="card"><span class="card-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10h4l2-5 2 10 2-5h4"/></svg></span><h3 class="h-card">Deterministic</h3>
+          <p class="muted">No model in the response path. The same transaction always produces the same JSON &mdash; nothing to hallucinate, nothing to drift.</p>
+          <div class="card-mini" aria-hidden="true">decode 0x0c84&hellip;4c8c <span class="lit">&rarr;</span> swap<br>decode 0x0c84&hellip;4c8c <span class="lit">&rarr;</span> swap <span class="lit">= identical</span></div>
+        </div>
+        <div class="card"><span class="card-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="9" width="12" height="8" rx="2"/><path d="M7 9V6a3 3 0 016 0v3"/></svg></span><h3 class="h-card">No accounts, no keys</h3>
+          <p class="muted">Paid per call in USDC over x402. An agent can discover, pay and retry entirely on its own.</p>
+          <div class="card-mini" aria-hidden="true"><span class="lit">402</span> &rarr; pay $0.02 USDC &rarr; <span class="lit">200 ok</span></div>
+        </div>
+        <div class="card"><span class="card-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 10S4.5 4.5 10 4.5 18.5 10 18.5 10 15.5 15.5 10 15.5 1.5 10 1.5 10z"/><circle cx="10" cy="10" r="2.5"/></svg></span><h3 class="h-card">Honest about gaps</h3>
+          <p class="muted">Every response says which checks ran and which could not. An empty result is never mistaken for a clean one.</p>
+          <div class="card-mini" aria-hidden="true">2 ran <span class="lit">&middot;</span> 3 unavailable <span class="lit">&middot;</span> stated</div>
+        </div>
       </div>
-      <div class="led-foot">A token that names itself with instruction-like text is a live injection route into any agent reading a decoder&rsquo;s output. <b>That is what <code class="inline">provenance</code> closes.</b></div>
     </div>
+  </section>
 
-    <div class="prose">
-      <p class="small faint">$0.02 per call in USDC. 50 free calls per IP address per day. No account, no signup, no API key.</p>
+  <section class="section">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">What runs today</span>
+        <h2 class="h-section">One product, and the two fields that make it different.</h2>
+        <p class="lead"><strong>base-transaction-decoder</strong> explains any Base mainnet transaction as strict JSON &mdash; plain English, a typed action, every asset moved with amounts already scaled, counterparties labelled, gas in dollars, risk flags with evidence.</p>
+      </div>
+      <div class="led reveal">
+        <div class="panel-head"><span>in every response</span><span>base mainnet</span></div>
+        <div class="led-row"><span class="led-lbl">checks</span><span class="led-val">Whether each safety check actually ran<small>Source unreachable &rarr; no flag emitted, check marked unavailable</small></span><span class="led-amt q"><span class="led-pill ran"><i></i>ran</span> <span class="led-pill na"><i></i>unavailable</span></span></div>
+        <div class="led-row"><span class="led-lbl">provenance</span><span class="led-val">Which strings the transaction&rsquo;s author controls<small>Token symbols, contract names, and the summary derived from them</small></span><span class="led-amt q">treat as data</span></div>
+        <div class="led-foot">A token that names itself with instruction-like text is a live injection route into any agent reading a decoder&rsquo;s output. <b>That is what <code class="inline">provenance</code> closes.</b></div>
+      </div>
+      <p class="term-note">$0.02 per call in USDC &middot; 50 free calls per IP address per day &middot; no account, no signup, no API key</p>
+    </div>
+  </section>
 
-      <h2>What we deployed and retired</h2>
+  <section class="section statement-band">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">What we retired</span>
+        <h2 class="h-section">We deployed a token, then took it apart in public.</h2>
+        <p class="lead">On 2026-09-01 we deployed a token on Base. Within a day we examined its structure and retired it &mdash; the pool withdrawn, the entire supply sent to an address it cannot leave. Two holders at the time: our own wallet and the pool. Nobody outside held it.</p>
+        <p class="lead">The reasons, the arithmetic, both transaction hashes and a verification anyone can run are published permanently. <strong>The record of what was wrong with it was not removed</strong> &mdash; including two dated corrections to things we got wrong, with the mistaken wording still visible above each fix.</p>
+      </div>
+    </div>
+  </section>
 
-      <p>On 2026-09-01 we deployed a token on Base. Within a day we examined its structure and retired it: the liquidity pool was withdrawn and the entire supply sent to an address it cannot leave. At the time it was retired there were two holders &mdash; our own wallet and the pool &mdash; and no outside person held it.</p>
-
-      <p>The reasons, the arithmetic, both transaction hashes and a verification anyone can run are published in full and permanently. <strong>We did not remove the record of what was wrong with it.</strong> The original text of that disclosure remains, including two dated corrections to things we got wrong, with the mistaken wording still visible above each fix.</p>
-
-      <h2>How we decide what to publish</h2>
-      <p>These are practices rather than principles, because a practice can be checked and a principle cannot.</p>
-      <ul class="checks">
-        <li><strong>Claims carry the date they were verified.</strong> A fact that was true last week is reported as a fact about last week.</li>
-        <li><strong>Pages are not overwritten.</strong> When something is wrong it is corrected with a dated amendment and the original stays visible.</li>
-        <li><strong>Examples are executed before they are published.</strong> Every command shown on this site is run against production.</li>
-        <li><strong>Unreachable is not clean.</strong> When a source cannot be checked, that is reported as unknown rather than as an absence of problems.</li>
+  <section class="section">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">How we decide what to publish</span>
+        <h2 class="h-section">Practices, not principles.</h2>
+        <p class="lead">A practice can be checked. A principle cannot.</p>
+      </div>
+      <ul class="checks reveal" style="max-width:46rem">
+        <li><strong>Claims carry the date they were verified.</strong> A fact true last week is reported as a fact about last week.</li>
+        <li><strong>Pages are never overwritten.</strong> Corrections are dated and the original stays visible.</li>
+        <li><strong>Examples are executed before publication.</strong> Every command shown here is run against production.</li>
+        <li><strong>Unreachable is not clean.</strong> A source that cannot be checked is reported as unknown, never as an absence of problems.</li>
         <li><strong>What could not be determined is stated alongside what was.</strong> The same rule the decoder follows in its own output.</li>
       </ul>
-
-      <h2>How it is built</h2>
-
-      <p>0200project is operated by one person with AI systems doing the majority of the engineering, review and analysis. Every claim published here is checked against a source before it ships, and the checks are automated where they can be.</p>
-
-      <p><strong>The site build fails</strong> if a page states a free-tier number the server does not report, names a registry entry that does not resolve, publishes an example that does not execute, or links one of our own properties to an error.</p>
-
-      <p>The company is small and the record is short. We would rather it be short and accurate.</p>
-
-      <h2>Contact</h2>
-      <p>Issues, questions and corrections: <a href="https://github.com/0200project/base-tx-explain/issues">GitHub Issues</a>. Security reports: <a href="/security/">the security page</a>.</p>
     </div>
+  </section>
 
-  </div>
+  <section class="section">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">How it is built</span>
+        <h2 class="h-section">One person, and gates that fail loudly.</h2>
+        <p class="lead">0200project is operated by one person, with AI systems doing the majority of the engineering, review and analysis. Every claim is checked against a source before it ships, and the checks are automated wherever they can be.</p>
+      </div>
+      <div class="led reveal">
+        <div class="panel-head"><span>the site build fails if</span><span>on every deploy</span></div>
+        <div class="led-row"><span class="led-lbl">tier</span><span class="led-val">A page states a free-tier number the server does not report</span><span class="led-amt q">blocked</span></div>
+        <div class="led-row"><span class="led-lbl">registry</span><span class="led-val">A page names a registry entry that does not resolve</span><span class="led-amt q">blocked</span></div>
+        <div class="led-row"><span class="led-lbl">samples</span><span class="led-val">A published example does not execute against production</span><span class="led-amt q">blocked</span></div>
+        <div class="led-row"><span class="led-lbl">links</span><span class="led-val">A link to one of our own properties returns an error</span><span class="led-amt q">blocked</span></div>
+        <div class="led-foot">The company is small and the record is short. <b>We would rather it be short and accurate.</b></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-head reveal" style="max-width:40rem">
+        <span class="eyebrow">Contact</span>
+        <h2 class="h-section">Talk to us.</h2>
+        <p class="lead">General enquiries and corrections: <a href="mailto:contact@0200project.com">contact@0200project.com</a>. Bugs and feature requests go to <a href="https://github.com/0200project/base-tx-explain/issues">GitHub Issues</a>. Security reports have <a href="/security/">their own page</a>.</p>
+        <div class="hero-actions" style="margin-top:1.75rem">
+          <a class="btn btn-primary" href="mailto:contact@0200project.com">contact@0200project.com</a>
+          <a class="btn btn-ghost" href="/playground/">Try the tool</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
 </main>
 
 <footer class="footer">
@@ -166,6 +199,7 @@
         <ul>
           <li><a href="/#about">About</a></li>
           <li><a href="/security/">Security</a></li>
+          <li><a href="mailto:contact@0200project.com">Contact</a></li>
           <li><a href="https://github.com/0200project/base-tx-explain/issues">Support</a></li>
         </ul>
       </nav>
