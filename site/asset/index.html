@@ -139,41 +139,38 @@
       No contract is deployed to Base mainnet, so nothing currently holds anything. Supply is
       100,000,000 with 18 decimals.</p>
 
-      <div class="card" style="border-left:2px solid var(--warn, #d29922);margin:0 0 1.25rem">
-        <p class="small" style="font-family:var(--mono);font-size:0.66rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--fg-faint);margin:0 0 0.5rem">Not yet stated</p>
-        <p style="margin:0 0 0.4rem"><strong>We are not publishing a maximum release rate yet, because we do not have one that covers the whole supply.</strong></p>
-        <p class="small" style="margin:0">The four ceilings below apply to 65,000,000 of 100,000,000. <strong>Undesignated &mdash; the largest bucket at 35,000,000 &mdash; is not covered by them.</strong> Any figure derived from the four alone would describe two thirds of the supply while reading as a bound on all of it. A number like that is worse than no number, so there is no number here until the Undesignated behaviour is settled and verifiable on-chain.</p>
+      <div class="card" style="border-left:2px solid var(--warn, #d29922);margin:0 0 1.5rem">
+        <p class="small" style="font-family:var(--mono);font-size:0.66rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--fg-faint);margin:0 0 0.5rem">Read this before the table</p>
+        <p style="margin:0 0 0.5rem"><strong style="font-size:1.1rem">All five locks release to one address.</strong></p>
+        <p class="small" style="margin:0 0 0.5rem">Founder, Treasury, Ecosystem, Contributors and Undesignated are five names for five schedules. <strong>They are not five destinations.</strong> Every one of them releases to the same beneficiary address, held by one person.</p>
+        <p class="small" style="margin:0">A reader who sees five named buckets will infer five recipients. <strong>The buckets differ in WHEN, not in WHO.</strong> Whatever the schedules do, the supply arrives at one party, and the names above the schedules describe intended future uses rather than parties who currently receive anything.</p>
       </div>
 
       <div class="led" style="margin:0 0 1.25rem">
-        <div class="panel-head"><span>four locks with a destination</span><span>per 30-day ceiling</span></div>
-        <div class="led-row"><span class="led-lbl">founder</span><span class="led-val">Founder and team<small>20% of supply</small></span><span class="led-amt">20,000,000</span></div>
-        <div class="led-row"><span class="led-lbl">treasury</span><span class="led-val">Treasury<small>15% of supply</small></span><span class="led-amt">15,000,000</span></div>
-        <div class="led-row"><span class="led-lbl">ecosystem</span><span class="led-val">Ecosystem<small>25% of supply</small></span><span class="led-amt">25,000,000</span></div>
-        <div class="led-row"><span class="led-lbl">contributors</span><span class="led-val">Contributors<small>5% of supply</small></span><span class="led-amt">5,000,000</span></div>
-        <div class="led-foot">Each lock carries a <b>30-day delay</b> and a per-window ceiling: founder 417,000 &middot; treasury 630,000 &middot; ecosystem 520,000 &middot; contributors 210,000. <b>None of these parameters is live until the contracts are on mainnet and readable on-chain.</b></div>
+        <div class="panel-head"><span>five schedules &middot; one beneficiary</span><span>holdings &amp; per-30d ceiling</span></div>
+        <div class="led-row"><span class="led-lbl">founder</span><span class="led-val">Founder and team<small>ceiling 417,000 per 30 days</small></span><span class="led-amt">20,000,000</span></div>
+        <div class="led-row"><span class="led-lbl">treasury</span><span class="led-val">Treasury<small>ceiling 630,000 per 30 days</small></span><span class="led-amt">15,000,000</span></div>
+        <div class="led-row"><span class="led-lbl">ecosystem</span><span class="led-val">Ecosystem<small>ceiling 520,000 per 30 days</small></span><span class="led-amt">25,000,000</span></div>
+        <div class="led-row"><span class="led-lbl">contributors</span><span class="led-val">Contributors<small>ceiling 210,000 per 30 days</small></span><span class="led-amt">5,000,000</span></div>
+        <div class="led-row"><span class="led-lbl">undesignated</span><span class="led-val">Undesignated<small>ceiling 729,000 per 30 days</small></span><span class="led-amt">35,000,000</span></div>
+        <div class="led-foot">Holdings sum to <b>100,000,000 exactly</b>. Every lock carries a <b>30-day delay</b>. <b>None of this is deployed to Base mainnet</b> &mdash; these are the parameters the contracts will carry if and when they exist, and every one of them is checkable on-chain at that point and not before.</div>
       </div>
 
-      <div class="card" style="border-left:2px solid var(--border-strong)">
-        <p class="small" style="font-family:var(--mono);font-size:0.66rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--fg-faint);margin:0 0 0.6rem">Not a fifth destination</p>
-        <p><strong>Undesignated &mdash; 35,000,000 XO2, 35% of supply.</strong></p>
+      <div class="card" style="border-left:2px solid var(--border-strong);margin:0 0 1.5rem">
+        <p class="small" style="font-family:var(--mono);font-size:0.66rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--fg-faint);margin:0 0 0.6rem">On the Undesignated bucket</p>
         <p>&ldquo;Undesignated (35,000,000 XO2, 35% of supply) is held with no configured release
         destination and no assigned purpose; nothing moves from it &mdash; including any future
         liquidity seeding, should the standing no-new-pool constraint ever be lifted &mdash; until a
         specific allocation is decided and disclosed at that time, not before.&rdquo;</p>
-        <p class="small faint">This is set apart from the table above deliberately. The other four
-        are locks with a destination and a ceiling. This one has neither, and putting it in the same
-        table would assert that it is the same kind of thing &mdash; which the sentence above
-        denies. <strong>A row in a table of locks claims &ldquo;this is a lock&rdquo; more loudly
-        than a paragraph nearby denies it.</strong></p>
+        <p class="small"><strong>Its ceiling was chosen without a designated purpose for the supply
+        it governs.</strong> It borrows the slowest pace already used elsewhere in the design &mdash;
+        a pace, not a reason.</p>
+        <p class="small"><strong>Giving that 35% a schedule implies a plan for it. There is
+        none.</strong> A release schedule is a statement about timing, not about intent, and nothing
+        about this bucket should be read as a commitment to release, distribute or use it.</p>
       </div>
 
-      <h2>UNPROVEN &mdash; hypotheses</h2>
-
-      <p><strong>The thesis:</strong> that deterministic, machine-verifiable settlement state is
-      useful infrastructure for autonomous commerce. One mechanism has been verified on-chain.
-      Nothing has been built on it. It may not be useful and it may not be needed.</p>
-
+      <p class="term-note">A maximum release rate across all five locks is not published here yet. The figures above are settled; how to state a combined rate without it reading as a distribution rate to multiple parties is not, and a rate figure that implies distribution would be wrong in the direction that flatters us.</p>
 
       <h2>Where the name 0200 comes from</h2>
       <p>In <strong>ISO 8583</strong> &mdash; the message standard behind card transactions &mdash;
