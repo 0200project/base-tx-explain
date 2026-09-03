@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<script>document.documentElement.classList.add('js')</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notes — what we changed and why | 0200project</title>
+<meta name="description" content="Notes from 0200project. Published when something is true, not on a schedule — what we changed, what we got wrong, and what it cost to find out.">
+<meta name="theme-color" content="#050505">
+<meta property="og:title" content="Notes — 0200project">
+<meta property="og:description" content="Published when something is true, not on a schedule.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="0200project">
+<meta property="og:image" content="https://0200project.com/assets/og.png">
+<meta property="og:url" content="https://0200project.com/notes/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://0200project.com/notes/">
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/style.css">
+<style>
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="nav">
+  <div class="container nav-inner">
+    <a class="brand" href="/" aria-label="0200project home">
+      <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+      0200project
+    </a>
+    <button class="nav-toggle" aria-expanded="false" aria-label="Menu" aria-controls="site-menu">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </button>
+    <nav aria-label="Main" style="display:contents"><ul class="nav-links" id="site-menu">
+      <li><a href="/about/">About</a></li>
+      <li><a href="/asset/">XO2</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/playground/">Playground</a></li>
+      <li><a href="/docs/">Docs</a></li>
+      <li><a href="/pricing/">Pricing</a></li>
+      <li class="nav-cta"><a class="btn btn-ghost btn-sm" href="https://github.com/0200project">GitHub</a></li>
+      <li class="nav-cta"><a class="btn btn-primary btn-sm" href="/playground/">Try it free</a></li>
+    </ul></nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="container">
+    <div class="page-hero">
+      <span class="eyebrow">Notes</span>
+      <h1 class="h-section">What we changed, and what it cost to find out.</h1>
+      <p class="lead" style="max-width:50ch">Published when something is true, not on a schedule. There is no posting cadence and none is promised &mdash; a quiet month here means a quiet month, not a lapse.</p>
+    </div>
+
+    <div class="prose">
+
+      <article style="border-top:1px solid var(--border);padding-top:2rem;margin-top:1rem">
+        <p class="small faint" style="font-family:var(--mono);letter-spacing:0.08em">2026-09-02</p>
+        <h2 style="margin-top:0.35rem">We shipped a page that told readers to run a check that fails</h2>
+        <p>The Genesis retirement page published a way for anyone to verify the outcome themselves:
+        compare the token contract&rsquo;s own balance against total supply. If they match, every
+        token that exists is at an address it cannot leave.</p>
+        <p><strong>They do not match, and never will.</strong> UniswapV2 permanently locks a minimum
+        amount of liquidity when a pair is created, so 0.0000001 tokens are stranded in the pair
+        forever. The contract holds 999,999,999.9999999 against a supply of 1,000,000,000.</p>
+        <p>A reader running our published check would have got a mismatch &mdash; which the same page
+        told them to read as <em>something is wrong</em>. <strong>We would have handed people an
+        instrument that reports a failure that did not happen.</strong></p>
+        <p>The corrected check adds the stranded dust and holds exactly. It is a better check than
+        the original, because it accounts for every token in two named places rather than asserting
+        that one number equals another.</p>
+        <p class="small faint">The uncomfortable part: we found that dust ourselves, hours earlier,
+        and wrote the phrase &ldquo;drained, not deleted&rdquo; specifically because of it. Knowing a
+        fact and carrying it into every place it bears on are different acts, and the second one is
+        where this failed.</p>
+      </article>
+
+      <article style="border-top:1px solid var(--border);padding-top:2rem;margin-top:2.5rem">
+        <p class="small faint" style="font-family:var(--mono);letter-spacing:0.08em">2026-09-02</p>
+        <h2 style="margin-top:0.35rem">Four numbers, all wrong, all wrong in the same direction</h2>
+        <p>While working out how fast supply could become movable, four separate figures were
+        produced. <strong>Every one of them was wrong, and every one understated the risk.</strong>
+        One aggregate omitted the largest bucket, so it bounded 65% of supply while reading as a
+        bound on all of it. One divided total supply by only the locked ceilings. One assumed a
+        360-day year. One treated five schedules as a shared pool when they drain independently
+        &mdash; understating the true duration by eight months.</p>
+        <p>Nobody was trying to flatter anything. <strong>All four came from collapsing a five-part
+        structure into a single number, and collapsing drops whichever constraint made the real
+        picture more restrictive.</strong></p>
+        <p><strong>One of the four was published.</strong> 21.6% per year went live at 22:14:19
+        and was pulled at 22:15:01 &mdash; 42 seconds. It is in this repository&rsquo;s history in
+        both directions: <code class="inline">59a713a</code> put it up,
+        <code class="inline">e26759d</code> took it down. The other three were caught before
+        publication.</p>
+        <p>We are stating that rather than the version we first drafted for this entry, which said
+        none of them reached the site. <strong>That draft was false, and it was false in the
+        direction that flattered us</strong> &mdash; on a page whose entire subject is claims that
+        flatter the person making them. It was caught by checking the sentence against the commit
+        log instead of against memory.</p>
+        <p>No rate figure is published today. When a summary cannot be derived honestly from its
+        parts, the absence and the reason carry more information than a smaller number, because the
+        reason names a failure a reader can go looking for elsewhere.</p>
+      </article>
+
+      <article style="border-top:1px solid var(--border);padding-top:2rem;margin-top:2.5rem">
+        <p class="small faint" style="font-family:var(--mono);letter-spacing:0.08em">2026-09-02</p>
+        <h2 style="margin-top:0.35rem">A correct sentence can be defeated by the thing it sits in</h2>
+        <p>Three times in one night, prose that was accurate was contradicted by its own container.</p>
+        <p>A page path named after a placeholder asserted that the placeholder was the name. A row in
+        a table of locks asserted &ldquo;this is a lock&rdquo; while the paragraph beside it said the
+        opposite. A heading reading <em>Allocation</em> asserted recipients that do not exist on
+        chain &mdash; all five schedules release to one address.</p>
+        <p><strong>In every case the words were right and the frame said otherwise, and the frame
+        wins</strong>, because a reader does not experience a layout as a claim to be checked.</p>
+        <p class="small faint">Which is also why it survives review: prose gets proofread, frames do
+        not. Nobody reads a table asking what its existence asserts.</p>
+      </article>
+
+      <article style="border-top:1px solid var(--border);padding-top:2rem;margin-top:2.5rem">
+        <p class="small faint" style="font-family:var(--mono);letter-spacing:0.08em">2026-09-02</p>
+        <h2 style="margin-top:0.35rem">Our own site had a one-click path into $25 of liquidity</h2>
+        <p>A page on this site carried a pre-filled swap link and an add-to-wallet button for the
+        Genesis token, with no risk language of any kind. At the time, a buyer spending $100 could
+        recover $0.95 if the majority holder sold one tenth of one percent of their position.</p>
+        <p><strong>None of it existed in our repository.</strong> The published file was 1,695 bytes
+        larger than the source, meaning it had been deployed from an uncommitted working directory.
+        The live site was serving something nobody could review.</p>
+        <p>It was removed by reconciling the published file rather than overwriting it with our
+        older source &mdash; which would also have removed the buy link, but silently, as an
+        invisible side effect of an unrelated change. <strong>Removing a buy funnel should be a
+        decision with a commit message, not an accident.</strong> It has one:
+        <code class="inline">8ac74e7</code>.</p>
+      </article>
+
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a class="brand" href="/" aria-label="0200project home">
+          <svg viewBox="0 0 64 36" aria-hidden="true"><rect x="0" y="0" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="0" width="15" height="15" rx="4" fill="#4e9eff"/><rect x="0" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="20" y="20" width="15" height="15" rx="4" fill="#2a2a31"/><rect x="44" y="1.5" width="20" height="7" rx="3.5" fill="#ececf1"/><rect x="44" y="14.5" width="14" height="7" rx="3.5" fill="#8b8b94"/><rect x="44" y="27.5" width="9" height="7" rx="3.5" fill="#55555e"/></svg>
+          0200project
+        </a>
+      </div>
+      <nav aria-label="Product">
+        <h4>Product</h4>
+        <ul>
+          <li><a href="/tools/">Tools</a></li>
+          <li><a href="/docs/">Documentation</a></li>
+          <li><a href="/docs/#request-format">API reference</a></li>
+          <li><a href="/pricing/">Pricing</a></li>
+          <li><a href="/about/">About</a></li>
+          
+          <li><a href="/changelog/">Changelog</a></li>
+          <li><a href="/faq/">FAQ</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Developers">
+        <h4>Developers</h4>
+        <ul>
+          <li><a href="/playground/">Playground</a></li>
+          <li><a href="https://github.com/0200project">GitHub</a></li>
+          <li><a href="https://registry.modelcontextprotocol.io/v0/servers?search=base-transaction-decoder">MCP Registry</a></li>
+          <li><a href="/llms.txt">llms.txt</a></li>
+          <li><a href="/status/">Status</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Company">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/about/">About</a></li>
+          <li><a href="/notes/">Notes</a></li>
+          <li><a href="/security/">Security</a></li>
+          <li><a href="mailto:contact@0200project.com">Contact</a></li>
+          <li><a href="https://github.com/0200project/base-tx-explain/issues">Support</a></li>
+        </ul>
+      </nav>
+      <nav aria-label="Legal">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/privacy/">Privacy</a></li>
+          <li><a href="/terms/">Terms</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 0200project <span class="faint">&middot;</span> <span class="mono">base-transaction-decoder v0.1.4 &middot; Base mainnet</span></span>
+      <a class="pill footer-status" href="/status/"><span class="dot"></span><span id="ft-status">Checking status&hellip;</span></a>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/site.js" defer></script>
+</body>
+</html>
