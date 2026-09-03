@@ -132,11 +132,50 @@
       that comparison to a conclusion, and until we do, the role is open in the plain sense that we
       do not know.</p>
 
+
+      <h2>Allocation &mdash; designed, not deployed</h2>
+
+      <p>The figures below describe <strong>what the locks will hold if and when they exist.</strong>
+      No contract is deployed to Base mainnet, so nothing currently holds anything. Supply is
+      100,000,000 with 18 decimals.</p>
+
+      <div class="led" style="margin:0 0 1.25rem">
+        <div class="panel-head"><span>four locks with a destination</span><span>per 30-day release ceiling</span></div>
+        <div class="led-row"><span class="led-lbl">founder</span><span class="led-val">Founder and team<small>20% of supply</small></span><span class="led-amt">20,000,000</span></div>
+        <div class="led-row"><span class="led-lbl">treasury</span><span class="led-val">Treasury<small>15% of supply</small></span><span class="led-amt">15,000,000</span></div>
+        <div class="led-row"><span class="led-lbl">ecosystem</span><span class="led-val">Ecosystem<small>25% of supply</small></span><span class="led-amt">25,000,000</span></div>
+        <div class="led-row"><span class="led-lbl">contributors</span><span class="led-val">Contributors<small>5% of supply</small></span><span class="led-amt">5,000,000</span></div>
+        <div class="led-foot">Each carries a <b>30-day delay</b> and a per-window release ceiling: founder 417,000 &middot; treasury 630,000 &middot; ecosystem 520,000 &middot; contributors 210,000. <b>Aggregate approximately 1.78% of supply per 30 days.</b> None of these parameters is live until the contracts are on mainnet and readable on-chain.</div>
+      </div>
+
+      <div class="card" style="border-left:2px solid var(--border-strong)">
+        <p class="small" style="font-family:var(--mono);font-size:0.66rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--fg-faint);margin:0 0 0.6rem">Not a fifth destination</p>
+        <p><strong>Undesignated &mdash; 35,000,000 XO2, 35% of supply.</strong></p>
+        <p>&ldquo;Undesignated (35,000,000 XO2, 35% of supply) is held with no configured release
+        destination and no assigned purpose; nothing moves from it &mdash; including any future
+        liquidity seeding, should the standing no-new-pool constraint ever be lifted &mdash; until a
+        specific allocation is decided and disclosed at that time, not before.&rdquo;</p>
+        <p class="small faint">This is set apart from the table above deliberately. The other four
+        are locks with a destination and a ceiling. This one has neither, and putting it in the same
+        table would assert that it is the same kind of thing &mdash; which the sentence above
+        denies. <strong>A row in a table of locks claims &ldquo;this is a lock&rdquo; more loudly
+        than a paragraph nearby denies it.</strong></p>
+      </div>
+
       <h2>UNPROVEN &mdash; hypotheses</h2>
 
       <p><strong>The thesis:</strong> that deterministic, machine-verifiable settlement state is
       useful infrastructure for autonomous commerce. One mechanism has been verified on-chain.
       Nothing has been built on it. It may not be useful and it may not be needed.</p>
+
+
+      <h2>Where the name 0200 comes from</h2>
+      <p>In <strong>ISO 8583</strong> &mdash; the message standard behind card transactions &mdash;
+      the Message Type Indicator <code class="inline">0200</code> is an <strong>Acquirer Financial
+      Request</strong>: the message a point-of-sale terminal or ATM sends to ask whether funds are
+      available. It is the moment a machine asks another machine to move money.</p>
+      <p class="small faint">Stated because it is checkable in the standard, not as a claim about
+      what we have built. The name predates us and belongs to nobody.</p>
 
       <h2>Who controls what</h2>
 
