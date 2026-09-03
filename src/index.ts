@@ -1501,6 +1501,50 @@ app.get('/stats', async (req, res) => {
   });
 });
 
+/**
+ * Mint a pass for OUR OWN use, so the free tier cannot wall internal verification.
+ *
+ * WHY THIS EXISTS: on 2026-09-03 this seat tried to verify the company's own most
+ * consequential transaction of the night — the Genesis retirement — using this product,
+ * from this machine, and got `{"error":"Payment required"}`. A public Base RPC answered
+ * the same question instantly and free. Our own paywall turned us away at the one moment
+ * the tool was needed for something real.
+ *
+ * WHY NOT JUST LET THE INTERNAL MARKER THROUGH — the obvious fix, and it is wrong.
+ * `internal.ts` states the marker's defining property in its own header: "NOT A SECURITY
+ * CONTROL. It grants no access and gates nothing... the worst case if it leaked is a
+ * miscounted row." Making it bypass the paywall silently converts an accounting tag into
+ * an access credential, and converts the blast radius of a leak from one wrong row into
+ * unlimited free service. The marker is sprayed across scripts and shell history precisely
+ * BECAUSE it is harmless; that assumption must not be invalidated underneath it.
+ *
+ * So this reuses two things already built for the job: the PASS mechanism (which exists to
+ * grant call entitlement) and STATS_TOKEN (already a real credential, already gating our
+ * own operational data). No new secret, no new trust assumption.
+ *
+ * ACCOUNTING: the minted pass carries an explicit non-revenue payer string so it can never
+ * be misread as a sale in `passSnapshot()`. It settles nothing and books nothing — pass
+ * minting only records revenue when a payment settles, which this does not.
+ */
+app.post('/pass/internal', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  if (!STATS_TOKEN) {
+    res.status(404).json({ error: 'not enabled' });
+    return;
+  }
+  const presented =
+    (req.headers['x-stats-token'] as string | undefined) ??
+    String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+  const authed = presented ? tokenMatches(presented) : hasDashCookie(req);
+  if (!authed) {
+    res.status(401).json({ error: 'bad token' });
+    return;
+  }
+  const pass = mintPass({ payer: 'internal:self-issued (NOT REVENUE)' });
+  console.log('[pass] INTERNAL self-issued pass minted — not a sale, books nothing');
+  res.status(200).json({ ...pass, note: 'Internal pass. Not a sale. Present as X-BTX-Pass.' });
+});
+
 // Canonical machine-readable contract for discovery indexers (x402scan et al.).
 const openApiDocument = buildOpenApiDocument(VERSION, PRICE_USD, PAYMENT_MODE === 'x402', PUBLIC_URL);
 app.get('/openapi.json', (_req, res) => {
