@@ -1214,6 +1214,27 @@ app.get('/healthz', (_req, res) => {
 // config keeps the endpoint dark. CORS is open because the dashboard is a
 // static page on another origin and the token is the actual gate.
 const STATS_TOKEN = process.env.STATS_TOKEN ?? '';
+
+/**
+ * A SEPARATE secret for minting internal passes. Deliberately not STATS_TOKEN.
+ *
+ * STATS_TOKEN grants READ of aggregate numbers. Minting a pass grants SERVICE.
+ * Those are different trust classes, and one secret spanning both means a leak
+ * that used to be a stats disclosure becomes a pass mint. Two secrets fail
+ * independently and cost one env var.
+ *
+ * Unset disables the route entirely, which is the right default: an internal
+ * convenience that is absent is a nuisance, and one that is on by accident is a
+ * free-service faucet.
+ */
+const INTERNAL_PASS_TOKEN = process.env.INTERNAL_PASS_TOKEN ?? '';
+const internalPassTokenMatches = (presented: string): boolean => {
+  if (!INTERNAL_PASS_TOKEN) return false;
+  const a = Buffer.from(presented, 'utf8');
+  const b = Buffer.from(INTERNAL_PASS_TOKEN, 'utf8');
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
+};
 app.options('/stats', (_req, res) => {
   res
     .set('Access-Control-Allow-Origin', '*')
@@ -1544,15 +1565,21 @@ const INTERNAL_PASS_CAP = 100;
 
 app.post('/pass/internal', (req, res) => {
   res.set('Cache-Control', 'no-store');
-  if (!STATS_TOKEN) {
+  if (!INTERNAL_PASS_TOKEN) {
     res.status(404).json({ error: 'not enabled' });
     return;
   }
+  // ⚠️ NO COOKIE PATH, unlike /stats and the dashboard routes. Minting a
+  // credential is not the same act as viewing a page, and accepting an ambient
+  // browser session here would let anything that can drive an authenticated
+  // browser mint service for itself. SameSite=Lax blocks the obvious CSRF, but
+  // the reason to require the secret is narrower than CSRF: possession of a
+  // secret is the claim we actually want to check, and a session cookie is not
+  // evidence of it.
   const presented =
-    (req.headers['x-stats-token'] as string | undefined) ??
+    (req.headers['x-internal-pass-token'] as string | undefined) ??
     String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
-  const authed = presented ? tokenMatches(presented) : hasDashCookie(req);
-  if (!authed) {
+  if (!presented || !internalPassTokenMatches(presented)) {
     res.status(401).json({ error: 'bad token' });
     return;
   }
@@ -1571,6 +1598,7 @@ app.post('/pass/internal', (req, res) => {
     ...pass,
     replaced_prior_internal_passes: replaced,
     note: 'Internal pass. Not a sale, excluded from active_passes. Present as X-BTX-Pass.',
+    warning: 'This grants SERVICE. Do not reuse STATS_TOKEN for it.',
   });
 });
 
