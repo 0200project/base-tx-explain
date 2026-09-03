@@ -77,8 +77,62 @@
 
       <p><strong>Current holders:</strong> two &mdash; our wallet, and the pool. No external address holds this token.</p>
 
+
+      <h2>The Genesis token is retired</h2>
+      <p class="updated">Executed 2026-09-02. Both transactions confirmed on Base mainnet.</p>
+
+      <p>The liquidity pool was withdrawn and the entire supply sent to the token&rsquo;s own
+      contract address, where it cannot be moved by anyone, including us.</p>
+
+      <ul>
+        <li><strong>Liquidity withdrawal</strong> &mdash; block 50803021<br>
+        <code class="inline">0xb365ca46b440c415cf3ec36d9a83eea4b89c6e1ccd2f58c6f1577f0ff8f1b887</code></li>
+        <li><strong>Transfer of full supply to the contract</strong> &mdash; block 50803098<br>
+        <code class="inline">0x742db31dd0dca7b00686354662cc0f7334fa65584b819c6f43511292cc494cb6</code></li>
+      </ul>
+
+      <h3>How to verify this yourself, in two reads</h3>
+      <p>Every token that exists is now in one of two places, and they add up exactly:</p>
+      <pre style="white-space:pre-wrap"><code>balanceOf(token, token)  +  balanceOf(token, pair)  ==  totalSupply()
+
+  999,999,999.9999999  +  0.0000001  =  1,000,000,000.0000000</code></pre>
+      <p>Where <code class="inline">token</code> is
+      <code class="inline">0xC626A027A0Fa57A9424Df1173b51d80d26B44FA6</code> and
+      <code class="inline">pair</code> is
+      <code class="inline">0x98d0bE8540a898eE5d946325D9535a12814a8978</code>. The deployer&rsquo;s
+      wallet now holds <strong>zero</strong>.</p>
+
+      <p><strong>Note what this is and is not: the tokens were transferred, not burned.</strong>
+      This contract has no burn function, so <code class="inline">totalSupply()</code> still reads
+      1,000,000,000 and always will. Nothing was destroyed and no supply was reduced &mdash; the
+      entire supply is simply at addresses that cannot release it. Any market capitalisation
+      computed from that number is meaningless.</p>
+
+      <p><strong>Why those addresses cannot release them.</strong> The contract has no owner, no
+      rescue function, no withdrawal function and no proxy; the source is verified and public and
+      the absence of those functions is checkable. The 0.0000001 in the pair is the minimum
+      liquidity UniswapV2 permanently locks when a pair is created, and it cannot be withdrawn by
+      anyone.</p>
+
+      <p><strong>The pool is drained, not deleted.</strong> The pair contract still exists and holds
+      that dust. <strong>The contract is permissionless: anyone can create a new pool for it using
+      their own tokens. Any such pool would not be ours and we would have no involvement in it.</strong></p>
+
+      <p>The withdrawal returned <strong>24.999999 USDC</strong>. That is our own capital returning
+      to us. It is recorded as a change in where an asset sits, not as revenue. No tokens were sold,
+      at any point, to anyone.</p>
+
       <h2>Amendments to this page</h2>
       <div class="card" style="border-left:2px solid var(--accent)">
+        <p class="small"><strong>2026-09-02, after execution.</strong> The verification check
+        published above was corrected. It originally read
+        <code class="inline">balanceOf(token, token) == totalSupply()</code>. That equality is false
+        and always will be: 0.0000001 tokens are permanently stranded in the pair, so the contract
+        holds 999,999,999.9999999 against a total supply of 1,000,000,000. A reader running the
+        original check would have seen a mismatch, which this page told them to read as
+        &ldquo;something is wrong&rdquo; &mdash; a failure that did not happen. The corrected check
+        accounts for every token in two named places and holds exactly.</p>
+
         <p class="small"><strong>2026-09-02, shortly after publication.</strong> One sentence was
         corrected. It originally read:</p>
         <blockquote><p class="small faint">&ldquo;After the supply is sent to an address it cannot
