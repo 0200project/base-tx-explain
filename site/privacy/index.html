@@ -84,7 +84,16 @@
       </ul>
 
       <h2>Data retention</h2>
-      <p>Our infrastructure provider keeps standard, short-lived operational logs, as effectively all hosting does. We keep nothing beyond that: no database, no request archive, no user records.</p>
+      <p>Our infrastructure provider keeps standard, short-lived operational logs, as effectively all hosting does. <strong>Beyond that we keep one thing, and this page previously said we kept nothing.</strong></p>
+      <p>The service writes an <strong>append-only event log</strong> &mdash; a single file on a persistent disk, one line per event, rebuilt into memory when the service restarts. There is no database, but the file is a record of requests, so calling it &ldquo;not a request archive&rdquo; would be a distinction that serves us rather than you.</p>
+      <p><strong>What each line can contain:</strong></p>
+      <ul>
+        <li>A <strong>call</strong>: the time, whether it was charged, free or on a pass, whether it succeeded, whether a risk check was unavailable, and a coarse client identifier.</li>
+        <li>A <strong>settled payment</strong>: the time, the amount, the transaction hash, and <strong>the paying wallet address</strong>.</li>
+        <li>A <strong>failed payment</strong>: the time, which stage failed, the reason, and <strong>the paying wallet address</strong>.</li>
+      </ul>
+      <p>It holds no names, no email addresses and no account records, because there are no accounts. It does hold wallet addresses for payments, and it is <strong>not currently bounded by any retention period</strong> &mdash; entries are not deleted on a schedule. If that changes, this page changes with it.</p>
+      <p class="small">Corrected 2026-09-04. The previous wording said &ldquo;no database, no request archive, no user records&rdquo;. The first was true on a technicality and the other two were not true at all.</p>
 
       <h2>Changes</h2>
       <p>If this policy changes, the new version is posted on this page with an updated date at the top.</p>
