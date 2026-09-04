@@ -193,6 +193,42 @@ function reapPending(now: number): void {
  * payment settled (MCP rail); omit it only where the caller cannot receive the
  * token unless settlement already succeeded (REST rail).
  */
+/**
+ * ⚠️ KNOWN HOLE, FILED NOT FIXED: WE CANNOT IDENTIFY MOST PASS BUYERS.
+ *
+ * Read from the production volume 2026-09-04: of four non-internal passes,
+ * THREE carry no `payer` and no `nonce` at all. Nothing in our records names
+ * who holds them.
+ *
+ * It is rail-specific rather than universal, and the distinction decides the fix:
+ *
+ *  - REST x402 (`mint: () => mintPass()`, index.ts): mints with NO argument, so
+ *    no payer and no nonce are ever recorded. Identity is not merely unstored,
+ *    it is UNRECOVERABLE.
+ *  - Stripe (index.ts): passes `obj.customer`, which is null for guest
+ *    checkout — so the field exists and is empty exactly when a stranger buys.
+ *  - MCP x402 (index.ts): records a `nonce` but no payer. THIS ONE IS
+ *    RECOVERABLE: the nonce is the EIP-3009 authorization nonce, and USDC emits
+ *    `AuthorizationUsed(address indexed authorizer, bytes32 indexed nonce)`, so
+ *    the payer can be read back off-chain from the nonce at any later date.
+ *
+ * WHY IT IS NOT FIXED HERE. The population is currently four calls on passes
+ * whose only named payer is already booked as non-revenue, and renewal plumbing
+ * ahead of demand costs more than the product earns. A documented hole beats a
+ * build nobody needs yet — and beats a hole nobody wrote down.
+ *
+ * ⚠️ THE TRIGGER: THE FIRST PASS SALE TO SOMEONE WE CANNOT NAME. At that moment
+ * this stops being theoretical, because a $9/30-day product whose holder we
+ * cannot identify cannot be notified of a correction, cannot be asked to renew,
+ * and expires silently — which reaches us as churn with no cause attached. It
+ * compounds with the MCP signal hole: pass-state headers are invisible to MCP
+ * callers, and `mcp_client` is the only shape that has ever attempted buy_pass.
+ * So on that rail neither side can see the relationship.
+ *
+ * CHEAPEST PARTIAL FIX WHEN THE TRIGGER FIRES: pass the nonce on the REST rail
+ * too. It costs one argument and converts "unrecoverable" into "recoverable
+ * from chain", without storing anything about a buyer we were not already told.
+ */
 export function mintPass(
   opts: { payer?: string; pending?: boolean; nonce?: string; days?: number; cap?: number; internal?: boolean } = {},
 ): { token: string; expires_at: string; call_cap: number } {
