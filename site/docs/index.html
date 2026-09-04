@@ -343,7 +343,7 @@ npm run dev</code></pre>
 
       <h2 id="authentication">Authentication</h2>
       <p>There is none, by design. No accounts, no API keys, no OAuth — nothing to provision, rotate, leak, or revoke.</p>
-      <p>Identity is replaced by payment. A free tier is metered per client IP, and beyond it each call is paid individually over <a href="#x402-payments">x402</a>. The server never needs to know who you are, only that the call is paid for.</p>
+      <p>Identity is replaced by payment. A free tier is metered per client &mdash; one IPv4 address, or one IPv6 /64 &mdash; and beyond it each call is paid individually over <a href="#x402-payments">x402</a>. The server never needs to know who you are, only that the call is paid for.</p>
 
       <h2 id="base-transaction-decoder">base-transaction-decoder</h2>
       <p>One tool: <code class="inline">explain_transaction(tx_hash)</code> returns a strict JSON explanation of any Base mainnet transaction (chain id 8453) — a plain-English summary, a classified action type, every asset that moved, labeled counterparties, evidence-backed risk flags, and the total gas cost in USD.</p>
@@ -584,7 +584,7 @@ npm run dev</code></pre>
 
       <h2 id="usage">Usage</h2>
       <ul>
-        <li><strong>Free tier</strong> — the first 50 calls in any 24 hours are free, with no signup. Metering is per client IP: machines behind the same NAT or a shared CI egress draw from one counter, so shared networks can hit the paywall early, and the counter resets a day later. After that, each call is paid via x402.</li>
+        <li><strong>Free tier</strong> — the first 50 calls in any 24 hours are free, with no signup. Metering is per client &mdash; one IPv4 address, or one IPv6 /64: machines behind the same NAT or a shared CI egress draw from one counter, so shared networks can hit the paywall early, and the counter resets a day later. After that, each call is paid via x402.</li>
         <li><strong>Rate limit</strong> — 60 requests per minute per client. Exceeding it returns JSON-RPC error <code class="inline">-32000</code> with HTTP 429.</li>
         <li><strong>Statelessness</strong> — the server keeps no sessions and no database, and a fresh MCP server is created per request. Calls are independent and deterministic, so parallelizing and retrying are always safe.</li>
       </ul>
@@ -596,7 +596,7 @@ npm run dev</code></pre>
             <tr><th>Tier</th><th>Price</th><th>Notes</th></tr>
           </thead>
           <tbody>
-            <tr><td>Free tier</td><td>$0</td><td>50 calls per 24 hours, metered per client IP. No signup.</td></tr>
+            <tr><td>Free tier</td><td>$0</td><td>50 calls per 24 hours, per IPv4 address or IPv6 /64. No signup.</td></tr>
             <tr><td>Per call</td><td>$0.02</td><td>USDC on Base via x402, paid per call.</td></tr>
             <tr><td>Pass</td><td>$9</td><td>30 days, up to 10,000 calls, 60/min. Bearer token via <a href="#pass">one x402 payment</a> &mdash; no account, not a subscription.</td></tr>
             <tr><td>Developer</td><td>$9/mo</td><td>Same usage as the Pass, renewing automatically. Card only, via Stripe.</td></tr>

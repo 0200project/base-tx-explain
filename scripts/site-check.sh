@@ -170,9 +170,17 @@ else
     # made it wrong. /terms/ and the README carried the retired fact under a
     # green check. A qualifier list is a second copy of the fact and goes stale
     # exactly like prose does. "network" is now DISQUALIFYING, checked below.
+    #
+    # 2026-09-04: the SAME bug a second time, in the accept list rather than the
+    # reject list. "per IP|IP address|client IP|shared" all counted as qualifying,
+    # so "50 free calls a day per IP address" PASSED -- certified by containing
+    # the very words that make it wrong for IPv6, where a /64 shares one counter.
+    # Thirteen strings across nine surfaces sat green. Only the /64 itself, or an
+    # explicit IPv6, is now accepted: the qualifier must name the thing that makes
+    # the claim true, not merely sit in the same vocabulary as it.
     UNQUAL="$(grep -rnE "${CALLS} (free calls|calls)" $SURFACES 2>/dev/null \
               | grep -v '/changelog/' \
-              | grep -vE 'per IP|IP address|client IP|/64|shared' || true)"
+              | grep -vE '/64|IPv6' || true)"
 
             # Separate, louder failure: prose that actively states the retired rule.
             # Not merely unqualified -- affirmatively wrong, wherever it appears.
@@ -185,12 +193,12 @@ else
                 Rewrite the claim; do not add a qualifier beside it."
             fi
     if [ -n "$UNQUAL" ]; then
-      fail "a free-tier claim does not say the allowance is shared per IP address" \
+      fail "a free-tier claim does not name the IPv6 /64 that shares its counter" \
         "$(printf '%s' "$UNQUAL" | sed "s|$ROOT/||" | sed 's/^/        /')
         Reads as a personal allowance. It is shared by everyone behind one
         address, which is exactly what walled a real first-time visitor."
     else
-      pass "every free-tier claim is qualified per IP address, on its own line"
+      pass "every free-tier claim names the /64, on its own line"
     fi
   fi
 fi

@@ -5,7 +5,7 @@
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>base-transaction-decoder — Base Transaction Decoder API with Risk Flags</title>
-<meta name="description" content="Decode any Base mainnet transaction into plain English and strict JSON — action type, assets moved, risk flags. MCP server, 50 free calls a day per IP, then $0.02 via x402.">
+<meta name="description" content="Decode any Base mainnet transaction into plain English and strict JSON. MCP server; 50 free calls a day per IPv4 address or IPv6 /64, then $0.02 via x402.">
 <meta name="theme-color" content="#050505">
 <meta property="og:title" content="base-transaction-decoder — Base Transaction Decoder API">
 <meta property="og:description" content="Decode any Base transaction into plain English and strict JSON — action types, assets moved, risk flags. MCP + x402, no API key.">
@@ -30,7 +30,7 @@
   "url": "https://0200project.com/tools/",
   "description": "Deterministic Base mainnet transaction decoding for AI agents over MCP. One tool, explain_transaction(tx_hash), returns strict JSON.",
   "author": { "@type": "Organization", "name": "0200project", "url": "https://0200project.com/" },
-  "offers": { "@type": "Offer", "price": "0.02", "priceCurrency": "USD", "description": "50 free calls per IP address per day, then $0.02 per call in USDC on Base via x402. No account, no API key." },
+  "offers": { "@type": "Offer", "price": "0.02", "priceCurrency": "USD", "description": "50 free calls per day, counted per IPv4 address or IPv6 /64, then $0.02 per call in USDC on Base via x402. No account, no API key." },
   "softwareVersion": "0.1.1",
   "featureList": [
     "Plain-English summary of any Base mainnet transaction",
@@ -156,7 +156,7 @@
             <span class="pill">v0.1.4</span>
             <span class="pill">Base mainnet</span>
             <span class="pill">$0.02 per call</span>
-            <span class="pill">50 free calls a day per IP</span>
+            <span class="pill">50 free calls a day per IP (IPv6: /64)</span>
           </div>
           <p class="small faint" style="margin-top:1.25rem">Validated on 100 random live Base transactions before launch — 95 decoded to a specific action type, the rest to an honest partial, zero crashes.</p>
           <div class="tool-actions">

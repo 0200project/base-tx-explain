@@ -225,7 +225,7 @@
         <p class="lead">Decoders dump the transaction. We explain it &mdash; and we tell your agent which fields an attacker controls, and when a safety check didn&rsquo;t actually run. Built for agents reading Base.</p>
         <ul class="checks hero-checks">
           <li>Deterministic &mdash; no LLM in the response path</li>
-          <li>50 free calls a day per IP address &mdash; no wallet, no signup, no API key</li>
+          <li>50 free calls a day, counted per IPv4 address or IPv6 /64 &mdash; no wallet, no signup, no API key</li>
         </ul>
         <form class="hero-try" action="/playground/" method="get">
           <input class="hero-try-input" type="text" name="tx" placeholder="Paste a Base tx hash&#8230;" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Base transaction hash">
@@ -324,7 +324,7 @@
   -H 'Content-Type: application/json' \
   -d '{"tx_hash":"0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c"}'</code></pre>
           </div>
-          <p class="small faint" style="margin-top:0.625rem">No key, no signup. 50 free calls per IP address each day, shared by everyone behind one address; then $0.02 per call in USDC on Base.</p>
+          <p class="small faint" style="margin-top:0.625rem">No key, no signup. 50 free calls each day per IPv4 address or IPv6 /64, shared by everyone behind it; then $0.02 per call in USDC on Base.</p>
           <div class="hero-actions" style="margin-top:0.5rem">
             <a class="btn btn-primary" href="/playground/">Open playground</a>
             <a class="btn btn-ghost" href="/docs/">Read the docs</a>
@@ -367,7 +367,7 @@
         </div>
         <div class="reveal">
           <ol class="pay-steps">
-            <li><div><strong>Call the tool</strong><span>First 50 calls each day are free, counted per IP address. No registration.</span></div></li>
+            <li><div><strong>Call the tool</strong><span>First 50 calls each day are free, counted per IPv4 address or IPv6 /64. No registration.</span></div></li>
             <li><div><strong>Receive a 402 challenge</strong><span>The response carries exact price, asset, and recipient — everything needed to pay.</span></div></li>
             <li><div><strong>Pay and retry</strong><span>$0.02 per call in USDC. The agent attaches proof of payment and retries autonomously.</span></div></li>
           </ol>

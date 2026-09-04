@@ -29,7 +29,7 @@
 
 ## Pricing
 
-- 50 free calls per IP address per 24h, shared by everyone behind one address (an
+- 50 free calls per 24h per IPv4 address or IPv6 /64, shared by everyone behind it (an
   office, a VPN exit, a CI runner all draw from the same allowance). Resets daily.
 - Then $0.02 per call in USDC on Base via x402, or $9 for a 30-day pass covering
   10,000 calls. Rate limit 60 requests/minute. No account, no API key.

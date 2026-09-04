@@ -76,7 +76,7 @@
       <p>Connect any MCP client to the hosted endpoint at <code class="inline">https://api.0200project.com/mcp</code> (streamable HTTP), or send a plain JSON-RPC <code class="inline">tools/call</code> request with curl. The response is strict JSON with a stable schema, so software can parse it blind. The <a href="/docs/#quickstart">quickstart</a> has the exact config and curl command, and the <a href="/playground/">playground</a> decodes hashes live in your browser.</p>
 
       <h2 id="api-key">Do I need an API key or an account?</h2>
-      <p>No. There are no accounts, no signup, and no API keys. Every IP address gets 50 free calls a day, shared by everyone behind it; after that, each call costs $0.02 in USDC on Base, paid through the x402 protocol. The payment challenge arrives inside the response, so an autonomous agent can pay and retry without a human ever filling in a form.</p>
+      <p>No. There are no accounts, no signup, and no API keys. Every client gets 50 free calls a day (one IPv4 address, or one IPv6 /64), shared by everyone behind it; after that, each call costs $0.02 in USDC on Base, paid through the x402 protocol. The payment challenge arrives inside the response, so an autonomous agent can pay and retry without a human ever filling in a form.</p>
 
       <h2 id="x402">What is x402 and how does pay-per-call work?</h2>
       <p>x402 is an open protocol that puts the HTTP <code class="inline">402 Payment Required</code> status to work: when a call needs payment, the response carries the exact price, asset, and recipient. The caller pays in USDC on Base from its own wallet, attaches proof of payment, and retries — the whole loop is machine-to-machine. Settlement is verified by a non-custodial facilitator that cannot move or redirect funds, and the server never holds assets or asks for keys. Details in the <a href="/docs/#x402-payments">payment docs</a>.</p>
@@ -158,7 +158,7 @@
       "name": "Do I need an API key or an account?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "No. There are no accounts, no signup, and no API keys. Every IP address gets 50 free calls a day, shared by everyone behind it; after that, each call costs $0.02 in USDC on Base, paid through the x402 protocol. The payment challenge arrives inside the response, so an autonomous agent can pay and retry without a human ever filling in a form."
+        "text": "No. There are no accounts, no signup, and no API keys. Every client gets 50 free calls a day (one IPv4 address, or one IPv6 /64), shared by everyone behind it; after that, each call costs $0.02 in USDC on Base, paid through the x402 protocol. The payment challenge arrives inside the response, so an autonomous agent can pay and retry without a human ever filling in a form."
       }
     },
     {
