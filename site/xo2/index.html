@@ -149,9 +149,7 @@
 .copied{color:#3fb950 !important}
 
 /* ── token hero, XRP-style presence ─────────────────────────────────── */
-.tok-hero{position:relative;overflow:hidden;padding:5.5rem 0 3.25rem;border-bottom:1px solid var(--border)}
-.tok-hero::before{content:"";position:absolute;inset:-40% -20% auto -20%;height:120%;
-  background:radial-gradient(65% 60% at 50% 28%,var(--accent-dim,#1f6feb)33,transparent 72%);pointer-events:none}
+.tok-hero{position:relative;padding:4.5rem 0 3rem;border-bottom:1px solid var(--border)}
 .tok-wrap{position:relative;display:flex;align-items:center;gap:2.5rem;flex-wrap:wrap}
 .tok-coin{width:184px;height:184px;border-radius:50%;flex:none;object-fit:cover;
   box-shadow:0 0 0 1px var(--border-strong),0 18px 44px -14px rgba(0,0,0,.55);background:var(--bg-inset)}
@@ -174,13 +172,6 @@
 @media (max-width:40rem){.tok-coin{width:108px;height:108px}.tok-hero{padding:3rem 0 2rem}}
 
 /* ── motion & graphics ──────────────────────────────────────────────── */
-.tok-hero::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
-  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
-  background-size:72px 72px;opacity:.6;
-  -webkit-mask-image:radial-gradient(70% 60% at 50% 40%,#000 0%,transparent 78%);
-          mask-image:radial-gradient(70% 60% at 50% 40%,#000 0%,transparent 78%)}
-.tok-hero::before{animation:tokDrift 34s ease-in-out infinite alternate}
-@keyframes tokDrift{from{transform:translate3d(-1.5%,0,0)}to{transform:translate3d(1.5%,1%,0)}}
 
 .tok-coinwrap{position:relative;flex:none;display:grid;place-items:center}
 .tok-coin{position:relative;z-index:1}
@@ -204,15 +195,10 @@
 }
 
 /* ── hero presence ──────────────────────────────────────────────────── */
-.tok-hero{padding:6.5rem 0 4rem}
-.tok-bg{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);
-  font-family:var(--mono);font-weight:700;font-size:min(31vw,22rem);line-height:1;
-  letter-spacing:-.05em;color:var(--fg-strong);opacity:.035;pointer-events:none;user-select:none;white-space:nowrap}
+.tok-hero{padding:4.5rem 0 3rem}
 .tok-wrap{gap:3rem}
-.tok-coin{width:216px;height:216px;box-shadow:0 0 0 1px var(--border-strong),0 0 0 10px rgba(88,166,255,.05),0 26px 60px -18px rgba(0,0,0,.65)}
-.tok-sym{font-size:clamp(4rem,15vw,8.5rem);letter-spacing:-.045em;
-  background:linear-gradient(96deg,var(--fg-strong) 0%,var(--fg-strong) 52%,var(--accent,#58a6ff) 100%);
-  -webkit-background-clip:text;background-clip:text;color:transparent}
+.tok-coin{width:168px;height:168px;box-shadow:none;border:1px solid var(--border-strong)}
+.tok-sym{font-size:clamp(3.2rem,11vw,6rem);letter-spacing:-.045em;color:var(--fg-strong)}
 .tok-name{font-size:1.3rem;letter-spacing:.16em;text-transform:uppercase;font-family:var(--mono);font-size:.82rem;color:var(--fg-faint)}
 .tok-ticker{align-items:center;gap:1rem}
 .tok-stats{margin-top:2.75rem}
@@ -260,10 +246,9 @@
 
   <section class="tok-hero">
     <div class="container">
-      <div class="tok-bg" aria-hidden="true">XO2</div>
       <div class="tok-wrap">
         <div class="tok-coinwrap">
-          <img class="tok-coin" src="/assets/xo2-512.png" width="216" height="216"
+          <img class="tok-coin" src="/assets/xo2-512.png" width="168" height="168"
                alt="XO2 token mark" loading="eager" decoding="async">
         </div>
         <div class="tok-id">
@@ -344,7 +329,7 @@
         <div class="led-foot" style="word-break:break-all"><b>The two hashes in full, so you can paste them anywhere:</b><br>
         <span class="mono small">0x5b88e0d0391e0e779bffafccd8c5a000d91c0bf1a6b114f1fa5e49134ddd1f71</span><br>
         <span class="mono small">0xe6e193c85042359c721a42c938edeafd6fad0b938a681d81ad25d1ed82bc8675</span></div>
-        <div class="led-foot">A wallet popup vanished mid-signature and the transaction was re-sent. <b>It happened twice.</b> Both re-sends were deployments to an address that was already occupied, and because every contract here was deployed with <code class="inline">CREATE2</code> &mdash; where the address is fixed by the salt rather than by the sender&rsquo;s nonce &mdash; <b>the duplicate reverted instead of deploying a second copy</b>. With nonce-based <code class="inline">CREATE</code> each re-send would have landed at a fresh address and produced a real duplicate contract holding real supply.</div>
+        <div class="led-foot">A wallet popup vanished mid-signature and the transaction was re-sent. <b>It happened twice.</b> Both re-sends were deployments to an address that was already occupied, and because every contract here was deployed with <code class="inline">CREATE2</code>, where the address is fixed by the salt rather than by the sender&rsquo;s nonce, <b>the duplicate reverted instead of deploying a second copy</b>. With nonce-based <code class="inline">CREATE</code> each re-send would have landed at a fresh address and produced a real duplicate contract holding real supply.</div>
       </div>
       <p class="term-note" style="margin-top:.75rem">Total cost of both mistakes: <strong>33,034,523 gas</strong>, which is about <strong>$0.50</strong> at the gas price our own decoder reports for the block that carried the token deployment. We are publishing the failures because they are the only evidence we have that the design choice was worth making, and evidence about ourselves is the kind nobody volunteers.</p>
 
