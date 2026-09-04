@@ -29,6 +29,7 @@ export type EventKind =
   | 'solidly_swap'
   | 'seaport_order'
   | 'user_operation'
+  | 'authorization_used'
   | 'eas_attested'
   | 'aave_supply'
   | 'aave_withdraw'
@@ -97,6 +98,11 @@ const KNOWN_EVENTS = new Map<Hex, KnownEvent>([
     'erc1155_batch',
     'event TransferBatch(address indexed operator, address indexed from, address indexed to, uint256[] ids, uint256[] values)',
   ),
+  // EIP-3009. The TOKEN emits this when a transfer executes against a signed
+  // authorization: the payer signs off-chain, a third party submits and pays
+  // gas. It is the settlement primitive under x402 — and under every other
+  // gasless USDC send on this chain, which is why nothing here names x402.
+  ev('authorization_used', 'event AuthorizationUsed(address indexed authorizer, bytes32 indexed nonce)'),
   ev('weth_deposit', 'event Deposit(address indexed dst, uint256 wad)'),
   ev('weth_withdrawal', 'event Withdrawal(address indexed src, uint256 wad)'),
   ev(

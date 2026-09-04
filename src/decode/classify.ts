@@ -25,6 +25,13 @@ export interface Classification {
     protocol?: string;
     userOpCount?: number;
     registeredName?: string;
+    /**
+     * The value moved on a signed authorization (EIP-3009) rather than from the
+     * transaction sender. Read by the summary, which must name the PAYER: the
+     * sender submitted and paid gas, and describing them as having sent the
+     * money is false.
+     */
+    authorized?: boolean;
     approvalRevoked?: boolean;
     approvalForAllGranted?: boolean;
     mintCount?: number;
@@ -249,6 +256,33 @@ export function classify(input: ClassifyInput): Classification {
   const distinctRecipients = new Set(outbound.map((m) => m.to.toLowerCase()));
   if (fnHint === 'batch_transfer' || (outbound.length >= 5 && distinctRecipients.size >= 5)) {
     return { action: 'batch_transfer', detail };
+  }
+
+  // 16b. AUTHORIZED (GASLESS) TRANSFERS — EIP-3009.
+  //
+  // Branch 17 requires the value to move FROM the transaction sender. In an
+  // authorized transfer it does not: the payer signs an authorization and a
+  // third party submits it, so `from` is the submitter and the money is the
+  // payer's. Our own customer settlements arrive this way and were classified
+  // `contract_interaction` — "called contract Multicall3 (function: aggregate3)"
+  // — because the outer call is the submitter's wrapper.
+  //
+  // Gated on the emitter being a LABELED TOKEN for the same reason every other
+  // protocol branch is: an unlabeled contract can emit any event it likes, and
+  // a forged AuthorizationUsed would otherwise relabel an arbitrary batch as a
+  // transfer.
+  //
+  // ⚠️ DELIBERATELY NOT CALLED x402, AND NOT AN x402 DETECTOR. Measured
+  // 2026-09-04T17:16Z: 896 AuthorizationUsed events in 500 Base blocks (~17
+  // minutes), 885 distinct transactions, 892 of them USDC. The overwhelming
+  // majority are ordinary gasless sends with no relation to x402. Labelling
+  // this event "x402 payment" would be confidently wrong hundreds of times an
+  // hour — a specific falsehood replacing a dull truth.
+  const authorized = events.filter(
+    (e) => e.kind === 'authorization_used' && getLabel(e.emitter)?.category === 'token',
+  );
+  if (authorized.length > 0 && fungibleMoves.length > 0) {
+    return { action: 'erc20_transfer', detail: { ...detail, authorized: true } };
   }
 
   // 17. Plain transfers

@@ -73,6 +73,26 @@ export function buildSummary(ctx: SummaryContext): string {
     case 'erc20_transfer': {
       if (reverted) return attempted(`transfer tokens to ${nameOf(to)}`);
       const outs = movements.filter((m) => m.standard === 'erc20' && m.from.toLowerCase() === from.toLowerCase());
+      // AUTHORIZED (EIP-3009) TRANSFERS NAME THE PAYER, NOT THE SUBMITTER.
+      //
+      // The default line below is `${sender} sent …`, and `sender` is the
+      // TRANSACTION sender. On an authorized transfer that party signed
+      // nothing away — they submitted someone else's signed authorization and
+      // paid the gas. Rendering the template as-is produces "0xc669… sent 0.02
+      // USDC", which is FALSE, and worse than the generic
+      // "called contract Multicall3 (function: aggregate3)" it replaces: a
+      // confident wrong sentence in place of a dull true one.
+      //
+      // `outs` is empty in exactly this case — nothing moved FROM the sender —
+      // which is the tell, and is why the fallback `movements[0]` would have
+      // silently attributed a stranger's payment to the submitter.
+      if (detail.authorized && outs.length === 0) {
+        const m = movements.find((x) => x.standard === 'erc20');
+        if (m) {
+          const submitted = m.from.toLowerCase() === from.toLowerCase() ? '' : `, submitted by ${sender}`;
+          return `${shortAddress(m.from)} sent ${fmtAmount(m.amount)} ${m.token} to ${nameOf(m.to)} using a signed transfer authorization${submitted}.`;
+        }
+      }
       const m = outs[0] ?? movements[0];
       if (!m) return `${sender} transferred tokens.`;
       return `${sender} sent ${fmtAmount(m.amount)} ${m.token} to ${nameOf(m.to)}.`;
