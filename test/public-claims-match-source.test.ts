@@ -123,6 +123,52 @@ describe('public site claims match the code that makes them true', () => {
     expect(text).toMatch(/wallet address|payer/i);
   });
 
+  /**
+   * ⚠️ A TRAP SET FOR A FUTURE EDITOR WHO WILL BELIEVE THEY ARE IMPROVING THE PAGE.
+   *
+   * /security/ says blocklists are "consumed read-only from public sources
+   * (ScamSniffer and MyEtherWallet), refreshed twice daily". Every clause is
+   * true: the deployed drainers.ts queries both and REFRESH_MS is 12 hours.
+   *
+   * But "refreshed twice daily" is a statement about OUR POLLING that a reader
+   * takes as a statement about THE DATA — and the ScamSniffer path we read has
+   * not changed since 2024-02-28. The sentence survives only because nothing
+   * near it claims the list is current. Add "current", "up to date" or "live"
+   * and a true sentence becomes a lie, and the repoint does not rescue it,
+   * because the corrected source is lagged seven days by its vendor's own README.
+   *
+   * SO THIS IS DELIBERATELY AN ABSENCE TEST, against my own preference for
+   * presence tests, and the reason the usual objection does not apply: the
+   * hazard here is an ADDITION, and a presence test cannot catch a word being
+   * added. Deleting the sentence entirely is a fine outcome — no claim, no lie —
+   * so there is nothing this guard can be satisfied by destroying.
+   */
+  it('never claims the drainer blocklist is current, while the source we read is not', () => {
+    const drainers = readFileSync(join(root, 'src/risk/drainers.ts'), 'utf8');
+    // Retires itself if we ever read a source that publishes no lag and is live.
+    const readsLaggedOrFrozen = /scamsniffer|darklist|lag/i.test(drainers);
+    if (!readsLaggedOrFrozen) return;
+
+    const CURRENCY = /\b(current|up[- ]to[- ]date|live|real[- ]time|latest|always fresh|continuously updated)\b/i;
+    const found: string[] = [];
+    for (const { path, html } of currentTensePages()) {
+      const text = html.replace(/<[^>]+>/g, ' ');
+      // Only the neighbourhood of the blocklist claim, so unrelated uses of
+      // "latest" elsewhere on the site do not fire this.
+      for (const m of text.matchAll(/blocklist|drainer|ScamSniffer|MyEtherWallet/gi)) {
+        const near = text.slice(Math.max(0, m.index! - 200), m.index! + 200);
+        const hit = CURRENCY.exec(near);
+        if (hit) found.push(`${path}: "${hit[0]}" within 200 chars of "${m[0]}"`);
+      }
+    }
+    expect(
+      [...new Set(found)],
+      'A currency word appeared beside the blocklist claim. The list we read has ' +
+        'not changed since 2024-02-28 and the corrected source is lagged seven ' +
+        'days by its vendor. Say how often WE FETCH, never how fresh the data is.',
+    ).toEqual([]);
+  });
+
   it('does not deny storing identifiers while the ledger stores a payer address', () => {
     const storesPayer = /payer\?: string/.test(usageSrc);
     if (!storesPayer) return;
