@@ -54,7 +54,8 @@ export interface RestDeps {
   /** Give a pass call back when the failure was ours. */
   refundPassUse: (token: string) => void;
   /** Called for every completed request so the usage ledger stays whole. */
-  record: (req: express.Request, charged: boolean, ok: boolean, viaPass?: boolean) => void;
+  /** `code` is the ExplainError code when the call failed; absent on success. */
+  record: (req: express.Request, charged: boolean, ok: boolean, viaPass?: boolean, code?: string) => void;
 }
 
 const HASH_RE = /^0x[0-9a-fA-F]{64}$/;
@@ -250,7 +251,7 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
       // the paid rail already refuses to settle on errors.
       if (free) deps.refundFreeCall(req);
       if (passToken) deps.refundPassUse(passToken);
-      deps.record(req, false, false, Boolean(passToken));
+      deps.record(req, false, false, Boolean(passToken), 'invalid_hash');
       res.status(400).json({
         error: 'tx_hash must be a 66-character hex transaction hash (0x + 64 hex chars).',
         code: 'invalid_hash',
@@ -264,11 +265,16 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
       res.status(200).json(result);
     } catch (err) {
       const known = err instanceof ExplainError;
-      if (!known || err.code === 'upstream_error') {
+      // ⚠️ `not_found` and `pending` REFUND TOO, and they were the expensive
+      // omission. Neither is a failure the caller could have avoided: a hash we
+      // cannot find is usually the wrong chain, and `pending` is the single most
+      // likely thing a caller does — watching for their own settlement to land.
+      // Charging for either meant the caller paid to be told we had nothing yet.
+      if (!known || err.code === 'upstream_error' || err.code === 'not_found' || err.code === 'pending') {
         if (free) deps.refundFreeCall(req);
         if (passToken) deps.refundPassUse(passToken);
       }
-      deps.record(req, false, false, Boolean(passToken));
+      deps.record(req, false, false, Boolean(passToken), known ? err.code : 'internal_error');
       if (!known) console.error('REST explain failed:', err);
       res.status(known && err.code === 'not_found' ? 404 : known ? 400 : 502).json({
         error: known

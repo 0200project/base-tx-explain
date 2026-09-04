@@ -17,6 +17,26 @@ import { CLIENT_KINDS, CLIENT_KIND_CAVEAT, type ClientKind } from './clientKind.
 
 export type UsageEvent =
   | { t: string; e: 'call'; charge: boolean; paid?: boolean; pass?: boolean; client: string; ok?: boolean; internal?: boolean; degraded?: boolean; channel?: string; kind?: string }
+  /**
+   * HOW A DECODE ENDED, AND WHY — recorded at the branch that decided it.
+   *
+   * ⚠️ WHY THIS IS A SEPARATE EVENT rather than fields on `call`. The MCP call
+   * event is written BEFORE the tool runs, so the outcome does not exist yet at
+   * that point. Restructuring that ordering under a live rail is the riskier
+   * change; emitting a second event where the result IS known is the same shape
+   * `payfail` already uses, and it covers both rails identically.
+   *
+   * ⚠️ AND IT CARRIES THE CODE, NOT THE STATUS. A status looked sufficient right
+   * up to the moment we needed it: `invalid_hash` and `upstream_error` BOTH
+   * return HTTP 400, so a status field would have shipped looking like an answer
+   * while being unable to separate "strangers are sending us bad input" from
+   * "our dependencies are failing" — the two questions we could not answer about
+   * 466 arrivals because this value was used to branch and then discarded.
+   *
+   * The rule this exists to satisfy: A VALUE USED TO MAKE A DECISION SHOULD BE
+   * RECORDED WITH THE DECISION.
+   */
+  | { t: string; e: 'outcome'; client: string; rail: 'mcp' | 'rest'; ok: boolean; code?: string; internal?: boolean }
   | {
       t: string;
       e: 'settled';
@@ -214,6 +234,11 @@ function absorb(ev: LedgerEvent): void {
       payer: ev.payer,
     });
     if (recentPayFailures.length > MAX_PAYFAIL_KEPT) recentPayFailures.shift();
+    return;
+  }
+  if (ev.e === 'outcome') {
+    // Deliberately counted nowhere. This is a diagnostic record, and folding it
+    // into any funnel counter would double-count every call that has one.
     return;
   }
   if (ev.e === 'call') {

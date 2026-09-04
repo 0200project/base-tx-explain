@@ -169,6 +169,38 @@ describe('public site claims match the code that makes them true', () => {
     ).toEqual([]);
   });
 
+  /**
+   * ⚠️ A PUBLISHED BILLING PROMISE THAT SILENTLY DEPENDS ON AN ENV VAR.
+   *
+   * The refund rule the site states is true only while the service is charging.
+   * The whole MCP refund block is gated on `PAYMENT_MODE === 'x402'`
+   * (index.ts), and PAYMENT_MODE DEFAULTS TO 'none' — so flipping it turns those
+   * pages into a description of a configuration we no longer run, silently.
+   *
+   * Prose cannot catch that, and hedging the sentence would be worse: a reader
+   * cannot experience the exception, because if we are not charging the billing
+   * paragraph is moot rather than wrong. So the duty is a BUILD-TIME one — while
+   * the claim is published, the deployed config must match it.
+   *
+   * Keyed on fly.toml because that is where the deployed value actually lives.
+   * A source test cannot read a runtime env var, and asserting the default would
+   * assert the wrong thing: the default is 'none'.
+   */
+  it('pins PAYMENT_MODE while the site publishes a refund promise', () => {
+    const pages = currentTensePages();
+    const claims = pages.filter(({ html }) =>
+      /refund|consumed|costs? a call|counts? against/i.test(html.replace(/<[^>]+>/g, ' ')),
+    );
+    // No claim published means no duty. Stated rather than silent, so a future
+    // reader can tell a vacuous pass from a real one.
+    if (claims.length === 0) return;
+    expect(
+      /^\s*PAYMENT_MODE\s*=\s*'x402'/m.test(flyToml),
+      `pages assert refund behaviour (${claims.map((c) => c.path).join(', ')}) ` +
+        `but fly.toml does not pin PAYMENT_MODE='x402' — the claim would describe a config we do not run`,
+    ).toBe(true);
+  });
+
   it('does not deny storing identifiers while the ledger stores a payer address', () => {
     const storesPayer = /payer\?: string/.test(usageSrc);
     if (!storesPayer) return;

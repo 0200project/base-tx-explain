@@ -623,17 +623,39 @@ function getServer(charge: boolean, ip: string, passToken: string | null = null)
     const result = await runExplain(args);
     // Apify marketplace billing (pay-per-event): charge only after a clean
     // decode - never for errors, ours or the user's. No-op off Apify.
-    if (!result.isError) await chargeApifyCall();
+    if (!result.isError) {
+      await chargeApifyCall();
+      recordEvent({
+        t: new Date().toISOString(), e: 'outcome',
+        client: createHash('sha256').update(`btx:${ip}`).digest('hex').slice(0, 8),
+        rail: 'mcp', ok: true,
+      });
+    }
     if (PAYMENT_MODE === 'x402' && result.isError) {
       try {
         const code = JSON.parse((result.content[0] as { text: string }).text).code as string;
         // Our failures refund; so does invalid_hash, which we reject before
         // doing any work - the REST rail already treats a typo that way, and
         // the two rails must not differ on what costs a credit.
-        if (code === 'upstream_error' || code === 'internal_error' || code === 'invalid_hash') {
+        //
+        // ⚠️ `not_found` and `pending` REFUND TOO. Neither is avoidable by the
+        // caller: a hash we cannot find is usually the wrong chain, and
+        // `pending` is what someone does while watching for their OWN
+        // settlement to land. Both rails must agree, so this list matches REST's.
+        if (
+          code === 'upstream_error' || code === 'internal_error' || code === 'invalid_hash' ||
+          code === 'not_found' || code === 'pending'
+        ) {
           if (passToken) refundPassUse(passToken);
           else refundFreeCall(ip);
         }
+        // The MCP rail recorded NO outcome at all until now, so the population
+        // that arrives on its own was permanently unmeasurable.
+        recordEvent({
+          t: new Date().toISOString(), e: 'outcome',
+          client: createHash('sha256').update(`btx:${ip}`).digest('hex').slice(0, 8),
+          rail: 'mcp', ok: false, code,
+        });
       } catch {
         /* unparseable error payload; keep the call consumed */
       }
@@ -2106,7 +2128,7 @@ function registerPaidRoutes(): void {
           return usePass(token).ok ? token : null;
         },
         refundPassUse,
-        record: (req, charged, ok, viaPass) => {
+        record: (req, charged, ok, viaPass, code) => {
           metrics.tool_calls++;
           if (charged) metrics.paywalled++;
           else metrics.free++;
@@ -2122,6 +2144,11 @@ function registerPaidRoutes(): void {
                   channel: channelOf(req.query, req.headers as Record<string, unknown>),
                   kind: clientKind(req.headers['user-agent']),
                 }),
+          });
+          // The outcome, WITH the code that produced it, at the point it is known.
+          recordEvent({
+            t: new Date().toISOString(), e: 'outcome', client: tag, rail: 'rest',
+            ok, internal: restIsOurs, ...(code ? { code } : {}),
           });
         },
       });
