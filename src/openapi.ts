@@ -66,6 +66,13 @@ const EXPLAIN_RESULT_SCHEMA = {
       },
       required: ['contract_verification', 'first_interaction', 'drainer_blacklist', 'unchecked_addresses', 'note'],
     },
+    decoded_at: {
+      type: 'string',
+      description:
+        'When this decode ran. Most fields are read at the transaction\'s own block and reproduce forever; ' +
+        'contract-verification status (and event names derived from a verified ABI) are read as of this time, ' +
+        'because no historical view of verification exists. A later re-run may differ for that reason alone.',
+    },
     gas_paid_usd: { type: ['number', 'null'] },
     // Ships beside gas_paid_usd so a machine reader cannot take the number
     // without the provenance. 'latest' means today's price was applied to a
@@ -97,7 +104,7 @@ const EXPLAIN_RESULT_SCHEMA = {
       required: ['untrusted_fields', 'note'],
     },
   },
-  required: ['summary', 'action_type', 'status', 'assets_moved', 'counterparties', 'risk_flags', 'checks', 'gas_paid_usd', 'gas_price_basis', 'timestamp', 'basescan_url', 'provenance'],
+  required: ['summary', 'action_type', 'status', 'assets_moved', 'counterparties', 'risk_flags', 'checks', 'gas_paid_usd', 'gas_price_basis', 'timestamp', 'decoded_at', 'basescan_url', 'provenance'],
 } as const;
 
 const PASS_OPERATION = (publicUrl: string): Record<string, unknown> => ({

@@ -93,9 +93,10 @@ const TOOL_DESCRIPTION =
   'counterparties[] (labeled where known: routers, bridges, marketplaces), risk_flags[] ' +
   '(unverified_contract, unlimited_approval, approval_for_all, known_drainer, ' +
   'first_time_counterparty, nonstandard_token_symbol, impersonated_token, ' +
-  'transaction_reverted), checks, gas_paid_usd, gas_price_basis (whether the ETH/USD '
-  'rate was read at the transaction\'s block or fell back to latest — a `latest` figure '
-  'does not reproduce), timestamp, block_number, tx_hash, ' +
+  'transaction_reverted), checks, gas_paid_usd, gas_price_basis (whether the ETH/USD ' +
+  'rate was read at the block or fell back to latest — a `latest` figure does not reproduce), ' +
+  'timestamp (when the tx was mined), decoded_at (when this decode ran; verification-derived ' +
+  'fields are as of then, everything else is read at the tx block), block_number, tx_hash, ' +
   'basescan_url, status, partial, provenance. ' +
   'Risk checks fail open, so read `checks` before drawing any conclusion from an empty ' +
   'risk_flags: it reports whether each check ran (ok / partial / unavailable / inconclusive / not_applicable), ' +

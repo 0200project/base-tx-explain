@@ -303,6 +303,7 @@ export async function explainTransaction(txHashRaw: string): Promise<ExplainResu
     gas_paid_usd: gasPaidUsd,
     gas_price_basis: ethUsd,
     timestamp: new Date(Number(block.timestamp) * 1000).toISOString(),
+    decoded_at: new Date().toISOString(),
     block_number: Number(receipt.blockNumber),
     tx_hash: hash,
     basescan_url: `https://basescan.org/tx/${hash}`,

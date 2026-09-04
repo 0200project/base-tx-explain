@@ -149,7 +149,30 @@ export interface ExplainResult {
    * figure; the two fields are only meaningful together.
    */
   gas_price_basis: PriceBasis;
+  /** When the TRANSACTION was mined. A property of the chain; never changes. */
   timestamp: string;
+  /**
+   * When THIS DECODE was produced. Present because not every field is a
+   * function of the transaction alone.
+   *
+   * ⚠️ MOST OF THIS ARTIFACT REPRODUCES FOREVER — amounts, counterparties,
+   * events and `gas_paid_usd` (see `gas_price_basis`) are read at the
+   * transaction's own block, and `first_interaction` is computed against the
+   * history before it. TWO THINGS ARE NOT:
+   *
+   *   • `unverified_contract` — verification status is read from Sourcify AS OF
+   *     NOW. Sourcify exposes no historical view, so a contract that is
+   *     unverified today and verified next month loses the flag. The flag is
+   *     therefore a statement about the contract TODAY, not about the moment of
+   *     the transaction.
+   *   • Event NAMES for contracts with no builtin decoder, which come from the
+   *     same verified-ABI source and appear when a contract becomes verified.
+   *
+   * A buyer re-running this decode later can legitimately see a different
+   * `risk_flags` array for those reasons and no other. `decoded_at` is what
+   * lets them tell that apart from an inconsistency.
+   */
+  decoded_at: string;
   block_number: number;
   tx_hash: string;
   basescan_url: string;

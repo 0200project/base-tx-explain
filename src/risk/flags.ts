@@ -101,7 +101,7 @@ export async function buildRiskFlags(ctx: FlagContext): Promise<RiskAssessment> 
       .map(async (e) => {
         const value = e.args.value as bigint | undefined;
         if (value === undefined) return null;
-        const supply = await getTokenSupply(e.emitter);
+        const supply = await getTokenSupply(e.emitter, ctx.blockNumber);
         const bounded = supply !== null && supply > 0n;
         const unlimited = bounded ? value >= supply : isUnlimitedApproval(value);
         if (!unlimited) return null;

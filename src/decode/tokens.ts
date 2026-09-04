@@ -93,15 +93,24 @@ export async function getContractName(address: Address): Promise<string | null> 
 // Cached ERC-20 totalSupply, used to judge whether an approval is effectively
 // unlimited (an allowance at or above the whole supply can never be a real,
 // bounded amount). DAY TTL, not FOREVER, so a transient read failure self-heals.
+//
+// ⚠️ READ AT THE TRANSACTION'S BLOCK, and keyed by it. Supply is not a property
+// of a token, it is a property of a token AT A MOMENT: a mint or a burn moves it,
+// and this figure decides whether an approval is reported as unlimited. Reading
+// it at HEAD meant the same historical transaction could be judged unlimited one
+// week and bounded the next, with nothing in the artifact saying why — the same
+// unlabelled non-reproducibility as applying today's ETH price to yesterday's
+// gas. Its sibling in the same risk check, isFirstInteraction, already takes a
+// block for exactly this reason.
 const supplyCache = new TtlCache<bigint | null>(10_000, DAY);
 const TOTAL_SUPPLY_ABI = [
   { type: 'function', name: 'totalSupply', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
 ] as const;
 
-export async function getTokenSupply(address: Address): Promise<bigint | null> {
-  return supplyCache.getOrLoad(address.toLowerCase(), async () => {
+export async function getTokenSupply(address: Address, blockNumber: bigint): Promise<bigint | null> {
+  return supplyCache.getOrLoad(`${address.toLowerCase()}:${blockNumber}`, async () => {
     try {
-      return await client.readContract({ address, abi: TOTAL_SUPPLY_ABI, functionName: 'totalSupply' });
+      return await client.readContract({ address, abi: TOTAL_SUPPLY_ABI, functionName: 'totalSupply', blockNumber });
     } catch {
       return null;
     }
