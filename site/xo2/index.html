@@ -174,6 +174,17 @@
         <div class="led-foot">Seven contracts were deployed from one address in <b>eleven transactions</b>. Both halves are readable: each of the seven addresses below returns code from <code class="inline">eth_getCode</code>, and the deploying address moved from nonce&nbsp;2 to nonce&nbsp;13.</div>
       </div>
 
+      <h2 class="h-section" style="margin:2.5rem 0 .75rem">Two of the deployments failed, and that is the point.</h2>
+      <p class="lead" style="margin-bottom:1.25rem">The eleven transactions were not eleven successes. <strong>Nine succeeded and two reverted</strong> &mdash; and of the nine that were deploy calls, <strong>seven succeeded and two reverted</strong>. Those are two different sentences answering two different questions, and collapsing them into one number is how the count was first got wrong.</p>
+
+      <div class="led">
+        <div class="panel-head"><span>the two failures</span><span>read from receipts</span></div>
+        <div class="led-row"><span class="led-lbl">nonce 8</span><span class="led-val">Duplicate distributor, sent after nonce 7 had already deployed it<small><code class="inline">0x5b88e0d0&hellip;1f71</code> &middot; reverted, no logs</small></span><span class="led-amt">16,516,751 gas</span></div>
+        <div class="led-row"><span class="led-lbl">nonce 10</span><span class="led-val">Duplicate token, sent after nonce 9 had already deployed it<small><code class="inline">0xe6e193c8&hellip;8675</code> &middot; reverted, no logs</small></span><span class="led-amt">16,517,772 gas</span></div>
+        <div class="led-foot">A wallet popup vanished mid-signature and the transaction was re-sent. <b>It happened twice.</b> Both re-sends were deployments to an address that was already occupied, and because every contract here was deployed with <code class="inline">CREATE2</code> &mdash; where the address is fixed by the salt rather than by the sender&rsquo;s nonce &mdash; <b>the duplicate reverted instead of deploying a second copy</b>. With nonce-based <code class="inline">CREATE</code> each re-send would have landed at a fresh address and produced a real duplicate contract holding real supply.</div>
+      </div>
+      <p class="term-note" style="margin-top:.75rem">Total cost of both mistakes: <strong>33,034,523 gas</strong>, which is about <strong>$0.50</strong> at the gas price our own decoder reports for the block that carried the token deployment. We are publishing the failures because they are the only evidence we have that the design choice was worth making, and evidence about ourselves is the kind nobody volunteers.</p>
+
       <h2 class="h-section" style="margin:2.5rem 0 .75rem">No wallet holds the supply.</h2>
       <p class="lead" style="margin-bottom:1.25rem">All 100,000,000 sit in five release contracts. The address that deployed them holds none, the distributor that filled them holds none, and there is no owner who can move them.</p>
 
