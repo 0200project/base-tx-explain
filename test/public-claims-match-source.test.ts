@@ -188,9 +188,21 @@ describe('public site claims match the code that makes them true', () => {
    */
   it('pins PAYMENT_MODE while the site publishes a refund promise', () => {
     const pages = currentTensePages();
-    const claims = pages.filter(({ html }) =>
-      /refund|consumed|costs? a call|counts? against/i.test(html.replace(/<[^>]+>/g, ' ')),
-    );
+    // ⚠️ NARROW ON PURPOSE, AND THE FIRST VERSION WAS NOT.
+    //
+    // It matched the bare word "consumed", which appears on /docs/ and
+    // /security/ in "blocklists are CONSUMED read-only from public sources" —
+    // prose about data sources, not billing. The guard passed, and it passed for
+    // a reason that had nothing to do with the claim it exists to protect. Worse,
+    // the failure message named /security/, so a future deployer reading it would
+    // have been sent to edit a page that never made the claim.
+    //
+    // These patterns describe what is being PROMISED about a call, so unrelated
+    // uses of "consumed" cannot satisfy them.
+    const claims = pages.filter(({ html }) => {
+      const text = html.replace(/<[^>]+>/g, ' ');
+      return /\brefunded\b|consumes? a (free )?call|costs? (you )?a call|counts? against your/i.test(text);
+    });
     // No claim published means no duty. Stated rather than silent, so a future
     // reader can tell a vacuous pass from a real one.
     if (claims.length === 0) return;
