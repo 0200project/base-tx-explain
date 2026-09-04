@@ -160,7 +160,7 @@
 .tok-sym{font-family:var(--mono);font-size:clamp(3.4rem,12vw,6.5rem);font-weight:700;letter-spacing:-.03em;
   line-height:.92;color:var(--fg-strong)}
 .tok-name{font-size:1.15rem;color:var(--fg-muted);letter-spacing:.01em}
-.tok-cash{color:var(--accent,#58a6ff);font-weight:600}
+.tok-cash{color:var(--fg-faint);font-weight:500;font-size:.46em;vertical-align:.34em;margin-right:.06em}
 .tok-badges{display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.7rem}
 .tok-badge{font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;
   padding:.3rem .6rem;border:1px solid var(--border-strong);border-radius:999px;color:var(--fg-muted);background:var(--bg-raised)}
@@ -172,6 +172,36 @@
 .tok-stat dd{margin:0;font-family:var(--mono);font-size:1.02rem;color:var(--fg-strong);font-variant-numeric:tabular-nums;word-break:break-all}
 .tok-note{position:relative;margin:1.15rem 0 0;font-size:.82rem;color:var(--fg-faint);max-width:46rem}
 @media (max-width:40rem){.tok-coin{width:108px;height:108px}.tok-hero{padding:3rem 0 2rem}}
+
+/* ── motion & graphics ──────────────────────────────────────────────── */
+.tok-hero::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:72px 72px;opacity:.6;
+  -webkit-mask-image:radial-gradient(70% 60% at 50% 40%,#000 0%,transparent 78%);
+          mask-image:radial-gradient(70% 60% at 50% 40%,#000 0%,transparent 78%)}
+.tok-hero::before{animation:tokDrift 34s ease-in-out infinite alternate}
+@keyframes tokDrift{from{transform:translate3d(-1.5%,0,0)}to{transform:translate3d(1.5%,1%,0)}}
+
+.tok-coinwrap{position:relative;flex:none;display:grid;place-items:center}
+.tok-coin{position:relative;z-index:1}
+
+
+.tok-badge{animation:tokRise .5s cubic-bezier(.2,.8,.2,1) both}
+.tok-badge:nth-child(2){animation-delay:.06s}.tok-badge:nth-child(3){animation-delay:.12s}
+.tok-badge:nth-child(4){animation-delay:.18s}.tok-badge:nth-child(5){animation-delay:.24s}
+@keyframes tokRise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.tok-badge.on{position:relative}
+.tok-badge.on::after{content:"";position:absolute;left:.62rem;top:50%;width:5px;height:5px;margin-top:-2.5px;border-radius:50%;background:#3fb950}
+.tok-badge.on{padding-left:1.3rem}
+
+.tok-stat{position:relative;transition:background .25s ease,transform .25s ease}
+.tok-stat::before{content:"";position:absolute;left:0;top:0;height:2px;width:0;background:var(--accent,#58a6ff);transition:width .35s ease}
+.tok-stat:hover{background:var(--bg-raised)}
+.tok-stat:hover::before{width:100%}
+
+@media (prefers-reduced-motion:reduce){
+  .tok-hero::before,.tok-badge{animation:none}
+}
 </style>
 </head>
 <body>
@@ -203,8 +233,10 @@
   <section class="tok-hero">
     <div class="container">
       <div class="tok-wrap">
-        <img class="tok-coin" src="/assets/xo2-512.png" width="184" height="184"
-             alt="XO2 token mark" loading="eager" decoding="async">
+        <div class="tok-coinwrap">
+          <img class="tok-coin" src="/assets/xo2-512.png" width="184" height="184"
+               alt="XO2 token mark" loading="eager" decoding="async">
+        </div>
         <div class="tok-id">
           <div class="tok-ticker">
             <h1 class="tok-sym"><span class="tok-cash">$</span>XO2</h1>
