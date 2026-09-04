@@ -166,7 +166,7 @@ const dataDir = process.env.DATA_DIR ?? './data';
 const ledgerPath = join(dataDir, 'events.jsonl');
 
 const days = new Map<string, DayAgg>();
-const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, unattributed_calls: 0, settlements: 0, revenue_usd: 0, payment_failures: 0, repeat_purchases_refused: 0 };
+const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, unmarked_calls: 0, settlements: 0, revenue_usd: 0, payment_failures: 0, repeat_purchases_refused: 0 };
 
 /**
  * Every settlement as it arrived, so the revenue split can be DERIVED rather
@@ -286,7 +286,7 @@ function absorb(ev: LedgerEvent): void {
     // subtraction `calls - internal_calls = external`, which is FALSE by exactly
     // this many. A reader doing correct arithmetic on two honest numbers would
     // get a wrong third one. The gap has to be visible or the pair is a trap.
-    if (ev.internal === undefined) lifetime.unattributed_calls++;
+    if (ev.internal === undefined) lifetime.unmarked_calls++;
     if (ev.internal) {
       // Checked FIRST, above every funnel branch, for the same reason `degraded`
       // is checked above the charge branches: the funnel answers "what did
@@ -596,7 +596,7 @@ export function flushCheckHealth(): void {
  * deploy gate.
  */
 export function publicHealthLifetime(lifetime: Record<string, unknown>): Record<string, unknown> {
-  // `internal_calls` and `unattributed_calls` are published DELIBERATELY, and
+  // `internal_calls` and `unmarked_calls` are published DELIBERATELY, and
   // they are the only commercial-adjacent numbers on this list. /healthz said
   // `calls: 1319` while 397 of those were our own traffic and the field that
   // disclosed it was filtered out of the same response — the public number
@@ -607,7 +607,7 @@ export function publicHealthLifetime(lifetime: Record<string, unknown>): Record<
   //
   // All three, or none. `calls` and `internal_calls` without the unattributed
   // count is a pair that reads as a partition and is not one.
-  const keep = ['calls', 'internal_calls', 'unattributed_calls', 'free', 'wall_hits', 'degraded_calls'] as const;
+  const keep = ['calls', 'internal_calls', 'unmarked_calls', 'free', 'wall_hits', 'degraded_calls'] as const;
   const out: Record<string, unknown> = {};
   for (const k of keep) if (k in lifetime) out[k] = lifetime[k];
   return out;

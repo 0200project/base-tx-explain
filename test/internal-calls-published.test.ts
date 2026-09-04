@@ -16,7 +16,7 @@ describe('the usage total ships with its own divisor', () => {
   const full = {
     calls: 1319,
     internal_calls: 397,
-    unattributed_calls: 101,
+    unmarked_calls: 101,
     free: 752,
     wall_hits: 81,
     degraded_calls: 0,
@@ -30,12 +30,12 @@ describe('the usage total ships with its own divisor', () => {
     expect(pub).toHaveProperty('internal_calls');
   });
 
-  it('publishes unattributed_calls, without which the pair reads as a partition and is not one', () => {
+  it('publishes unmarked_calls, without which the pair reads as a partition and is not one', () => {
     // calls - internal_calls = 922, but only 821 are external: 101 rows predate
     // the marker and are neither. Two honest numbers, one wrong subtraction.
     const pub = publicHealthLifetime(full);
-    expect(pub).toHaveProperty('unattributed_calls');
-    expect(Number(pub.calls) - Number(pub.internal_calls) - Number(pub.unattributed_calls)).toBe(821);
+    expect(pub).toHaveProperty('unmarked_calls');
+    expect(Number(pub.calls) - Number(pub.internal_calls) - Number(pub.unmarked_calls)).toBe(821);
   });
 
   it('still withholds every commercial field', () => {

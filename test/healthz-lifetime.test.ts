@@ -9,6 +9,14 @@ import { publicHealthLifetime } from '../src/usage.js';
  * built to fail if a commercial field ever reappears — including a field nobody
  * has added yet.
  */
+/**
+ * ⚠️ `internal_calls` and `unmarked_calls` were MOVED OUT of the hidden set
+ * on 2026-09-04, deliberately, and must not be moved back to make this file
+ * tidier. /healthz published `calls: 1319` while 397 of those were our own
+ * traffic; hiding the divisor did not protect anything, it made the public
+ * total wrong. They are operational, not commercial — they say who generated
+ * demand, not what anyone paid. The commercial fields below stay hidden.
+ */
 describe('publicHealthLifetime: operational demand only, never commercial', () => {
   // A full ledger snapshot with every commercial field the leak exposed.
   const full: Record<string, unknown> = {
@@ -32,6 +40,7 @@ describe('publicHealthLifetime: operational demand only, never commercial', () =
     attributed_revenue_usd: 0.02,
     external_clients: 29,
     internal_calls: 3,
+    unmarked_calls: 2,
     unique_clients: 12,
     payment_attempted: 12,
     payment_failures: 0,
@@ -61,7 +70,6 @@ describe('publicHealthLifetime: operational demand only, never commercial', () =
       'unattributed_revenue_usd',
       'attributed_revenue_usd',
       'external_clients',
-      'internal_calls',
       'unique_clients',
       'payment_attempted',
       'payment_failures',
@@ -78,6 +86,13 @@ describe('publicHealthLifetime: operational demand only, never commercial', () =
     expect(widened).not.toHaveProperty('revenue_this_quarter_usd');
     expect(widened).not.toHaveProperty('new_customer_ltv');
     // still only the four operational keys
-    expect(Object.keys(widened).sort()).toEqual(['calls', 'degraded_calls', 'free', 'wall_hits']);
+    expect(Object.keys(widened).sort()).toEqual([
+      'calls',
+      'degraded_calls',
+      'free',
+      'internal_calls',
+      'unmarked_calls',
+      'wall_hits',
+    ]);
   });
 });

@@ -118,6 +118,35 @@
   .pr-url-row .copy-btn { flex: none; align-self: center; }
   .pr-success-next { font-size: 0.875rem; color: var(--fg-muted); margin-top: 1rem; }
   .pr-success-next a { color: var(--accent-strong); }
+
+/* ── live chain verifier ─────────────────────────────────────────────── */
+.chain{border:1px solid var(--border-strong);background:var(--bg-panel);border-radius:10px;overflow:hidden;margin-bottom:1.5rem;position:relative}
+.chain-head{display:flex;justify-content:space-between;align-items:center;gap:.75rem;padding:.6rem .9rem;border-bottom:1px solid var(--border);background:var(--bg-inset);font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-faint)}
+.chain-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--fg-faint);margin-right:.45rem;vertical-align:middle}
+.chain[data-state="loading"] .chain-dot{background:var(--warn,#d29922);animation:chainPulse 1s ease-in-out infinite}
+.chain[data-state="ok"] .chain-dot{background:#3fb950;box-shadow:0 0 8px #3fb95088}
+.chain[data-state="fail"] .chain-dot{background:#f85149}
+@keyframes chainPulse{0%,100%{opacity:.25}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.chain[data-state="loading"] .chain-dot{animation:none;opacity:.7}}
+.chain-body{padding:.9rem}
+.chain-supply{display:flex;align-items:baseline;gap:.6rem;flex-wrap:wrap;margin-bottom:.9rem}
+.chain-num{font-family:var(--mono);font-size:clamp(1.5rem,5vw,2.3rem);font-weight:600;color:var(--fg-strong);font-variant-numeric:tabular-nums;line-height:1}
+.chain-unit{font-family:var(--mono);font-size:.8rem;color:var(--fg-muted)}
+.lock{display:grid;grid-template-columns:minmax(6.5rem,auto) 1fr minmax(5.5rem,auto);gap:.6rem;align-items:center;padding:.42rem 0;border-top:1px solid var(--border)}
+.lock:first-of-type{border-top:0}
+.lock-name{font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-muted)}
+.lock-bar{height:9px;border-radius:5px;background:var(--bg-inset);overflow:hidden;position:relative}
+.lock-fill{height:100%;width:0;border-radius:5px;background:linear-gradient(90deg,var(--accent-dim,#1f6feb),var(--accent,#58a6ff));transition:width .9s cubic-bezier(.2,.8,.2,1)}
+@media (prefers-reduced-motion:reduce){.lock-fill{transition:none}}
+.lock-amt{font-family:var(--mono);font-size:.78rem;text-align:right;font-variant-numeric:tabular-nums;color:var(--fg)}
+.lock:hover .lock-name,.lock:focus-within .lock-name{color:var(--fg-strong)}
+.chain-foot{padding:.7rem .9rem;border-top:1px solid var(--border);background:var(--bg-inset);font-size:.78rem;color:var(--fg-muted)}
+.chain-btn{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;padding:.4rem .7rem;border:1px solid var(--border-strong);border-radius:6px;background:var(--bg-raised);color:var(--fg);cursor:pointer;min-height:32px}
+.chain-btn:hover{border-color:var(--border-hover);color:var(--fg-strong)}
+.chain-btn:disabled{opacity:.5;cursor:default}
+.copyable{cursor:pointer;border-bottom:1px dashed var(--border-strong)}
+.copyable:hover{color:var(--fg-strong);border-bottom-color:var(--fg-muted)}
+.copied{color:#3fb950 !important}
 </style>
 </head>
 <body>
@@ -164,8 +193,29 @@
         <p class="small" style="margin:0">Nothing on this page is an offer to sell, a solicitation, or a claim about future value. There is no public sale, no liquidity pool and no market. If that changes, this page changes with it and says when.</p>
       </div>
 
+
+      <div class="chain" id="chain" data-state="idle">
+        <div class="chain-head">
+          <span><span class="chain-dot"></span><span id="chain-status">not read yet</span></span>
+          <button class="chain-btn" id="chain-go" type="button">read the chain</button>
+        </div>
+        <div class="chain-body">
+          <div class="chain-supply">
+            <span class="chain-num" id="chain-supply">&mdash;</span>
+            <span class="chain-unit">XO2 total supply</span>
+          </div>
+          <div id="chain-locks">
+            <div class="lock"><span class="lock-name">founder/team</span><div class="lock-bar"><div class="lock-fill" data-i="0"></div></div><span class="lock-amt" data-amt="0">&mdash;</span></div>
+            <div class="lock"><span class="lock-name">treasury</span><div class="lock-bar"><div class="lock-fill" data-i="1"></div></div><span class="lock-amt" data-amt="1">&mdash;</span></div>
+            <div class="lock"><span class="lock-name">ecosystem</span><div class="lock-bar"><div class="lock-fill" data-i="2"></div></div><span class="lock-amt" data-amt="2">&mdash;</span></div>
+            <div class="lock"><span class="lock-name">contributors</span><div class="lock-bar"><div class="lock-fill" data-i="3"></div></div><span class="lock-amt" data-amt="3">&mdash;</span></div>
+            <div class="lock"><span class="lock-name">undesignated</span><div class="lock-bar"><div class="lock-fill" data-i="4"></div></div><span class="lock-amt" data-amt="4">&mdash;</span></div>
+          </div>
+        </div>
+        <div class="chain-foot" id="chain-foot">This panel calls <code class="inline">totalSupply()</code> and five <code class="inline">balanceOf()</code> reads against a public Base RPC endpoint, from your browser. Nothing here is served by us. If a read fails it says so rather than showing a number.</div>
+      </div>
       <div class="led" style="margin-bottom:1.25rem">
-        <div class="panel-head"><span>the contract</span><span>read 2026-09-04 01:1xZ</span></div>
+        <div class="panel-head"><span>the contract</span><span>values below are static &mdash; the live panel above reads them</span></div>
         <div class="led-row"><span class="led-lbl">address</span><span class="led-val"><code class="inline">0xdE906C748E56fD6F648eb8564532673257Ac414b</code><small>Base mainnet, chain 8453</small></span><span class="led-amt">&mdash;</span></div>
         <div class="led-row"><span class="led-lbl">name</span><span class="led-val"><code class="inline">name()</code></span><span class="led-amt">0200 Protocol</span></div>
         <div class="led-row"><span class="led-lbl">symbol</span><span class="led-val"><code class="inline">symbol()</code></span><span class="led-amt">XO2</span></div>
@@ -649,6 +699,108 @@ balanceOf()    for 0xf4211E30…9807 and 0x3129b6…1783 — both zero</code></p
         body.innerHTML = '<p>Could not reach the server to confirm your payment. Reload this page in a few seconds.</p>';
       });
   })();
+})();
+</script>
+<script>
+/* Live chain read. The page claims every figure is readable from the chain;
+   this makes the reader able to do it without leaving the page. Two rules:
+   it never renders a number it did not read, and a failure says WHY. */
+(function(){
+  var TOKEN='0xdE906C748E56fD6F648eb8564532673257Ac414b';
+  var LOCKS=['0x78e0DA1821C214534523262EFaC2Df561c00408F',
+             '0x9F0Ddc559d1071c135b6265c2DBB2fB8407bA818',
+             '0x98aa8D4F6EAB6EF780800b1C3183897703E7B6CE',
+             '0x6594662D521eb4e66F94B44149F92cc1928FCeDa',
+             '0x3f4Fb350Ccdf0a604E5a32e4032e150d7e539Cd1'];
+  var RPCS=['https://mainnet.base.org','https://base-rpc.publicnode.com'];
+  var el=document.getElementById('chain'); if(!el) return;
+  var btn=document.getElementById('chain-go'), status=document.getElementById('chain-status'),
+      supplyEl=document.getElementById('chain-supply'), foot=document.getElementById('chain-foot');
+
+  function pad(a){ return '000000000000000000000000'+a.replace(/^0x/,''); }
+  function fmt(wei){
+    var whole=wei/1000000000000000000n;
+    return whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  }
+  function call(rpc,to,data){
+    return fetch(rpc,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_call',params:[{to:to,data:data},'latest']})})
+      .then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(function(j){ if(j.error) throw new Error(j.error.message||'rpc error');
+                         if(!j.result||j.result==='0x') throw new Error('empty result'); return BigInt(j.result); });
+  }
+  function withFallback(to,data,i){
+    i=i||0; if(i>=RPCS.length) return Promise.reject(new Error('all endpoints failed'));
+    return call(RPCS[i],to,data).catch(function(e){ if(i+1<RPCS.length) return withFallback(to,data,i+1); throw e; });
+  }
+  function countUp(node,target){
+    var t=String(target), dur=650, t0=null;
+    function step(ts){ if(!t0)t0=ts; var k=Math.min(1,(ts-t0)/dur);
+      var digits=t.replace(/,/g,''); var cur=Math.floor(Number(digits)*(k*k*(3-2*k)));
+      node.textContent=String(cur).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+      if(k<1) requestAnimationFrame(step); else node.textContent=t; }
+    /* A hidden tab pauses requestAnimationFrame, so an animated-only write
+       leaves the number blank on a panel that actually SUCCEEDED -- a false
+       failure, which is worse than no animation. Write the value first, then
+       animate over it, and keep a timer that lands on the value regardless. */
+    node.textContent=t;
+    var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(reduce||document.hidden) return;
+    setTimeout(function(){ node.textContent=t; }, dur+250);
+    requestAnimationFrame(step);
+  }
+
+  function run(){
+    el.setAttribute('data-state','loading');
+    status.textContent='reading base mainnet\u2026'; btn.disabled=true;
+    var jobs=[withFallback(TOKEN,'0x18160ddd')].concat(LOCKS.map(function(a){
+      return withFallback(TOKEN,'0x70a08231'+pad(a)); }));
+    Promise.all(jobs).then(function(r){
+      var supply=r[0], balances=r.slice(1);
+      countUp(supplyEl,fmt(supply));
+      var sum=0n;
+      balances.forEach(function(b,i){
+        sum+=b;
+        var pct = supply>0n ? Number(b*10000n/supply)/100 : 0;
+        var fill=el.querySelector('.lock-fill[data-i="'+i+'"]');
+        var amt=el.querySelector('.lock-amt[data-amt="'+i+'"]');
+        if(fill) setTimeout(function(){ fill.style.width=pct+'%'; }, 60*i);
+        if(amt) amt.textContent=fmt(b)+'  '+pct.toFixed(2)+'%';
+      });
+      el.setAttribute('data-state','ok');
+      var d=new Date();
+      status.textContent='read '+d.toISOString().slice(0,16).replace('T',' ')+'Z';
+      var exact = (sum===supply);
+      foot.innerHTML = exact
+        ? '<b>The five locks hold the entire supply.</b> Their balances sum to <code class="inline">'+fmt(sum)+'</code>, which is <code class="inline">totalSupply()</code> exactly \u2014 checked in your browser just now, against a public Base endpoint we do not run. No wallet outside these five holds any.'
+        : '<b>The five locks hold '+fmt(sum)+' of '+fmt(supply)+'.</b> They do not sum to the full supply, which means some has moved out of the locks. That is a real reading, not an error \u2014 compare it against the schedule below.';
+    }).catch(function(e){
+      el.setAttribute('data-state','fail');
+      status.textContent='could not read';
+      supplyEl.textContent='\u2014';
+      foot.innerHTML='<b>The chain read failed, so no number is shown.</b> Reason: <code class="inline">'+String(e.message||e).replace(/[<>&]/g,'')+'</code>. Public endpoints rate-limit and browsers block some of them; this is the panel refusing to invent a figure. Every address here is linked to Basescan \u2014 check it there instead.';
+    }).then(function(){ btn.disabled=false; });
+  }
+  btn.addEventListener('click',run);
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){ es.forEach(function(en){
+      if(en.isIntersecting){ io.disconnect(); run(); } }); },{rootMargin:'80px'});
+    io.observe(el);
+  } else { run(); }
+
+  /* click any address to copy it */
+  document.querySelectorAll('.mono, code.inline').forEach(function(n){
+    var t=(n.textContent||'').trim();
+    if(!/^0x[a-fA-F0-9]{40}$/.test(t)) return;
+    n.classList.add('copyable'); n.setAttribute('role','button'); n.setAttribute('tabindex','0');
+    n.title='click to copy';
+    function copy(){ if(!navigator.clipboard) return;
+      navigator.clipboard.writeText(t).then(function(){
+        var old=n.textContent; n.classList.add('copied'); n.textContent='copied';
+        setTimeout(function(){ n.textContent=old; n.classList.remove('copied'); },900); }); }
+    n.addEventListener('click',copy);
+    n.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){e.preventDefault();copy();} });
+  });
 })();
 </script>
 <script src="/assets/site.js" defer></script>
