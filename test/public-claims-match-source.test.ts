@@ -16,8 +16,8 @@ import { join } from 'node:path';
  * at different times for different reasons. Nothing but a test connects them.
  *
  * ⚠️ THE CHANGELOG IS DELIBERATELY EXEMPT. It is a dated historical record: the
- * v0.1.0 entry correctly says "10 free calls per client" because that is what
- * shipped on 2026-08-20, and a later entry records the change to 50. Asserting
+ * v0.1.0 entry correctly states the free-tier figure OF ITS OWN DATE, which is
+ * lower than today's, and a later entry records the change. Asserting
  * current values against dated history would generate false failures and train
  * everyone to ignore this file — which is worse than not having it.
  */
@@ -33,8 +33,9 @@ function currentTensePages(): Array<{ path: string; html: string }> {
       const p = join(dir, entry);
       if (statSync(p).isDirectory()) {
         // The changelog is DATED HISTORY, not a current-tense claim: its v0.1.0
-        // entry correctly says "10 free calls per client" for 2026-08-20, and a
-        // later entry records the change to 50. Asserting today's values against
+        // entry correctly states the free-tier figure of its own date, which is
+        // lower than today's, and a later entry records the change. Asserting
+        // today's values against
         // it would produce false failures and train everyone to ignore this file.
         // ⚠️ THE EXEMPTION IS FILE-SHAPED AND CONTAINERS ACQUIRE CONTENTS: a
         // current-tense summary added to the top of that page would be invisible
