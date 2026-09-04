@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>About 0200project — what we build, what we run, and what we retired | 0200project</title>
+<title>About 0200project, what we build, what we run, and what we retired | 0200project</title>
 <meta name="description" content="0200project builds machine-native tools for autonomous agents. One product runs, one token was deployed and retired within a day, and the record of both is published in full.">
 <meta name="theme-color" content="#050505">
 <meta property="og:title" content="About 0200project">
@@ -54,7 +54,7 @@
       <div class="reveal">
         <span class="eyebrow">About 0200project</span>
         <h1 class="statement">We build tools agents can trust.</h1>
-        <p class="lead">Autonomous software needs to call something, get an answer, and act on it &mdash; with no human reading the output first. That only works if the tool behaves identically every time, costs a knowable amount, and says what it could not determine.</p>
+        <p class="lead">Autonomous software needs to call something, get an answer, and act on it, with no human reading the output first. That only works if the tool behaves identically every time, costs a knowable amount, and says what it could not determine.</p>
       </div>
       <div class="hero-mark reveal" aria-hidden="true">
         <img src="/assets/logo-hero.png" width="240" height="240" alt="">
@@ -70,7 +70,7 @@
       </div>
       <div class="grid-3 reveal">
         <div class="card"><span class="card-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10h4l2-5 2 10 2-5h4"/></svg></span><h3 class="h-card">Deterministic</h3>
-          <p class="muted">No model in the response path. The same transaction always produces the same JSON &mdash; nothing to hallucinate, nothing to drift.</p>
+          <p class="muted">No model in the response path. The same transaction always produces the same JSON, nothing to hallucinate, nothing to drift.</p>
           <div class="card-mini" aria-hidden="true">decode 0x0c84&hellip;4c8c <span class="lit">&rarr;</span> swap<br>decode 0x0c84&hellip;4c8c <span class="lit">&rarr;</span> swap <span class="lit">= identical</span></div>
         </div>
         <div class="card"><span class="card-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="9" width="12" height="8" rx="2"/><path d="M7 9V6a3 3 0 016 0v3"/></svg></span><h3 class="h-card">No accounts, no keys</h3>
@@ -90,7 +90,7 @@
       <div class="section-head reveal">
         <span class="eyebrow">What runs today</span>
         <h2 class="h-section">One product, and the two fields that make it different.</h2>
-        <p class="lead"><strong>base-transaction-decoder</strong> explains any Base mainnet transaction as strict JSON &mdash; plain English, a typed action, every asset moved with amounts already scaled, counterparties labelled, gas in dollars, risk flags with evidence.</p>
+        <p class="lead"><strong>base-transaction-decoder</strong> explains any Base mainnet transaction as strict JSON, plain English, a typed action, every asset moved with amounts already scaled, counterparties labelled, gas in dollars, risk flags with evidence.</p>
       </div>
       <div class="led reveal">
         <div class="panel-head"><span>in every response</span><span>base mainnet</span></div>
@@ -150,10 +150,10 @@
         <div class="led-row"><span class="led-lbl">version</span><span class="led-val">Running in production</span><span class="led-amt" id="lv-ver">&mdash;</span></div>
         <div class="led-row"><span class="led-lbl">calls</span><span class="led-val">Lifetime, all clients<small><span id="lv-free">&mdash;</span> served on the free tier</small></span><span class="led-amt" id="lv-calls">&mdash;</span></div>
         <div class="led-row"><span class="led-lbl">wall hits</span><span class="led-val">Callers who reached the paywall<small>Every one of them is someone the free tier could not finish serving</small></span><span class="led-amt" id="lv-wall">&mdash;</span></div>
-        <div class="led-row"><span class="led-lbl">degraded</span><span class="led-val">Calls answered while a check was unavailable<small>Reported rather than hidden &mdash; this is the number most services do not publish</small></span><span class="led-amt" id="lv-deg">&mdash;</span></div>
+        <div class="led-row"><span class="led-lbl">degraded</span><span class="led-val">Calls answered while a check was unavailable<small>Reported rather than hidden, this is the number most services do not publish</small></span><span class="led-amt" id="lv-deg">&mdash;</span></div>
         <div class="led-foot" id="lv-checks">Loading per-check health&hellip;</div>
       </div>
-      <p class="term-note">If this panel fails to load it will say so rather than showing nothing &mdash; an empty panel and a broken one look identical, and only one of them is honest.</p>
+      <p class="term-note">If this panel fails to load it will say so rather than showing nothing, an empty panel and a broken one look identical, and only one of them is honest.</p>
     </div>
   </section>
 
@@ -237,7 +237,7 @@
   var fail = function(msg){
     var w = el('live-when'); if (w) w.textContent = 'unreachable';
     var f = el('lv-checks');
-    if (f) f.innerHTML = '<b>Could not reach the server.</b> That is what this panel shows when it cannot read production &mdash; not a blank space. ' + msg;
+    if (f) f.innerHTML = '<b>Could not reach the server.</b> That is what this panel shows when it cannot read production, not a blank space. ' + msg;
   };
   fetch('https://api.0200project.com/healthz', { cache: 'no-store' })
     .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })

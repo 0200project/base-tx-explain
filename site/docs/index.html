@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>base-transaction-decoder Documentation — Decode Base Transactions over MCP</title>
+<title>base-transaction-decoder Documentation, Decode Base Transactions over MCP</title>
 <meta name="description" content="How to decode Base transactions over MCP: request format, strict JSON schema with 30 action types and 8 risk flags, x402 pay-per-call, and self-hosting.">
 <meta name="theme-color" content="#050505">
-<meta property="og:title" content="base-transaction-decoder Documentation — Decode Base Transactions over MCP">
+<meta property="og:title" content="base-transaction-decoder Documentation, Decode Base Transactions over MCP">
 <meta property="og:description" content="Request format, strict JSON schema, 30 action types, 8 risk flags, x402 pay-per-call, self-hosting.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="0200project">
@@ -128,7 +128,7 @@
 
     <article class="docs-content">
       <h1>Documentation</h1>
-      <p class="docs-lead">Everything needed to connect an MCP client, call <code class="inline">explain_transaction</code>, parse the response, and pay per call — by hand or autonomously.</p>
+      <p class="docs-lead">Everything needed to connect an MCP client, call <code class="inline">explain_transaction</code>, parse the response, and pay per call, by hand or autonomously.</p>
 
       <h2 id="introduction">Introduction</h2>
       <p>0200project builds machine-native tools for autonomous AI agents: narrowly scoped services with strict JSON contracts, designed to be called and parsed by software without a human in the loop. The first and currently only shipped tool is <strong>base-transaction-decoder</strong>, launched August 20, 2026. More tools are in development.</p>
@@ -137,7 +137,7 @@
       <p><strong>For agents / machine-readable.</strong> The HTTP contract is published as OpenAPI at <a href="https://api.0200project.com/openapi.json">api.0200project.com/openapi.json</a>, and a plain-text guide for agents lives at <a href="https://api.0200project.com/llms.txt">api.0200project.com/llms.txt</a>. The same decode is also available as plain REST &mdash; <code class="inline">POST /explain</code> with <code class="inline">{"tx_hash": "0x&hellip;"}</code> &mdash; identical output, standard x402 flow.</p>
 
       <h2 id="quickstart">Quickstart</h2>
-      <p>The server is one streamable-HTTP endpoint: <code class="inline">https://api.0200project.com/mcp</code>. Pick a client — every path calls the same tool.</p>
+      <p>The server is one streamable-HTTP endpoint: <code class="inline">https://api.0200project.com/mcp</code>. Pick a client, every path calls the same tool.</p>
 
       <div class="qs-tabs" role="tablist" aria-label="Quickstart by client">
         <button class="qs-tab" role="tab" type="button" id="tab-qs-rest" data-panel="qs-rest" aria-controls="qs-rest" aria-selected="true" tabindex="0">REST</button>
@@ -152,14 +152,14 @@
 
       <div class="qs-panel qs-active" role="tabpanel" id="qs-rest" aria-labelledby="tab-qs-rest">
         <h3>REST</h3>
-        <p>The simplest path &mdash; no MCP client, no SDK. POST a transaction hash, get the explanation back as plain JSON:</p>
+        <p>The simplest path, no MCP client, no SDK. POST a transaction hash, get the explanation back as plain JSON:</p>
         <div class="codeblock">
           <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#qs-rest-cmd">Copy</button></div>
           <pre><code id="qs-rest-cmd">curl -X POST https://api.0200project.com/explain \
   -H 'Content-Type: application/json' \
   -d '{"tx_hash":"0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c"}'</code></pre>
         </div>
-        <p>The first calls are free. Past the free tier the endpoint answers with a standard HTTP 402 x402 challenge &mdash; pay $0.02 in USDC on Base and retry, or use an x402-capable HTTP client that handles it automatically. For heavy use, the <a href="#pass">$9 pass</a> covers 10,000 calls over 30 days via the <code class="inline">X-BTX-Pass</code> header.</p>
+        <p>The first calls are free. Past the free tier the endpoint answers with a standard HTTP 402 x402 challenge, pay $0.02 in USDC on Base and retry, or use an x402-capable HTTP client that handles it automatically. For heavy use, the <a href="#pass">$9 pass</a> covers 10,000 calls over 30 days via the <code class="inline">X-BTX-Pass</code> header.</p>
       </div>
 
       <div class="qs-panel" role="tabpanel" id="qs-claude-code" aria-labelledby="tab-qs-claude-code">
@@ -169,7 +169,7 @@
           <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#qs-claude-code-cmd">Copy</button></div>
           <pre><code id="qs-claude-code-cmd">claude mcp add --transport http base-transaction-decoder https://api.0200project.com/mcp</code></pre>
         </div>
-        <p>Then ask Claude about any Base transaction hash — it calls <code class="inline">explain_transaction</code> on its own.</p>
+        <p>Then ask Claude about any Base transaction hash, it calls <code class="inline">explain_transaction</code> on its own.</p>
       </div>
 
       <div class="qs-panel" role="tabpanel" id="qs-claude-desktop" aria-labelledby="tab-qs-claude-desktop">
@@ -257,7 +257,7 @@ asyncio.run(main())</code></pre>
 
       <div class="qs-panel" role="tabpanel" id="qs-curl" aria-labelledby="tab-qs-curl">
         <h3>curl</h3>
-        <p>No MCP client needed — POST a JSON-RPC <code class="inline">tools/call</code> envelope directly:</p>
+        <p>No MCP client needed, POST a JSON-RPC <code class="inline">tools/call</code> envelope directly:</p>
         <div class="codeblock">
           <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#curl-cmd">Copy</button></div>
           <pre><code id="curl-cmd">curl -X POST https://api.0200project.com/mcp \
@@ -265,7 +265,7 @@ asyncio.run(main())</code></pre>
   -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"explain_transaction","arguments":{"tx_hash":"0x0c84b951051f779903b57af9225ca570c77cd5531195968dd78106a69d6c4d8c"}}}'</code></pre>
         </div>
-        <p>The response arrives as a server-sent-events frame — an <code class="inline">event: message</code> line followed by a <code class="inline">data:</code> line carrying the JSON-RPC result:</p>
+        <p>The response arrives as a server-sent-events frame, an <code class="inline">event: message</code> line followed by a <code class="inline">data:</code> line carrying the JSON-RPC result:</p>
         <div class="codeblock">
           <div class="panel-head"><span>response · text/event-stream</span></div>
           <pre><code>event: message
@@ -275,7 +275,7 @@ data: {"jsonrpc":"2.0","id":1,"result":{ ... }}</code></pre>
 
       <div class="qs-panel" role="tabpanel" id="qs-x402" aria-labelledby="tab-qs-x402">
         <h3>x402 paid client</h3>
-        <p>The autonomous-payment path: the client makes the call, catches the in-band 402 challenge, signs a USDC payment, and retries — no account, no API key. The wallet needs USDC on Base; the exact scheme uses an EIP-3009 authorization, so it needs no ETH for gas. Use a dedicated wallet holding a small balance, never a personal one.</p>
+        <p>The autonomous-payment path: the client makes the call, catches the in-band 402 challenge, signs a USDC payment, and retries, no account, no API key. The wallet needs USDC on Base; the exact scheme uses an EIP-3009 authorization, so it needs no ETH for gas. Use a dedicated wallet holding a small balance, never a personal one.</p>
         <p>Packages: <code class="inline">npm install @modelcontextprotocol/sdk @x402/mcp @x402/evm viem</code>. Excerpted from the runnable test client at <a href="https://github.com/0200project/base-tx-explain/blob/main/scripts/paid-call.ts">scripts/paid-call.ts</a>:</p>
         <div class="codeblock">
           <div class="panel-head"><span>paid-call.ts</span><button class="copy-btn" type="button" data-copy="#qs-x402-code">Copy</button></div>
@@ -309,13 +309,13 @@ await client.close();</code></pre>
       </div>
 
       <p>Whichever path you take, the tool result carries the explanation twice: as <code class="inline">structuredContent</code>, and stringified in <code class="inline">content[0].text</code>. Parse whichever your client prefers.</p>
-      <p><strong>The free tier is metered per client &mdash; one IPv4 address, or one IPv6 /64.</strong> The first 50 calls in any 24 hours are free with no signup, counted per IP address (IPv6 collapses to the /64) — machines behind one NAT or a shared CI egress draw from a single counter, which is why the paywall can appear before 50 of your own calls. The window is rolling: a shared address that runs out recovers the next day rather than staying walled. After that, each call is $0.02 via <a href="#x402-payments">x402</a>.</p>
+      <p><strong>The free tier is metered per client, one IPv4 address, or one IPv6 /64.</strong> The first 50 calls in any 24 hours are free with no signup, counted per IP address (IPv6 collapses to the /64), machines behind one NAT or a shared CI egress draw from a single counter, which is why the paywall can appear before 50 of your own calls. The window is rolling: a shared address that runs out recovers the next day rather than staying walled. After that, each call is $0.02 via <a href="#x402-payments">x402</a>.</p>
 
       <h2 id="installation">Installation</h2>
       <h3>Hosted endpoint</h3>
       <p>The hosted server at <code class="inline">https://api.0200project.com/mcp</code> works with any MCP client using the config in the <a href="#quickstart">quickstart</a> — nothing to install. It is also listed in the MCP registry as <code class="inline">io.github.0200project/base-transaction-decoder</code>.</p>
       <h3>Self-hosting</h3>
-      <p>The server is open source under an MIT-style license and runs anywhere Docker runs. It is a <strong>single-writer</strong> service: the free-tier counters, the passes and the event log are files on one machine&rsquo;s disk, so it runs as one instance rather than a scaled pool. That is a deliberate constraint rather than a stage we have not outgrown &mdash; a settled engagement cannot be charged a second time, because the guard that refuses a repeat reads state only one process writes. Two instances would split that state: the free allowance and the rate limit would both double, and a pass minted on one would be unknown to the other.</p>
+      <p>The server is open source under an MIT-style license and runs anywhere Docker runs. It is a <strong>single-writer</strong> service: the free-tier counters, the passes and the event log are files on one machine&rsquo;s disk, so it runs as one instance rather than a scaled pool. That is a deliberate constraint rather than a stage we have not outgrown, a settled engagement cannot be charged a second time, because the guard that refuses a repeat reads state only one process writes. Two instances would split that state: the free allowance and the rate limit would both double, and a pass minted on one would be unknown to the other.</p>
       <div class="codeblock">
         <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#selfhost-cmd">Copy</button></div>
         <pre><code id="selfhost-cmd">git clone https://github.com/0200project/base-tx-explain
@@ -342,13 +342,13 @@ npm run dev</code></pre>
       </div>
 
       <h2 id="authentication">Authentication</h2>
-      <p>There is none, by design. No accounts, no API keys, no OAuth — nothing to provision, rotate, leak, or revoke.</p>
-      <p>Identity is replaced by payment. A free tier is metered per client &mdash; one IPv4 address, or one IPv6 /64 &mdash; and beyond it each call is paid individually over <a href="#x402-payments">x402</a>. The server never needs to know who you are, only that the call is paid for.</p>
+      <p>There is none, by design. No accounts, no API keys, no OAuth, nothing to provision, rotate, leak, or revoke.</p>
+      <p>Identity is replaced by payment. A free tier is metered per client, one IPv4 address, or one IPv6 /64, and beyond it each call is paid individually over <a href="#x402-payments">x402</a>. The server never needs to know who you are, only that the call is paid for.</p>
 
       <h2 id="base-transaction-decoder">base-transaction-decoder</h2>
-      <p>One tool: <code class="inline">explain_transaction(tx_hash)</code> returns a strict JSON explanation of any Base mainnet transaction (chain id 8453) — a plain-English summary, a classified action type, every asset that moved, labeled counterparties, evidence-backed risk flags, and the total gas cost in USD.</p>
+      <p>One tool: <code class="inline">explain_transaction(tx_hash)</code> returns a strict JSON explanation of any Base mainnet transaction (chain id 8453), a plain-English summary, a classified action type, every asset that moved, labeled counterparties, evidence-backed risk flags, and the total gas cost in USD.</p>
       <p><strong>Input contract.</strong> <code class="inline">tx_hash</code> is <code class="inline">0x</code> followed by 64 hex characters. Base mainnet only.</p>
-      <p><strong>Determinism.</strong> The pipeline is raw transaction + receipt from Base RPC, through roughly 40 builtin event decoders (ERC-20/721/1155, Uniswap V2/V3/V4, Aerodrome/Solidly, Seaport, Aave V3, Compound V3, OP-stack bridges, ERC-4337 EntryPoint, EAS, Basenames, WETH, LP position managers), into a deterministic rule-ordered classification. Labels come from a verified table of major Base contracts; app-specific events are named via verified ABIs on Sourcify. No model touches the response — the same hash always yields the same bytes.</p>
+      <p><strong>Determinism.</strong> The pipeline is raw transaction + receipt from Base RPC, through roughly 40 builtin event decoders (ERC-20/721/1155, Uniswap V2/V3/V4, Aerodrome/Solidly, Seaport, Aave V3, Compound V3, OP-stack bridges, ERC-4337 EntryPoint, EAS, Basenames, WETH, LP position managers), into a deterministic rule-ordered classification. Labels come from a verified table of major Base contracts; app-specific events are named via verified ABIs on Sourcify. No model touches the response, the same hash always yields the same bytes.</p>
       <p>Before launch, 100 random recent live Base transactions were decoded: 95 produced a specific action type, the rest degraded to an honest partial summary, and there were zero crashes.</p>
       <h3>Known limits</h3>
       <ul>
@@ -356,7 +356,7 @@ npm run dev</code></pre>
         <li>Internal ETH transfers (contract-to-contract value moves) are not visible without trace APIs; WETH events cover the common cases.</li>
         <li>When something cannot be decoded, the output says so instead of guessing.</li>
         <li>The absence of a <code class="inline">known_drainer</code> flag is not a safety guarantee.</li>
-        <li>Not financial advice — the tool reports what a transaction did, not whether it was a good idea.</li>
+        <li>Not financial advice, the tool reports what a transaction did, not whether it was a good idea.</li>
       </ul>
 
       <h2 id="request-format">Request format</h2>
@@ -390,7 +390,7 @@ npm run dev</code></pre>
           </thead>
           <tbody>
             <tr><td><code class="inline">summary</code></td><td>string</td><td>1–3 sentence plain-English description of what the transaction did.</td></tr>
-            <tr><td><code class="inline">action_type</code></td><td>string</td><td>One of 30 enum values — see below.</td></tr>
+            <tr><td><code class="inline">action_type</code></td><td>string</td><td>One of 30 enum values, see below.</td></tr>
             <tr><td><code class="inline">status</code></td><td>string</td><td><code class="inline">"success"</code> or <code class="inline">"reverted"</code>.</td></tr>
             <tr><td><code class="inline">assets_moved</code></td><td>array</td><td>Each entry: <code class="inline">token</code>, <code class="inline">amount</code> (decimal string), <code class="inline">from</code>, <code class="inline">to</code>, <code class="inline">token_address</code>, <code class="inline">standard</code>.</td></tr>
             <tr><td><code class="inline">counterparties</code></td><td>array</td><td>Each entry: <code class="inline">address</code>, <code class="inline">label</code> (string or null). Labels come from a verified table of major Base contracts.</td></tr>
@@ -442,7 +442,7 @@ npm run dev</code></pre>
       </ul>
 
       <h3><code>risk_flags</code> values</h3>
-      <p>A flag always means evidence was found — a failed lookup never produces a flag, which is why <a href="#checks"><code class="inline">checks</code></a> below tells you whether the lookup happened. Sources: Sourcify and Basescan verification status, the ScamSniffer and MyEtherWallet public blocklists (consumed at runtime, refreshed twice daily), and approval semantics.</p>
+      <p>A flag always means evidence was found, a failed lookup never produces a flag, which is why <a href="#checks"><code class="inline">checks</code></a> below tells you whether the lookup happened. Sources: Sourcify and Basescan verification status, the ScamSniffer and MyEtherWallet public blocklists (consumed at runtime, refreshed twice daily), and approval semantics.</p>
       <div class="table-wrap">
         <table>
           <thead>
@@ -471,7 +471,7 @@ npm run dev</code></pre>
           <tbody>
             <tr><td><code class="inline">ok</code></td><td>The check ran against every address that warranted it.</td></tr>
             <tr><td><code class="inline">partial</code></td><td>It ran against some but not all of them.</td></tr>
-            <tr><td><code class="inline">unavailable</code></td><td>It could not run at all — the upstream sources it depends on were unreachable. Transient: a retry may get an answer.</td></tr>
+            <tr><td><code class="inline">unavailable</code></td><td>It could not run at all, the upstream sources it depends on were unreachable. Transient: a retry may get an answer.</td></tr>
             <tr><td><code class="inline">inconclusive</code></td><td>It ran and nothing failed, but its method cannot answer for this input, and a retry will not change that. Today this is <code class="inline">first_interaction</code> for a sender with more transaction history than the lookup reads.</td></tr>
             <tr><td><code class="inline">not_applicable</code></td><td>There was nothing for this check to look at.</td></tr>
           </tbody>
@@ -479,13 +479,13 @@ npm run dev</code></pre>
       </div>
       <p>The keys are <code class="inline">contract_verification</code> (Sourcify, then Basescan), <code class="inline">first_interaction</code> (Blockscout, then Basescan) and <code class="inline">drainer_blacklist</code>, plus a <code class="inline">note</code> naming anything that did not fully run — <code class="inline">null</code> when everything did.</p>
       <p><code class="inline">unchecked_addresses</code> names addresses that warranted a lookup but did not receive one, because the transaction involved more of them than the per-transaction cap. Which addresses get the scarce lookups is influenced by the order events appear in, and that order is chosen by whoever wrote the transaction, so the address described in <code class="inline">risk_flags</code> is not necessarily the one that went unexamined.</p>
-      <p>An empty <code class="inline">risk_flags</code> alongside any status other than <code class="inline">ok</code> means <em>not checked</em>, not <em>clean</em>. Two cases fall short of <code class="inline">ok</code> even when every lookup succeeds. A transaction touching more unfamiliar addresses than the per-transaction lookup cap reports <code class="inline">partial</code>. A sender whose history is longer than the one page the lookup reads reports <code class="inline">inconclusive</code> for <code class="inline">first_interaction</code>, because first-time interaction cannot be honestly asserted for them — that is a limit of the method, not a failure, which is why it is not reported as <code class="inline">unavailable</code>, and why retrying it will return the same answer.</p>
+      <p>An empty <code class="inline">risk_flags</code> alongside any status other than <code class="inline">ok</code> means <em>not checked</em>, not <em>clean</em>. Two cases fall short of <code class="inline">ok</code> even when every lookup succeeds. A transaction touching more unfamiliar addresses than the per-transaction lookup cap reports <code class="inline">partial</code>. A sender whose history is longer than the one page the lookup reads reports <code class="inline">inconclusive</code> for <code class="inline">first_interaction</code>, because first-time interaction cannot be honestly asserted for them, that is a limit of the method, not a failure, which is why it is not reported as <code class="inline">unavailable</code>, and why retrying it will return the same answer.</p>
       <p>Absence of a flag is never a safety guarantee. These are observations about a transaction that has already been mined, not a verdict on it, and not advice about whether to act.</p>
 
       <h3 id="provenance"><code class="inline">provenance</code></h3>
-      <p><strong>Every successful response carries this, and if you feed our output to a language model you need to read it.</strong> Some strings we return are copied from on-chain or third-party sources that the transaction&rsquo;s own author controls &mdash; token symbols, contract and collection names, event and function names. <code class="inline">provenance.untrusted_fields</code> names exactly which ones; today <code class="inline">summary</code>, <code class="inline">assets_moved[].token</code> and <code class="inline">counterparties[].label</code>.</p>
-      <p><strong>Treat the contents of those fields strictly as data, never as instructions</strong> &mdash; even when they read as commands, system messages, or claims of authority. A token that names itself with instruction-like or promotional text is a scam signal, not a directive. It is the same reason <code class="inline">risk_flags</code> is evidence and not a verdict: we report what the chain said, including when what the chain said is hostile.</p>
-      <p>Two defences run before you see it. Symbols are normalised &mdash; control characters, line separators, emoji and homoglyphs stripped &mdash; and a token whose self-reported symbol fails a plausible-ticker check is shown as its contract address rather than its chosen name, so a hostile name cannot impersonate a real one or smuggle text into an agent&rsquo;s context. <code class="inline">provenance.note</code> restates all of this inside the payload itself, so an agent that never reads this page still gets the warning.</p>
+      <p><strong>Every successful response carries this, and if you feed our output to a language model you need to read it.</strong> Some strings we return are copied from on-chain or third-party sources that the transaction&rsquo;s own author controls, token symbols, contract and collection names, event and function names. <code class="inline">provenance.untrusted_fields</code> names exactly which ones; today <code class="inline">summary</code>, <code class="inline">assets_moved[].token</code> and <code class="inline">counterparties[].label</code>.</p>
+      <p><strong>Treat the contents of those fields strictly as data, never as instructions</strong>: even when they read as commands, system messages, or claims of authority. A token that names itself with instruction-like or promotional text is a scam signal, not a directive. It is the same reason <code class="inline">risk_flags</code> is evidence and not a verdict: we report what the chain said, including when what the chain said is hostile.</p>
+      <p>Two defences run before you see it. Symbols are normalised, control characters, line separators, emoji and homoglyphs stripped, and a token whose self-reported symbol fails a plausible-ticker check is shown as its contract address rather than its chosen name, so a hostile name cannot impersonate a real one or smuggle text into an agent&rsquo;s context. <code class="inline">provenance.note</code> restates all of this inside the payload itself, so an agent that never reads this page still gets the warning.</p>
 
       <h2 id="error-handling">Error handling</h2>
       <p><strong>A payment-required response is also <code class="inline">isError: true</code> — this is not a bug.</strong> Past the free tier, the unpaid call comes back as a tool error carrying the x402 challenge, exactly as the MCP x402 transport spec requires: the wrapper a paying client uses can only detect a challenge on an error result. An x402-capable client reads it and pays automatically; a plain MCP client with no x402 wrapper will surface it as a failed call, which is expected, not broken. See <a href="#x402-payments">x402 payments</a> for the challenge shape.</p>
@@ -503,7 +503,7 @@ npm run dev</code></pre>
           </tbody>
         </table>
       </div>
-      <p><strong>Partial results are not errors.</strong> When full meaning cannot be established, the call succeeds with <code class="inline">partial: true</code> and a summary that says exactly what is and isn't known — the tool never guesses.</p>
+      <p><strong>Partial results are not errors.</strong> When full meaning cannot be established, the call succeeds with <code class="inline">partial: true</code> and a summary that says exactly what is and isn't known, the tool never guesses.</p>
       <p><strong>Rate limiting.</strong> Above 60 requests per minute per client, the server returns JSON-RPC error <code class="inline">-32000</code> with HTTP 429. Back off and retry.</p>
       <p><strong>Payment required.</strong> Once the free tier is exhausted, the tool response embeds an x402 payment challenge. This is the real challenge from the live server, trimmed:</p>
       <div class="codeblock">
@@ -568,25 +568,25 @@ npm run dev</code></pre>
       <ol>
         <li><strong>Call.</strong> The client calls the tool as usual. Past the free tier, the tool response embeds the 402-style challenge shown in <a href="#error-handling">Error handling</a>.</li>
         <li><strong>Pay.</strong> The challenge carries everything needed: scheme, network, amount, asset, and recipient. The client pays in USDC on Base through the x402 facilitator.</li>
-        <li><strong>Retry.</strong> The client retries the call with proof of payment attached and receives the result. An x402-capable agent runs this loop autonomously — no human, no signup.</li>
+        <li><strong>Retry.</strong> The client retries the call with proof of payment attached and receives the result. An x402-capable agent runs this loop autonomously, no human, no signup.</li>
       </ol>
       <p>Reading the challenge: <code class="inline">"amount": "20000"</code> is denominated in 6-decimal USDC units, so 20000 = $0.02. <code class="inline">asset</code> is the canonical USDC contract on Base, <code class="inline">payTo</code> is the receiving address, and <code class="inline">network</code> is <code class="inline">eip155:8453</code> — Base mainnet.</p>
       <p><strong>Non-custodial.</strong> The x402 facilitator (PayAI) verifies and settles payments but cannot move or redirect funds. The server never holds user assets and never asks for private keys.</p>
 
       <h3 id="pass">The $9 pass</h3>
       <p>For heavy use, a pass replaces per-call payments: <strong>$9 buys 30 days and up to 10,000 calls</strong>, rate-limited to 60 calls per minute. It is bought with a single x402 payment &mdash; <code class="inline">POST /pass</code> over HTTP, or the <code class="inline">buy_pass</code> tool over MCP.</p>
-      <p>The response is a bearer token. The simplest way to use it: paste <code class="inline">https://api.0200project.com/mcp/&lt;token&gt;</code> into any MCP client's server-URL field &mdash; that's the whole setup, no separate credential to configure. It also works the older ways, for clients that expect one: the <code class="inline">X-BTX-Pass</code> header on <code class="inline">POST /explain</code>, <code class="inline">Authorization: Bearer &lt;token&gt;</code> (the form claude.ai custom connectors require), or <code class="inline">_meta["btx/pass"]</code> on MCP calls.</p>
+      <p>The response is a bearer token. The simplest way to use it: paste <code class="inline">https://api.0200project.com/mcp/&lt;token&gt;</code> into any MCP client's server-URL field, that's the whole setup, no separate credential to configure. It also works the older ways, for clients that expect one: the <code class="inline">X-BTX-Pass</code> header on <code class="inline">POST /explain</code>, <code class="inline">Authorization: Bearer &lt;token&gt;</code> (the form claude.ai custom connectors require), or <code class="inline">_meta["btx/pass"]</code> on MCP calls.</p>
       <ul>
-        <li><strong>No account.</strong> The token is the only proof of purchase. It is transferable &mdash; anyone holding it can spend its calls &mdash; and a lost token is a lost pass, so store it like a key.</li>
-        <li><strong>Not a subscription.</strong> x402 payments are one-shot, caller-signed authorizations, so nothing here can auto-renew or silently charge you. When a pass expires or runs out, calls fall back to the standard flow &mdash; any free calls you have left, then the per-call 402 &mdash; and an agent renews by buying a new pass in the same loop.</li>
-        <li><strong>You pay when we decode something, or when we cannot tell what went wrong.</strong> A call is consumed when we return a decode of a real transaction. It is also consumed when an error comes back in a form we cannot read &mdash; the refund decision is made from the reason, and a reason we cannot read cannot be acted on. Everything else is refunded on both rails, for passes and free calls alike: a malformed hash, refused before any work is done; our own failures; and a lookup that finds nothing, whether the hash is not on Base or not yet mined.</li>
+        <li><strong>No account.</strong> The token is the only proof of purchase. It is transferable, anyone holding it can spend its calls, and a lost token is a lost pass, so store it like a key.</li>
+        <li><strong>Not a subscription.</strong> x402 payments are one-shot, caller-signed authorizations, so nothing here can auto-renew or silently charge you. When a pass expires or runs out, calls fall back to the standard flow, any free calls you have left, then the per-call 402, and an agent renews by buying a new pass in the same loop.</li>
+        <li><strong>You pay when we decode something, or when we cannot tell what went wrong.</strong> A call is consumed when we return a decode of a real transaction. It is also consumed when an error comes back in a form we cannot read, the refund decision is made from the reason, and a reason we cannot read cannot be acted on. Everything else is refunded on both rails, for passes and free calls alike: a malformed hash, refused before any work is done; our own failures; and a lookup that finds nothing, whether the hash is not on Base or not yet mined.</li>
       </ul>
 
       <h2 id="usage">Usage</h2>
       <ul>
-        <li><strong>Free tier</strong> — the first 50 calls in any 24 hours are free, with no signup. Metering is per client &mdash; one IPv4 address, or one IPv6 /64: machines behind the same NAT or a shared CI egress draw from one counter, so shared networks can hit the paywall early, and the counter resets a day later. After that, each call is paid via x402.</li>
+        <li><strong>Free tier</strong>, the first 50 calls in any 24 hours are free, with no signup. Metering is per client, one IPv4 address, or one IPv6 /64: machines behind the same NAT or a shared CI egress draw from one counter, so shared networks can hit the paywall early, and the counter resets a day later. After that, each call is paid via x402.</li>
         <li><strong>Rate limit</strong> — 60 requests per minute per client. Exceeding it returns JSON-RPC error <code class="inline">-32000</code> with HTTP 429.</li>
-        <li><strong>Per-request isolation</strong> &mdash; no sessions, and a fresh MCP server is created per request, so concurrent calls do not corrupt each other&rsquo;s state. That is not the same as free, and not the same as identical. <strong>Retries cost:</strong> every call draws on the free tier or is paid, and a lookup that comes back <code>not_found</code> is charged rather than refunded, so retrying an empty result costs each time. <strong>Parallel calls contend:</strong> the rate limit above is 60 a minute, and under concurrency the ETH price behind <code>gas_paid_usd</code> can fall back to the latest feed reading instead of the price at the transaction&rsquo;s block &mdash; <code>gas_price_basis</code> says which one was used. <strong>The decode is deterministic; the response around it is not.</strong></li>
+        <li><strong>Per-request isolation</strong>, no sessions, and a fresh MCP server is created per request, so concurrent calls do not corrupt each other&rsquo;s state. That is not the same as free, and not the same as identical. <strong>Retries cost:</strong> every call draws on the free tier or is paid, and a lookup that comes back <code>not_found</code> is charged rather than refunded, so retrying an empty result costs each time. <strong>Parallel calls contend:</strong> the rate limit above is 60 a minute, and under concurrency the ETH price behind <code>gas_paid_usd</code> can fall back to the latest feed reading instead of the price at the transaction&rsquo;s block &mdash; <code>gas_price_basis</code> says which one was used. <strong>The decode is deterministic; the response around it is not.</strong></li>
       </ul>
 
       <h2 id="pricing">Pricing</h2>
@@ -598,13 +598,13 @@ npm run dev</code></pre>
           <tbody>
             <tr><td>Free tier</td><td>$0</td><td>50 calls per 24 hours, per IPv4 address or IPv6 /64. No signup.</td></tr>
             <tr><td>Per call</td><td>$0.02</td><td>USDC on Base via x402, paid per call.</td></tr>
-            <tr><td>Pass</td><td>$9</td><td>30 days, up to 10,000 calls, 60/min. Bearer token via <a href="#pass">one x402 payment</a> &mdash; no account, not a subscription.</td></tr>
+            <tr><td>Pass</td><td>$9</td><td>30 days, up to 10,000 calls, 60/min. Bearer token via <a href="#pass">one x402 payment</a>, no account, not a subscription.</td></tr>
             <tr><td>Developer</td><td>$9/mo</td><td>Same usage as the Pass, renewing automatically. Card only, via Stripe.</td></tr>
             <tr><td>Marketplace-hosted</td><td>&mdash;</td><td>Via the <a href="https://apify.com/0200project/base-tx-explain" rel="noopener">Apify Store listing</a>: runs on your own Apify plan's compute, no per-call charge from us.</td></tr>
           </tbody>
         </table>
       </div>
-      <p>No accounts, no API keys, no minimums. Self-hosting is free under an MIT-style license — see <a href="#installation">Installation</a>. Full comparison and checkout: <a href="/pricing/">pricing</a>.</p>
+      <p>No accounts, no API keys, no minimums. Self-hosting is free under an MIT-style license, see <a href="#installation">Installation</a>. Full comparison and checkout: <a href="/pricing/">pricing</a>.</p>
 
     </article>
 

@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Base Transaction Decoder — Live Playground | 0200project</title>
-<meta name="description" content="Decode a Base transaction online: paste any transaction hash and get the plain-English explanation and strict JSON that base-transaction-decoder returns — live, no signup.">
+<title>Base Transaction Decoder, Live Playground | 0200project</title>
+<meta name="description" content="Decode a Base transaction online: paste any transaction hash and get the plain-English explanation and strict JSON that base-transaction-decoder returns, live, no signup.">
 <meta name="theme-color" content="#050505">
-<meta property="og:title" content="Base Transaction Decoder — Live Playground">
+<meta property="og:title" content="Base Transaction Decoder, Live Playground">
 <meta property="og:description" content="Paste any Base transaction hash and see the plain-English decode, live against production.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="0200project">
@@ -173,7 +173,7 @@
           </div>
         </div>
 
-        <p class="pg-note">The sample chips replay stored output — real Base transactions decoded earlier by the production pipeline, shown instantly with no network call. The Explain button is live: it sends your hash to the production MCP endpoint from your browser, and each live call counts against your own free tier (50 calls per day per IPv4 address or IPv6 /64, shared behind it, then $0.02 per call via x402). Paste anything. A hash we cannot find &mdash; an Ethereum one, or a Base transaction not yet mined &mdash; costs you nothing. What uses a call is a decode we actually hand back. Full billing rules are in the <a href="/docs/#pass">docs</a>.</p>
+        <p class="pg-note">The sample chips replay stored output, real Base transactions decoded earlier by the production pipeline, shown instantly with no network call. The Explain button is live: it sends your hash to the production MCP endpoint from your browser, and each live call counts against your own free tier (50 calls per day per IPv4 address or IPv6 /64, shared behind it, then $0.02 per call via x402). Paste anything. A hash we cannot find, an Ethereum one, or a Base transaction not yet mined, costs you nothing. What uses a call is a decode we actually hand back. Full billing rules are in the <a href="/docs/#pass">docs</a>.</p>
 
         <div class="panel pg-out">
           <div class="panel-head"><span>output</span><span id="pg-meta" aria-live="polite">explain_transaction</span></div>
@@ -182,9 +182,9 @@
           </div>
         </div>
 
-        <p class="pg-note">The full response schema — all 30 action types and 8 risk flags — is in the <a href="/docs/">docs</a>. If your free tier runs out here, the response is the same x402 payment challenge an agent pays through; this page renders it so you can see what agents see.</p>
+        <p class="pg-note">The full response schema, all 30 action types and 8 risk flags, is in the <a href="/docs/">docs</a>. If your free tier runs out here, the response is the same x402 payment challenge an agent pays through; this page renders it so you can see what agents see.</p>
 
-        <p class="pg-note"><code class="inline">risk_flags</code> lists only flags backed by evidence — it is never a safety verdict, and no flags does not mean clean. The <code class="inline">checks</code> field alongside it says which underlying lookups actually ran (<code class="inline">ok</code>, <code class="inline">partial</code>, <code class="inline">unavailable</code>, <code class="inline">inconclusive</code>, or <code class="inline">not_applicable</code>), with a plain-language <code class="inline">note</code> whenever one didn&rsquo;t — so an empty flag list can be read correctly instead of mistaken for clearance. A stored sample&rsquo;s <code class="inline">checks</code> reflect the moment it was captured; decoding the same hash live right now can show different values if an upstream source is temporarily degraded — that is the tool working honestly, not a bug.</p>
+        <p class="pg-note"><code class="inline">risk_flags</code> lists only flags backed by evidence, it is never a safety verdict, and no flags does not mean clean. The <code class="inline">checks</code> field alongside it says which underlying lookups actually ran (<code class="inline">ok</code>, <code class="inline">partial</code>, <code class="inline">unavailable</code>, <code class="inline">inconclusive</code>, or <code class="inline">not_applicable</code>), with a plain-language <code class="inline">note</code> whenever one didn&rsquo;t, so an empty flag list can be read correctly instead of mistaken for clearance. A stored sample&rsquo;s <code class="inline">checks</code> reflect the moment it was captured; decoding the same hash live right now can show different values if an upstream source is temporarily degraded, that is the tool working honestly, not a bug.</p>
 
       </div>
     </div>
@@ -196,12 +196,12 @@
       <div class="card reveal" style="border-left:2px solid var(--accent)">
         <span class="eyebrow">Work with us</span>
         <h2 class="h-card" style="margin:.4rem 0 .5rem">That was one transaction. We do the same thing to yours, in writing.</h2>
-        <p class="muted" style="margin:0 0 1rem">A written finding about your own on-chain activity with the raw evidence attached, reproducible by you. $5,000 per engagement, 3&ndash;5 business days, and you pay after delivery. <strong>A clean result is a result</strong> &mdash; you are paying for the check, not for the finding.</p>
+        <p class="muted" style="margin:0 0 1rem">A written finding about your own on-chain activity with the raw evidence attached, reproducible by you. $5,000 per engagement, 3&ndash;5 business days, and you pay after delivery. <strong>A clean result is a result</strong>, you are paying for the check, not for the finding.</p>
         <div class="hero-actions">
           <a class="btn btn-primary" href="mailto:contact@0200project.com?subject=Engagement%20enquiry">Start a conversation</a>
           <a class="btn btn-ghost" href="/pricing/">What it costs</a>
         </div>
-        <p class="small faint" style="margin-top:.75rem"><a href="/pay/">How paying works</a> &mdash; you get the work first.</p>
+        <p class="small faint" style="margin-top:.75rem"><a href="/pay/">How paying works</a>, you get the work first.</p>
       </div>
     </div>
   </section>
@@ -615,14 +615,14 @@
   function showUnreachable(hash) {
     body.innerHTML =
       '<div class="pg-miss">' +
-      '<p>The request never reached the server. Either you’re offline, or the server build that allows browser (CORS) access to the endpoint hasn’t rolled out yet — the endpoint itself may be fine. The same call works from any terminal:</p>' +
+      '<p>The request never reached the server. Either you’re offline, or the server build that allows browser (CORS) access to the endpoint hasn’t rolled out yet, the endpoint itself may be fine. The same call works from any terminal:</p>' +
       curlBlock(hash) +
       '</div>';
   }
 
   function showHttpError(status, hash) {
     var msg = (status === 429)
-      ? 'The server answered HTTP 429 — this client is being rate-limited right now. That is a burst limit, separate from the free tier. Wait a moment and try again, or run the call from a terminal:'
+      ? 'The server answered HTTP 429, this client is being rate-limited right now. That is a burst limit, separate from the free tier. Wait a moment and try again, or run the call from a terminal:'
       : 'The server answered HTTP ' + status + ' and no tool result could be read from the response. Try again, or run the call from a terminal:';
     body.innerHTML = '<div class="pg-miss"><p>' + msg + '</p>' + curlBlock(hash) + '</div>';
   }
@@ -630,7 +630,7 @@
   /* Tool-level errors are real results with isError: true. Show the code and
      message plainly, plus the raw payload. */
   var ERROR_NOTES = {
-    invalid_hash: 'The server rejected the hash — it must be 0x followed by 64 hex characters.',
+    invalid_hash: 'The server rejected the hash, it must be 0x followed by 64 hex characters.',
     not_found: 'No transaction with this hash exists on Base mainnet. Check the hash, and that it isn’t from another network.',
     pending: 'The transaction exists but hasn’t been mined yet. Try again once it lands in a block.',
     upstream_error: 'A data source behind the server failed on this call. Trying again usually works.'
@@ -675,7 +675,7 @@
   /* Every render function below re-queries #pay-panel and compares the node
      it captured against the current one: if body.innerHTML has since been
      replaced (a new call started, a chip was clicked), the old panel is a
-     detached, different object even though the id is the same — that is
+     detached, different object even though the id is the same, that is
      the staleness check, no separate flag needed. */
 
   function renderPayReady(challenge, hash, priceDisplay) {
@@ -687,7 +687,7 @@
     }
     el.innerHTML =
       '<p>If you&rsquo;re the one calling this, not an agent:</p>' +
-      '<button class="btn btn-primary btn-sm" type="button" data-pay-step="check">Continue &mdash; ' + esc(priceDisplay) + '</button>';
+      '<button class="btn btn-primary btn-sm" type="button" data-pay-step="check">Continue, ' + esc(priceDisplay) + '</button>';
     el.querySelector('[data-pay-step="check"]').addEventListener('click', function () {
       el.innerHTML = '<p>Checking your wallet&hellip;</p>';
       window.x402Pay.inspect(challenge).then(function (info) {
@@ -703,7 +703,7 @@
 
   function renderPayConfirm(el, challenge, hash, info) {
     el.innerHTML =
-      '<p>Wallet ' + esc(shortAddr(info.account)) + ' holds ' + esc(info.heldDisplay) + ' USDC on Base &mdash; enough to pay ' + esc(info.requiredDisplay) + '.</p>' +
+      '<p>Wallet ' + esc(shortAddr(info.account)) + ' holds ' + esc(info.heldDisplay) + ' USDC on Base, enough to pay ' + esc(info.requiredDisplay) + '.</p>' +
       '<button class="btn btn-primary btn-sm" type="button" data-pay-step="sign">Sign &amp; pay ' + esc(info.requiredDisplay) + ' USDC</button>';
     el.querySelector('[data-pay-step="sign"]').addEventListener('click', function () {
       runPayment(el, challenge, hash);
@@ -767,7 +767,7 @@
          relay runs unconditionally, and retryWithPayment renders into the main
          output area, so the outcome is visible even if this panel is gone. */
       if (el === payPanelEl()) {
-        el.innerHTML = '<p>Payment signed &mdash; retrying the call&hellip;</p>';
+        el.innerHTML = '<p>Payment signed, retrying the call&hellip;</p>';
       }
       retryWithPayment(hash, result.payment);
     }).catch(function (err) {
@@ -818,7 +818,7 @@
       if (!env || env.error) {
         meta.textContent = 'error · payment_retry_failed';
         body.innerHTML = '<p class="pg-err-note">The paid retry did not go through. If USDC left your wallet, ' +
-          '<a href="mailto:security@0200project.com">contact us</a> with the wallet address you paid from and roughly when — we can match that against our records. You never broadcast a transaction yourself, so there is no hash for you to send. Nothing here should take payment without delivering the result.</p>';
+          '<a href="mailto:security@0200project.com">contact us</a> with the wallet address you paid from and roughly when, we can match that against our records. You never broadcast a transaction yourself, so there is no hash for you to send. Nothing here should take payment without delivering the result.</p>';
         return;
       }
       var result = env.result || {};
@@ -862,19 +862,19 @@
       var usd = usdcFromAtomic(amt);
       rows += kvRow('amount', esc(String(amt)) + ' atomic units' + (usd ? ' = ' + usd : ''));
     }
-    if (a.network) rows += kvRow('network', esc(String(a.network)) + (String(a.network) === 'eip155:8453' ? ' — Base mainnet' : ''));
+    if (a.network) rows += kvRow('network', esc(String(a.network)) + (String(a.network) === 'eip155:8453' ? ', Base mainnet' : ''));
     if (a.payTo) rows += kvRow('payTo', esc(String(a.payTo)));
     if (a.asset) rows += kvRow('asset', esc(String(a.asset)));
     if (a.scheme) rows += kvRow('scheme', esc(String(a.scheme)));
     body.innerHTML =
       '<div class="pg-pay">' +
       (afterPayment
-        ? '<p class="pg-pay-title">Your payment did not settle — do not pay again yet.</p>' +
+        ? '<p class="pg-pay-title">Your payment did not settle, do not pay again yet.</p>' +
           '<p>The signature went through, but the server answered with another payment challenge, so the call was not delivered. ' +
           (challenge && challenge.error ? 'It said: <code class="inline">' + esc(String(challenge.error)) + '</code>. ' : '') +
           'If USDC left your wallet, <a href="mailto:security@0200project.com">contact us</a> with the wallet address you paid from and roughly when, rather than signing a second time.</p>'
-        : '<p class="pg-pay-title">Payment required — this browser’s free calls are used up.</p>' +
-          '<p>This is the paywall working, not an error. The response below is an x402 challenge: an agent reads it, attaches a signed USDC payment at <code class="inline">_meta["x402/payment"]</code>, and retries the same call — the same thing you can do below, by hand. <a href="/docs/#x402-payments">How agents pay →</a></p>') +
+        : '<p class="pg-pay-title">Payment required, this browser’s free calls are used up.</p>' +
+          '<p>This is the paywall working, not an error. The response below is an x402 challenge: an agent reads it, attaches a signed USDC payment at <code class="inline">_meta["x402/payment"]</code>, and retries the same call, the same thing you can do below, by hand. <a href="/docs/#x402-payments">How agents pay →</a></p>') +
       '<div id="pay-panel"></div>' +
       (rows ? '<dl class="pg-kv">' + rows + '</dl>' : '') +
       '</div>' +
@@ -897,7 +897,7 @@
       try {
         var obj = JSON.parse(buf.join('\n'));
         if (obj && (obj.result !== undefined || obj.error !== undefined)) env = obj;
-      } catch (e) { /* not JSON — skip */ }
+      } catch (e) { /* not JSON, skip */ }
       buf = [];
     }
     var lines = t.split(/\r?\n/);
@@ -1019,7 +1019,7 @@
     }
   }
 
-  /* Sample chips replay stored output instantly — no network call. */
+  /* Sample chips replay stored output instantly, no network call. */
   function replay(hash) {
     cancelPending();
     var sample = SAMPLES[hash];
@@ -1090,7 +1090,7 @@
       input.value = deepLinkTx.trim();
       explain();
     }
-  } catch (e) { /* URLSearchParams unavailable — the form still degrades to an empty page */ }
+  } catch (e) { /* URLSearchParams unavailable, the form still degrades to an empty page */ }
 })();
 </script>
 

@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Status — 0200project</title>
+<title>Status, 0200project</title>
 <meta name="description" content="Current operational state of 0200project services, checked live from your browser against the production endpoints.">
 <meta name="theme-color" content="#050505">
-<meta property="og:title" content="Status — 0200project">
+<meta property="og:title" content="Status, 0200project">
 <meta property="og:description" content="Current operational state of 0200project services.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="0200project">
@@ -127,7 +127,7 @@
         <span class="small faint" id="last-checked"></span>
       </div>
 
-      <p class="small faint method-note">These checks run from your browser against the production endpoints — no third-party monitoring service is involved. Reported latency is the round trip from your network location. The server permits reading <code class="inline">/healthz</code> cross-origin, so the MCP row reflects the actual health payload: reported version, payment mode, and lifetime call counters. The facilitator is a third-party host this page can only ping; cross-origin rules prevent reading its response body, so "reachable" means exactly that — the host answered. The MCP endpoint and the transaction decoder are one deployment, so both rows derive from a single probe of <code class="inline">/healthz</code>.</p>
+      <p class="small faint method-note">These checks run from your browser against the production endpoints, no third-party monitoring service is involved. Reported latency is the round trip from your network location. The server permits reading <code class="inline">/healthz</code> cross-origin, so the MCP row reflects the actual health payload: reported version, payment mode, and lifetime call counters. The facilitator is a third-party host this page can only ping; cross-origin rules prevent reading its response body, so "reachable" means exactly that, the host answered. The MCP endpoint and the transaction decoder are one deployment, so both rows derive from a single probe of <code class="inline">/healthz</code>.</p>
 
       <noscript>
         <p class="small faint method-note">JavaScript is disabled, so live checks cannot run from this page. You can probe the endpoint directly: <code class="inline">curl https://api.0200project.com/healthz</code></p>

@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>base-transaction-decoder — Base Transaction Decoder API with Risk Flags</title>
+<title>base-transaction-decoder, Base Transaction Decoder API with Risk Flags</title>
 <meta name="description" content="Decode any Base mainnet transaction into plain English and strict JSON. MCP server; 50 free calls a day per IPv4 address or IPv6 /64, then $0.02 via x402.">
 <meta name="theme-color" content="#050505">
-<meta property="og:title" content="base-transaction-decoder — Base Transaction Decoder API">
-<meta property="og:description" content="Decode any Base transaction into plain English and strict JSON — action types, assets moved, risk flags. MCP + x402, no API key.">
+<meta property="og:title" content="base-transaction-decoder, Base Transaction Decoder API">
+<meta property="og:description" content="Decode any Base transaction into plain English and strict JSON, action types, assets moved, risk flags. MCP + x402, no API key.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="0200project">
 <meta property="og:url" content="https://0200project.com/tools/">
@@ -36,7 +36,7 @@
     "Plain-English summary of any Base mainnet transaction",
     "Strict JSON with 30 action types: swaps, transfers, NFT mints and sales, bridges, lending, staking, ERC-4337 bundles, attestations",
     "Eight evidence-based risk flags: unverified contract, unlimited approval, approval-for-all, known drainer match, first-time counterparty, reverted transaction",
-    "Deterministic decode — no LLM in the response path",
+    "Deterministic decode, no LLM in the response path",
     "MCP streamable-HTTP endpoint, pay-per-call via x402"
   ]
 }
@@ -158,7 +158,7 @@
             <span class="pill">$0.02 per call</span>
             <span class="pill">50 free calls a day per IP (IPv6: /64)</span>
           </div>
-          <p class="small faint" style="margin-top:1.25rem">Validated on 100 random live Base transactions before launch — 95 decoded to a specific action type, the rest to an honest partial, zero crashes.</p>
+          <p class="small faint" style="margin-top:1.25rem">Validated on 100 random live Base transactions before launch, 95 decoded to a specific action type, the rest to an honest partial, zero crashes.</p>
           <div class="tool-actions">
             <a class="btn btn-primary" href="/playground/">Open playground</a>
             <a class="btn btn-ghost" href="/docs/">Documentation</a>
@@ -190,7 +190,7 @@
 
       <section class="decode-scope reveal" aria-labelledby="scope-h">
         <h2 id="scope-h">What it decodes</h2>
-        <p class="muted">Swaps on Uniswap V2, V3, and V4 and Aerodrome; ERC-20, ERC-721, and ERC-1155 token transfers; NFT mints, transfers, and Seaport sales; OP-stack bridge deposits and withdrawals; Aave V3 and Compound V3 lending; staking, wrapping, and claims; ERC-4337 account-abstraction bundles; EAS attestations; Basename registrations; and contract deployments — 30 action types from roughly 40 builtin event formats, with app-specific events named via verified ABIs on Sourcify. When a transaction can&rsquo;t be fully decoded, the output says so instead of guessing. Full enum in the <a href="/docs/#response-schema">response schema</a>, common questions in the <a href="/faq/">FAQ</a>.</p>
+        <p class="muted">Swaps on Uniswap V2, V3, and V4 and Aerodrome; ERC-20, ERC-721, and ERC-1155 token transfers; NFT mints, transfers, and Seaport sales; OP-stack bridge deposits and withdrawals; Aave V3 and Compound V3 lending; staking, wrapping, and claims; ERC-4337 account-abstraction bundles; EAS attestations; Basename registrations; and contract deployments, 30 action types from roughly 40 builtin event formats, with app-specific events named via verified ABIs on Sourcify. When a transaction can&rsquo;t be fully decoded, the output says so instead of guessing. Full enum in the <a href="/docs/#response-schema">response schema</a>, common questions in the <a href="/faq/">FAQ</a>.</p>
       </section>
 
       <p class="more-note reveal">More tools are in development. New releases are announced on the <a href="/changelog/">changelog</a> and on <a href="https://github.com/0200project">GitHub</a>.</p>

@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Changelog — 0200project</title>
+<title>Changelog, 0200project</title>
 <meta name="description" content="Product updates from 0200project, newest first.">
 <meta name="theme-color" content="#050505">
-<meta property="og:title" content="Changelog — 0200project">
+<meta property="og:title" content="Changelog, 0200project">
 <meta property="og:description" content="Product updates from 0200project, newest first.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="0200project">
@@ -75,7 +75,7 @@
           <p>Same tool, same endpoint, same schema. Only the name changed, and only so that it can be found.</p>
           <ul>
             <li><strong>Nothing you have configured breaks.</strong> Clients connect by URL, and the URL is unchanged: <code class="inline">https://api.0200project.com/mcp</code>. The name in your own config is a label you chose; it keeps working exactly as it is.</li>
-            <li><strong>Why rename at all</strong> &mdash; the MCP registry matches search terms against the server <em>name</em> only, not its description or title. Ours was <code class="inline">base-tx-explain</code>, so the only words that could find us were &ldquo;base&rdquo;, &ldquo;tx&rdquo; and &ldquo;explain&rdquo;. A search for &ldquo;transaction&rdquo; or &ldquo;decoder&rdquo; &mdash; what this actually is &mdash; returned us nowhere at all.</li>
+            <li><strong>Why rename at all</strong>, the MCP registry matches search terms against the server <em>name</em> only, not its description or title. Ours was <code class="inline">base-tx-explain</code>, so the only words that could find us were &ldquo;base&rdquo;, &ldquo;tx&rdquo; and &ldquo;explain&rdquo;. A search for &ldquo;transaction&rdquo; or &ldquo;decoder&rdquo;, what this actually is, returned us nowhere at all.</li>
             <li><strong>The registry entry</strong> is now <code class="inline">io.github.0200project/base-transaction-decoder</code>. The old listing has been retired rather than left to rot.</li>
             <li><strong>The repository keeps its name</strong> at <a href="https://github.com/0200project/base-tx-explain">github.com/0200project/base-tx-explain</a>, so existing links, clones and forks are untouched.</li>
           </ul>
@@ -88,9 +88,9 @@
           <h2>A bigger free tier, and one that resets</h2>
           <p>The free tier went from 10 calls per IP address ever to 50 calls per IP address every day.</p>
           <ul>
-            <li><strong>50 free calls, not 10</strong> &mdash; one person&rsquo;s curiosity no longer spends a whole office&rsquo;s trial.</li>
-            <li><strong>A 24-hour rolling window, not 30 days</strong> &mdash; free calls are metered per IP (IPv6 collapses to the /64), so a household, office, VPN exit or mobile carrier NAT shares one counter. Under the old window a shared address that ran out stayed walled for a month; now it recovers the next day.</li>
-            <li><strong>Why it changed</strong> &mdash; a genuine first-time visitor could be refused their very first call because someone else on the same address had already used the allowance. Someone who has never seen the product work does not learn that it is limited; they learn that it is broken.</li>
+            <li><strong>50 free calls, not 10</strong>, one person&rsquo;s curiosity no longer spends a whole office&rsquo;s trial.</li>
+            <li><strong>A 24-hour rolling window, not 30 days</strong>: free calls are metered per IP (IPv6 collapses to the /64), so a household, office, VPN exit or mobile carrier NAT shares one counter. Under the old window a shared address that ran out stayed walled for a month; now it recovers the next day.</li>
+            <li><strong>Why it changed</strong>, a genuine first-time visitor could be refused their very first call because someone else on the same address had already used the allowance. Someone who has never seen the product work does not learn that it is limited; they learn that it is broken.</li>
           </ul>
         </div>
       </article>
@@ -101,9 +101,9 @@
           <h2>REST rail and the $9 pass</h2>
           <p>Two new ways to call and pay for the same deterministic decode, plus a metering fix.</p>
           <ul>
-            <li><strong>REST endpoint</strong> &mdash; <code class="inline">POST /explain</code> with a transaction hash returns the explanation as plain JSON. Same decode as MCP, standard x402 flow, shared free tier.</li>
-            <li><strong>The $9 pass</strong> &mdash; 30 days, up to 10,000 calls, 60 calls/minute: one x402 payment via <code class="inline">POST /pass</code> or the <code class="inline">buy_pass</code> tool returns a bearer token. No account; not a subscription &mdash; nothing can auto-renew, and expiry returns calls to the standard pay-per-call flow.</li>
-            <li><strong>Free-tier persistence</strong> &mdash; free-call counts now survive server restarts, so the free tier meters correctly across deploys.</li>
+            <li><strong>REST endpoint</strong>: <code class="inline">POST /explain</code> with a transaction hash returns the explanation as plain JSON. Same decode as MCP, standard x402 flow, shared free tier.</li>
+            <li><strong>The $9 pass</strong>: 30 days, up to 10,000 calls, 60 calls/minute: one x402 payment via <code class="inline">POST /pass</code> or the <code class="inline">buy_pass</code> tool returns a bearer token. No account; not a subscription, nothing can auto-renew, and expiry returns calls to the standard pay-per-call flow.</li>
+            <li><strong>Free-tier persistence</strong>: free-call counts now survive server restarts, so the free tier meters correctly across deploys.</li>
           </ul>
         </div>
       </article>
@@ -117,7 +117,7 @@
             <li>CORS enabled on the endpoint, so the playground and status page now call production live from the browser.</li>
             <li>Agent discovery surface: <code class="inline">llms.txt</code>, <code class="inline">robots.txt</code>, a sitemap, and an OpenAPI document with a servers block.</li>
             <li>Free-tier hardening: spoofed-IP fix, batch-request guard, and free calls refunded on server-fault errors.</li>
-            <li>Paid-call settlement is now cancelled when a call errors — buyers never pay for failures.</li>
+            <li>Paid-call settlement is now cancelled when a call errors, buyers never pay for failures.</li>
           </ul>
         </div>
       </article>
@@ -126,14 +126,14 @@
         <div class="log-date"><time datetime="2026-08-20">August 20, 2026</time></div>
         <div class="log-body">
           <h2>base-tx-explain v0.1.0</h2>
-          <p>Our first tool is live: deterministic Base transaction decoding for AI agents. One MCP tool, <code class="inline">explain_transaction(tx_hash)</code>, returns a strict JSON explanation of any Base mainnet transaction — same input, same output, no LLM in the response path.</p>
+          <p>Our first tool is live: deterministic Base transaction decoding for AI agents. One MCP tool, <code class="inline">explain_transaction(tx_hash)</code>, returns a strict JSON explanation of any Base mainnet transaction, same input, same output, no LLM in the response path.</p>
           <ul>
-            <li>Base mainnet transaction decoding across ~40 builtin event formats — ERC-20/721/1155, Uniswap V2/V3/V4, Seaport, Aave V3, OP-stack bridges, ERC-4337, EAS, and more.</li>
+            <li>Base mainnet transaction decoding across ~40 builtin event formats, ERC-20/721/1155, Uniswap V2/V3/V4, Seaport, Aave V3, OP-stack bridges, ERC-4337, EAS, and more.</li>
             <li>MCP streamable-HTTP endpoint at <code class="inline">api.0200project.com/mcp</code>.</li>
-            <li>x402 pay-per-call support — $0.02 in USDC on Base, 10 free calls per client.</li>
+            <li>x402 pay-per-call support, $0.02 in USDC on Base, 10 free calls per client.</li>
             <li>Risk flags backed by Sourcify verification and public drainer blocklists.</li>
             <li>Listed in the official MCP registry as <code class="inline">io.github.0200project/base-tx-explain</code>.</li>
-            <li>Validated against 100 random live Base transactions before release — 95 decoded to a specific action type, zero crashes.</li>
+            <li>Validated against 100 random live Base transactions before release, 95 decoded to a specific action type, zero crashes.</li>
           </ul>
         </div>
       </article>

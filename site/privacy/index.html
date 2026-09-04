@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Privacy Policy — 0200project</title>
+<title>Privacy Policy, 0200project</title>
 <meta name="description" content="How 0200project handles data: no accounts, no cookies, no tracking, and an IP address held only transiently in memory for rate limiting.">
 <meta name="theme-color" content="#050505">
-<meta property="og:title" content="Privacy Policy — 0200project">
+<meta property="og:title" content="Privacy Policy, 0200project">
 <meta property="og:description" content="No accounts, no cookies, no tracking. What little we process, and why.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="0200project">
@@ -63,7 +63,7 @@
       <p>Two things reach our servers when you call a tool:</p>
       <ul>
         <li><strong>The transaction hash you submit.</strong> This identifies data that is already public on the Base blockchain. We look it up, decode it, and return the result.</li>
-        <li><strong>Your IP address.</strong> We hold it transiently in memory to enforce the 60-requests-per-minute rate limit and to meter the free tier. It is never written to a database — the service does not have one.</li>
+        <li><strong>Your IP address.</strong> We hold it transiently in memory to enforce the 60-requests-per-minute rate limit and to meter the free tier. It is never written to a database, the service does not have one.</li>
       </ul>
 
       <h2>What we don't do</h2>
@@ -85,17 +85,17 @@
 
       <h2>Data retention</h2>
       <p>Our infrastructure provider keeps standard, short-lived operational logs, as effectively all hosting does. <strong>Beyond that we keep one thing, and this page previously said we kept nothing.</strong></p>
-      <p>The service writes an <strong>append-only event log</strong> &mdash; a single file on a persistent disk, one line per event, rebuilt into memory when the service restarts. There is no database, but the file is a record of requests, so calling it &ldquo;not a request archive&rdquo; would be a distinction that serves us rather than you.</p>
-      <p><strong>What each line can contain &mdash; and what it cannot.</strong></p>
+      <p>The service writes an <strong>append-only event log</strong>, a single file on a persistent disk, one line per event, rebuilt into memory when the service restarts. There is no database, but the file is a record of requests, so calling it &ldquo;not a request archive&rdquo; would be a distinction that serves us rather than you.</p>
+      <p><strong>What each line can contain, and what it cannot.</strong></p>
       <p>Every line records <strong>how a call went, not what was asked</strong>. No line contains the transaction you looked up, the answer we returned, or anything else you sent us. That boundary holds as we add operational fields; if it ever stops holding, this page changes before the code does.</p>
-      <p>Within it &mdash; these are the kinds of line that can appear, and not every call produces one of each:</p>
+      <p>Within it, these are the kinds of line that can appear, and not every call produces one of each:</p>
       <ul>
         <li>A <strong>call</strong>: the time, whether it was charged, free or on a pass, whether it succeeded, whether a risk check was unavailable, which interface it arrived through, and a coarse client identifier.</li>
-        <li>An <strong>outcome</strong>: the time, the interface, whether the decode succeeded, and a short code for why it did not &mdash; a malformed hash, an upstream failure, a transaction we could not find. This one records why your request failed, which is more than the operational fields above it. It does not record what you asked about.</li>
+        <li>An <strong>outcome</strong>: the time, the interface, whether the decode succeeded, and a short code for why it did not, a malformed hash, an upstream failure, a transaction we could not find. This one records why your request failed, which is more than the operational fields above it. It does not record what you asked about.</li>
         <li>A <strong>settled payment</strong>: the time, the amount, <strong>the payment&rsquo;s</strong> transaction hash, and <strong>the paying wallet address</strong>.</li>
         <li>A <strong>failed payment</strong>: the time, which stage failed, the reason, and <strong>the paying wallet address</strong>.</li>
       </ul>
-      <p>It holds no names, no email addresses and no account records, because there are no accounts. It does hold wallet addresses for payments, and it is <strong>not currently bounded by any retention period</strong> &mdash; entries are not deleted on a schedule. If that changes, this page changes with it.</p>
+      <p>It holds no names, no email addresses and no account records, because there are no accounts. It does hold wallet addresses for payments, and it is <strong>not currently bounded by any retention period</strong>: entries are not deleted on a schedule. If that changes, this page changes with it.</p>
       <p class="small">Corrected 2026-09-04. The previous wording said &ldquo;no database, no request archive, no user records&rdquo;. The first was true on a technicality and the other two were not true at all.</p>
       <p class="small">Updated 2026-09-04. The service now records why a call failed; the <em>outcome</em> line and the boundary sentence above were added with it.</p>
 

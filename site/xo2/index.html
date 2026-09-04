@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>XO2 — the token, and everything you can check about it | 0200project</title>
+<title>XO2, the token, and everything you can check about it | 0200project</title>
 <meta name="description" content="XO2 is the token of the 0200 Protocol on Base. It has no utility today. Every figure on this page is readable from the chain, and this page says how to read it.">
 <meta name="theme-color" content="#050505">
-<meta property="og:title" content="XO2 — the token, and everything you can check about it">
+<meta property="og:title" content="XO2, the token, and everything you can check about it">
 <meta property="og:description" content="No utility today. 100,000,000 supply, all of it in five contracts. Every number here is one eth_call away.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="0200project">
@@ -202,6 +202,33 @@
 @media (prefers-reduced-motion:reduce){
   .tok-hero::before,.tok-badge{animation:none}
 }
+
+/* ── hero presence ──────────────────────────────────────────────────── */
+.tok-hero{padding:6.5rem 0 4rem}
+.tok-bg{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);
+  font-family:var(--mono);font-weight:700;font-size:min(31vw,22rem);line-height:1;
+  letter-spacing:-.05em;color:var(--fg-strong);opacity:.035;pointer-events:none;user-select:none;white-space:nowrap}
+.tok-wrap{gap:3rem}
+.tok-coin{width:216px;height:216px;box-shadow:0 0 0 1px var(--border-strong),0 0 0 10px rgba(88,166,255,.05),0 26px 60px -18px rgba(0,0,0,.65)}
+.tok-sym{font-size:clamp(4rem,15vw,8.5rem);letter-spacing:-.045em;
+  background:linear-gradient(96deg,var(--fg-strong) 0%,var(--fg-strong) 52%,var(--accent,#58a6ff) 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.tok-name{font-size:1.3rem;letter-spacing:.16em;text-transform:uppercase;font-family:var(--mono);font-size:.82rem;color:var(--fg-faint)}
+.tok-ticker{align-items:center;gap:1rem}
+.tok-stats{margin-top:2.75rem}
+.tok-stat dd{font-size:1.15rem}
+
+/* entrance: once, on load, from a visible resting state */
+.tok-coinwrap,.tok-id{animation:tokIn .62s cubic-bezier(.2,.85,.25,1) both}
+.tok-id{animation-delay:.07s}
+.tok-stat{animation:tokIn .5s cubic-bezier(.2,.85,.25,1) both}
+.tok-stat:nth-child(1){animation-delay:.16s}.tok-stat:nth-child(2){animation-delay:.22s}
+.tok-stat:nth-child(3){animation-delay:.28s}.tok-stat:nth-child(4){animation-delay:.34s}
+@keyframes tokIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.tok-coin{transition:transform .5s cubic-bezier(.2,.85,.25,1)}
+.tok-coinwrap:hover .tok-coin{transform:scale(1.035)}
+@media (prefers-reduced-motion:reduce){.tok-coinwrap,.tok-id,.tok-stat{animation:none}.tok-coin{transition:none}}
+@media (max-width:40rem){.tok-coin{width:124px;height:124px}.tok-hero{padding:3.25rem 0 2.25rem}.tok-wrap{gap:1.5rem}.tok-bg{font-size:44vw;opacity:.045}}
 </style>
 </head>
 <body>
@@ -232,9 +259,10 @@
 
   <section class="tok-hero">
     <div class="container">
+      <div class="tok-bg" aria-hidden="true">XO2</div>
       <div class="tok-wrap">
         <div class="tok-coinwrap">
-          <img class="tok-coin" src="/assets/xo2-512.png" width="184" height="184"
+          <img class="tok-coin" src="/assets/xo2-512.png" width="216" height="216"
                alt="XO2 token mark" loading="eager" decoding="async">
         </div>
         <div class="tok-id">
@@ -258,7 +286,7 @@
         <div class="tok-stat"><dt>deployed</dt><dd>2026&#8209;09&#8209;03</dd></div>
         <div class="tok-stat"><dt>contract</dt><dd class="mono">0xdE906C748E56fD6F648eb8564532673257Ac414b</dd></div>
       </dl>
-      <p class="tok-note">Every figure above is read from the chain by the panel below, in your own browser. Nothing here is a price, a market, or an offer &mdash; there is none of any of those.</p>
+      <p class="tok-note">Every figure above is read from the chain by the panel below, in your own browser. Nothing here is a price, a market, or an offer, there is none of any of those.</p>
 
       <p class="lead">Deployed 2026&#8209;09&#8209;03. Every figure on this page was read from the chain, and every one of them tells you how to read it yourself. Where we cannot prove something, the page says so instead of rounding it off.</p>
     </div>
@@ -296,7 +324,7 @@
         <div class="chain-foot" id="chain-foot">This panel calls <code class="inline">totalSupply()</code> and five <code class="inline">balanceOf()</code> reads against a public Base RPC endpoint, from your browser. Nothing here is served by us. If a read fails it says so rather than showing a number.</div>
       </div>
       <div class="led" style="margin-bottom:1.25rem">
-        <div class="panel-head"><span>the contract</span><span>values below are static &mdash; the live panel above reads them</span></div>
+        <div class="panel-head"><span>the contract</span><span>values below are static, the live panel above reads them</span></div>
         <div class="led-row"><span class="led-lbl">address</span><span class="led-val"><code class="inline">0xdE906C748E56fD6F648eb8564532673257Ac414b</code><small>Base mainnet, chain 8453</small></span><span class="led-amt">&mdash;</span></div>
         <div class="led-row"><span class="led-lbl">name</span><span class="led-val"><code class="inline">name()</code></span><span class="led-amt">0200 Protocol</span></div>
         <div class="led-row"><span class="led-lbl">symbol</span><span class="led-val"><code class="inline">symbol()</code></span><span class="led-amt">XO2</span></div>
@@ -306,7 +334,7 @@
       </div>
 
       <h2 class="h-section" style="margin:2.5rem 0 .75rem">Two of the deployments failed, and that is the point.</h2>
-      <p class="lead" style="margin-bottom:1.25rem">The eleven transactions were not eleven successes. <strong>Nine succeeded and two reverted</strong> &mdash; and of the nine that were deploy calls, <strong>seven succeeded and two reverted</strong>. Those are two different sentences answering two different questions, and collapsing them into one number is how the count was first got wrong.</p>
+      <p class="lead" style="margin-bottom:1.25rem">The eleven transactions were not eleven successes. <strong>Nine succeeded and two reverted</strong>, and of the nine that were deploy calls, <strong>seven succeeded and two reverted</strong>. Those are two different sentences answering two different questions, and collapsing them into one number is how the count was first got wrong.</p>
 
       <div class="led">
         <div class="panel-head"><span>the two failures</span><span>read from receipts</span></div>
@@ -336,7 +364,7 @@
         <span class="mono small">0x6594662D521eb4e66F94B44149F92cc1928FCeDa</span><br>
         <span class="mono small">0x3f4Fb350Ccdf0a604E5a32e4032e150d7e539Cd1</span><br>
         <span class="small faint">distributor 0x2FaBA769283db7d5FF6A71DC930b2dB2521b2d95</span></div>
-        <div class="led-foot">Holdings sum to <b>100,000,000 exactly</b>. Each lock carries its own ceiling and they are never pooled &mdash; a lock cannot borrow another's allowance. Every lock enforces a <b>30-day delay</b> before a release completes.</div>
+        <div class="led-foot">Holdings sum to <b>100,000,000 exactly</b>. Each lock carries its own ceiling and they are never pooled, a lock cannot borrow another's allowance. Every lock enforces a <b>30-day delay</b> before a release completes.</div>
       </div>
 
       <div class="card" style="border-left:2px solid var(--border-strong);margin-top:1.25rem">
@@ -350,7 +378,7 @@
         <div class="panel-head"><span>two separate measurements</span><span>do not divide one by the other</span></div>
         <div class="led-row"><span class="led-lbl">ceiling</span><span class="led-val">Most that can become movable in any rolling 30-day window<small>The five per-lock ceilings summed, while every lock still holds a balance</small></span><span class="led-amt">2.506%</span></div>
         <div class="led-row"><span class="led-lbl">exhaustion</span><span class="led-val">Earliest point at which every lock could be empty<small>Governed by the slowest bucket, Ecosystem, at 48.08 windows</small></span><span class="led-amt">~3.95 yr</span></div>
-        <div class="led-foot"><b>These are two measurements, not one number expressed twice.</b> Dividing supply by the ceiling gives 3.28 years, which is <b>eight months short</b>, because the locks drain independently against their own holdings rather than from a shared pool &mdash; two of them empty at 23.81 windows, after which the maximum rate falls to 1.666% per window. That division is how this figure was got wrong twice before it was got right.</div>
+        <div class="led-foot"><b>These are two measurements, not one number expressed twice.</b> Dividing supply by the ceiling gives 3.28 years, which is <b>eight months short</b>, because the locks drain independently against their own holdings rather than from a shared pool, two of them empty at 23.81 windows, after which the maximum rate falls to 1.666% per window. That division is how this figure was got wrong twice before it was got right.</div>
       </div>
       <p class="term-note" style="margin-top:.75rem">No annualised rate is published. The 30-day window is the mechanism; a year is a convenience, and converting to one produced two of the four errors made arriving at these two numbers.</p>
 
@@ -368,32 +396,32 @@ upgradeTo()        implementation()    setName()</code></pre>
       <h2 class="h-section" style="margin:2.5rem 0 .75rem">Where we are verified, and where we are not.</h2>
       <div class="card">
         <p style="margin:0 0 .6rem"><strong>On Basescan:</strong> the token, the distributor and <strong>one</strong> of the five locks are exact-match verified. The other four locks are <strong>byte-for-byte identical to that verified lock apart from their release ceiling</strong>, which appears three times in each lock's runtime bytecode as a PUSH32 constant and agrees with <code class="inline">ceiling()</code> called on that lock.</p>
-        <p style="margin:0 0 .6rem"><strong>On Sourcify: not verified.</strong> Sourcify is a separate registry and we have not submitted to it. <strong>Our own decoder therefore flags our own distributor</strong> with <code class="inline">unverified_contract</code> &mdash; and that flag is correct. We would rather tell you than have you find it.</p>
+        <p style="margin:0 0 .6rem"><strong>On Sourcify: not verified.</strong> Sourcify is a separate registry and we have not submitted to it. <strong>Our own decoder therefore flags our own distributor</strong> with <code class="inline">unverified_contract</code>, and that flag is correct. We would rather tell you than have you find it.</p>
         <p class="small faint" style="margin:0">If it ever reads &ldquo;all contracts verified&rdquo; on this page, that is erosion and it is wrong.</p>
       </div>
 
       <h2 class="h-section" style="margin:2.5rem 0 .75rem">Check all of it yourself.</h2>
-      <p class="lead" style="margin-bottom:1rem">Nothing here needs our cooperation. These are actions, not coordinates &mdash; byte offsets go stale, calls do not.</p>
+      <p class="lead" style="margin-bottom:1rem">Nothing here needs our cooperation. These are actions, not coordinates, byte offsets go stale, calls do not.</p>
       <div class="codeblock">
         <div class="panel-head"><span>reproduction</span><span>any Base RPC</span></div>
         <pre><code># the five ceilings, read from the locks themselves
 ceiling()      on each of the five lock addresses
-beneficiary()  on each — one distinct value, or our claim is wrong
-balanceOf()    on the token, for each lock — sums to totalSupply()
+beneficiary()  on each, one distinct value, or our claim is wrong
+balanceOf()    on the token, for each lock, sums to totalSupply()
 
 # the four locks Basescan marks "similar match"
 eth_getCode    on each, diffed against the verified lock:
                identical apart from the ceiling constant
 
 # nothing is held by a person
-balanceOf()    for 0xf4211E30…9807 and 0x3129b6…1783 — both zero</code></pre>
+balanceOf()    for 0xf4211E30…9807 and 0x3129b6…1783, both zero</code></pre>
       </div>
 
       <h2 class="h-section" style="margin:2.5rem 0 .75rem">There was an earlier token, and it is not this one.</h2>
       <div class="card" style="border-left:2px solid var(--border-strong)">
         <p style="margin:0 0 .6rem">A different wallet, <a class="mono" href="https://basescan.org/address/0x3129b6525dBe86a0c61d3C8ad162A333a5EF1783" rel="noopener" title="0x3129b6525dBe86a0c61d3C8ad162A333a5EF1783">0x3129b6&hellip;1783</a>, deployed a token called <strong>$0200</strong> on 2026&#8209;09&#8209;01 at 17:21&nbsp;UTC. It was retired <strong>31 hours later</strong>: the pool was withdrawn and the entire supply sent to an address it cannot leave. That wallet holds none of it, and holds no XO2 either.</p>
-        <p style="margin:0 0 .6rem">Both tokens are permanently on Base and both are visible from those addresses. <strong>XO2 was not deployed by that wallet</strong> &mdash; it was deployed by <a class="mono" href="https://basescan.org/address/0xf4211E309d80a074dAc37C616d1Aa7899ed29807" rel="noopener" title="0xf4211E309d80a074dAc37C616d1Aa7899ed29807">0xf4211E30&hellip;9807</a>, the same address that receives every release above.</p>
-        <p style="margin:0"><strong>One thing here you cannot check and are taking from us: both wallets are ours.</strong> No chain query establishes that &mdash; we are telling you, in our own voice, because a page arguing that you should check everything cannot quietly mix in something you can't.</p>
+        <p style="margin:0 0 .6rem">Both tokens are permanently on Base and both are visible from those addresses. <strong>XO2 was not deployed by that wallet</strong>, it was deployed by <a class="mono" href="https://basescan.org/address/0xf4211E309d80a074dAc37C616d1Aa7899ed29807" rel="noopener" title="0xf4211E309d80a074dAc37C616d1Aa7899ed29807">0xf4211E30&hellip;9807</a>, the same address that receives every release above.</p>
+        <p style="margin:0"><strong>One thing here you cannot check and are taking from us: both wallets are ours.</strong> No chain query establishes that, we are telling you, in our own voice, because a page arguing that you should check everything cannot quietly mix in something you can't.</p>
       </div>
 
     </div>
@@ -471,7 +499,7 @@ balanceOf()    for 0xf4211E30…9807 and 0x3129b6…1783 — both zero</code></p
 
   /* Shared by both success renders (card redirect-back and wallet inline).
      site.js only binds [data-copy] buttons present at load, so anything
-     injected later — like these — needs its own listener. */
+     injected later, like these, needs its own listener. */
   function wireCopyButton(btnId, valueId) {
     var btn = document.getElementById(btnId);
     var val = document.getElementById(valueId);
@@ -566,7 +594,7 @@ balanceOf()    for 0xf4211E30…9807 and 0x3129b6…1783 — both zero</code></p
 
   function renderConfirm(challenge, info) {
     renderPanel(
-      '<p>Wallet ' + esc(shortAddr(info.account)) + ' holds ' + esc(info.heldDisplay) + ' USDC on Base — enough to pay ' + esc(info.requiredDisplay) + '.</p>' +
+      '<p>Wallet ' + esc(shortAddr(info.account)) + ' holds ' + esc(info.heldDisplay) + ' USDC on Base, enough to pay ' + esc(info.requiredDisplay) + '.</p>' +
       '<button class="btn btn-primary btn-sm" type="button" id="pass-sign-btn">Sign &amp; pay ' + esc(info.requiredDisplay) + ' USDC</button>'
     );
     document.getElementById('pass-sign-btn').addEventListener('click', function () {
@@ -602,7 +630,7 @@ balanceOf()    for 0xf4211E30…9807 and 0x3129b6…1783 — both zero</code></p
         '<div class="pr-success-icon" aria-hidden="true"></div>' +
         '<div><h2 style="font-size:0.9375rem">Paid.</h2></div>' +
       '</div>' +
-      '<p style="margin-top:0.625rem;color:var(--fg-strong);font-weight:500">This is the only proof of purchase — save it now.</p>' +
+      '<p style="margin-top:0.625rem;color:var(--fg-strong);font-weight:500">This is the only proof of purchase, save it now.</p>' +
       (url
         ? '<div class="pr-url-row" style="margin-top:0.75rem"><div class="pr-url" id="pr-wallet-url-value">' + esc(url) + '</div><button class="copy-btn" type="button" id="pr-wallet-copy-btn">Copy</button></div>'
         : '<p style="margin-top:0.75rem">' + esc((payload && (payload.note || payload.keep_this_token)) || 'Check the response for your token.') + '</p>')
@@ -650,7 +678,7 @@ balanceOf()    for 0xf4211E30…9807 and 0x3129b6…1783 — both zero</code></p
         if (s && STATE_LABEL[state]) s.textContent = STATE_LABEL[state];
       }
     }).then(function (signed) {
-      renderPanel('<p>Payment signed — completing your purchase…</p>');
+      renderPanel('<p>Payment signed, completing your purchase…</p>');
       return callBuyPass(signed.payment);
     }).then(function (res) {
       if (isX402(res.payload)) {
@@ -680,12 +708,12 @@ balanceOf()    for 0xf4211E30…9807 and 0x3129b6…1783 — both zero</code></p
         // no free tier, so anything other than a challenge is unexpected.
         renderPanel('<p>Unexpected response from the server. Try again in a moment.</p>');
         buyBtn.disabled = false;
-        buyBtn.textContent = 'Buy the pass — $9';
+        buyBtn.textContent = 'Buy the pass, $9';
         return;
       }
       priceDisplay = payAmountDisplay(challenge);
       buyBtn.disabled = false;
-      buyBtn.textContent = 'Buy the pass' + (priceDisplay ? ' — ' + priceDisplay : ' — $9');
+      buyBtn.textContent = 'Buy the pass' + (priceDisplay ? ', ' + priceDisplay : ', $9');
       renderPanel('<p>Checking your wallet…</p>');
       window.x402Pay.inspect(challenge).then(function (info) {
         if (info.canPay) renderConfirm(challenge, info);
@@ -696,7 +724,7 @@ balanceOf()    for 0xf4211E30…9807 and 0x3129b6…1783 — both zero</code></p
     }).catch(function () {
       renderPanel('<p>Could not reach the server to read the price. Try again in a moment.</p>');
       buyBtn.disabled = false;
-      buyBtn.textContent = 'Buy the pass — $9';
+      buyBtn.textContent = 'Buy the pass, $9';
     });
   }
 
@@ -715,7 +743,7 @@ balanceOf()    for 0xf4211E30…9807 and 0x3129b6…1783 — both zero</code></p
     box.className = 'panel show';
     meta.textContent = 'checking…';
     body.innerHTML = '<p class="pg-hint">Confirming your payment…</p>';
-    /* How long this exact payment has been stuck in "not ready" — survives the
+    /* How long this exact payment has been stuck in "not ready", survives the
        manual reloads we're telling them to do. A first sighting gets the plain
        "give it a moment" message; past ~45s of real waiting, telling them to
        keep reloading would just be untrue, so the message changes to a real
@@ -743,7 +771,7 @@ balanceOf()    for 0xf4211E30…9807 and 0x3129b6…1783 — both zero</code></p
             body.innerHTML =
               '<p>This is taking longer than it should. If your card was charged, ' +
               'email <a href="mailto:security@0200project.com">security@0200project.com</a> with this page\'s URL ' +
-              'and we\'ll sort it out directly — don\'t assume reloading again will fix it at this point.</p>';
+              'and we\'ll sort it out directly, don\'t assume reloading again will fix it at this point.</p>';
           } else {
             body.innerHTML = '<p>' + esc(r.body.error || 'Your payment is still processing. Reload this page in a few seconds.') + '</p>';
           }
@@ -766,13 +794,13 @@ balanceOf()    for 0xf4211E30…9807 and 0x3129b6…1783 — both zero</code></p
             '</div>' +
           '</div>' +
           '<p style="margin-top:1rem;color:var(--fg-strong);font-weight:500">' +
-            esc(r.body.warning || 'This URL is your only proof of purchase — copy it now, there is no account to recover it from later.') +
+            esc(r.body.warning || 'This URL is your only proof of purchase, copy it now, there is no account to recover it from later.') +
           '</p>' +
           '<div class="pr-url-row" style="margin-top:0.75rem">' +
             '<div class="pr-url" id="pr-url-value">' + esc(r.body.mcp_url) + '</div>' +
             '<button class="copy-btn" type="button" id="pr-copy-btn">Copy</button>' +
           '</div>' +
-          '<p class="pr-success-next">Paste this into any MCP client’s server-URL field to start calling it — no separate credential to configure. <a href="/docs/#quickstart">Quickstart</a></p>';
+          '<p class="pr-success-next">Paste this into any MCP client’s server-URL field to start calling it, no separate credential to configure. <a href="/docs/#quickstart">Quickstart</a></p>';
         wireCopyButton('pr-copy-btn', 'pr-url-value');
       })
       .catch(function () {

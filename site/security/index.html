@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Security — 0200project</title>
+<title>Security, 0200project</title>
 <meta name="description" content="The security posture of 0200project services: no private keys, non-custodial payments, no accounts, no database, deterministic and open source.">
 <meta name="theme-color" content="#050505">
-<meta property="og:title" content="Security — 0200project">
+<meta property="og:title" content="Security, 0200project">
 <meta property="og:description" content="No private keys, non-custodial payments, no accounts, no database, deterministic and open source.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="0200project">
@@ -62,14 +62,14 @@
 
       <h2>No private keys, ever</h2>
       <p>The service never asks for, receives, or stores private keys or seed phrases. There is no request field where one could be supplied, and no account to attach one to.</p>
-      <p>Payments are made from the agent's own wallet, under the agent's own control. The server only checks that a payment settled — it never touches the wallet that made it.</p>
+      <p>Payments are made from the agent's own wallet, under the agent's own control. The server only checks that a payment settled, it never touches the wallet that made it.</p>
 
       <h2>Non-custodial architecture</h2>
       <p>Paid calls settle in USDC on Base through the x402 protocol. Settlement is verified by a facilitator that can confirm a payment but cannot move or redirect funds. The server never holds user assets at any point.</p>
       <p>The payment challenge is carried in the open, inside the tool response: exact amount, asset contract, and recipient address. A paying agent can inspect all of it before deciding to pay.</p>
 
       <h2>Minimal data collection</h2>
-      <p>There are no accounts, no cookies, and no analytics. Client IPs are held transiently in memory, only for rate limiting and free-tier metering, and there is no database — nowhere for data to accumulate, nothing to breach retroactively.</p>
+      <p>There are no accounts, no cookies, and no analytics. Client IPs are held transiently in memory, only for rate limiting and free-tier metering, and there is no database, nowhere for data to accumulate, nothing to breach retroactively.</p>
 
       <h2>Deterministic processing</h2>
       <p>There is no model in the response path. Every response is produced by deterministic decode of public chain data, so the same input always yields the same output and any response can be independently reproduced and audited.</p>
@@ -80,11 +80,11 @@
       <p>Risk-flag blocklists are consumed read-only from public sources (ScamSniffer and MyEtherWallet), refreshed twice daily. The service never writes to them.</p>
 
       <h2>Honest limits</h2>
-      <p>Risk flags report evidence that was found; a failed lookup never produces a flag. By the same token, the absence of a <code class="inline">known_drainer</code> flag is not a safety guarantee — a bad actor may simply not be on any public blocklist yet.</p>
+      <p>Risk flags report evidence that was found; a failed lookup never produces a flag. By the same token, the absence of a <code class="inline">known_drainer</code> flag is not a safety guarantee, a bad actor may simply not be on any public blocklist yet.</p>
       <p>The tool reports what a transaction did, not whether it was a good idea. It is not financial advice.</p>
 
       <h2>Reporting a vulnerability</h2>
-      <p>If you believe you have found a security issue in any 0200project service, open a <a href="https://github.com/0200project/base-tx-explain/security/advisories/new">private security advisory on GitHub</a> with the details — what you found, where, and how to reproduce it. Advisories stay private between you and the maintainers until a fix is out. We read every report and will acknowledge yours promptly.</p>
+      <p>If you believe you have found a security issue in any 0200project service, open a <a href="https://github.com/0200project/base-tx-explain/security/advisories/new">private security advisory on GitHub</a> with the details, what you found, where, and how to reproduce it. Advisories stay private between you and the maintainers until a fix is out. We read every report and will acknowledge yours promptly.</p>
 
     </div>
 

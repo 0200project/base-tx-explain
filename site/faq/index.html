@@ -4,10 +4,10 @@
 <meta charset="utf-8">
 <script>document.documentElement.classList.add('js')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FAQ — Base Transaction Decoding, MCP &amp; x402 | 0200project</title>
+<title>FAQ, Base Transaction Decoding, MCP &amp; x402 | 0200project</title>
 <meta name="description" content="How to decode Base transactions, what an MCP server is, how AI agents pay per call with x402, what the risk flags mean, and honest API comparisons.">
 <meta name="theme-color" content="#050505">
-<meta property="og:title" content="FAQ — Base Transaction Decoding, MCP &amp; x402">
+<meta property="og:title" content="FAQ, Base Transaction Decoding, MCP &amp; x402">
 <meta property="og:description" content="Decoding Base transactions, MCP, x402 pay-per-call, risk flags, and honest comparisons.">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="0200project">
@@ -62,15 +62,15 @@
     <div class="prose">
 
       <h2 id="what-is-it">What is base-transaction-decoder?</h2>
-      <p>base-transaction-decoder is a Base transaction decoder API built for AI agents. It exposes one MCP tool, <code class="inline">explain_transaction(tx_hash)</code>: you send a Base mainnet transaction hash and get back strict JSON — a plain-English summary, a classified action type, every asset that moved, counterparties labeled where known, evidence-based risk flags, and the gas cost in USD. It is built by <a href="/">0200project</a> and the <a href="https://github.com/0200project/base-tx-explain">source is public</a>.</p>
+      <p>base-transaction-decoder is a Base transaction decoder API built for AI agents. It exposes one MCP tool, <code class="inline">explain_transaction(tx_hash)</code>: you send a Base mainnet transaction hash and get back strict JSON, a plain-English summary, a classified action type, every asset that moved, counterparties labeled where known, evidence-based risk flags, and the gas cost in USD. It is built by <a href="/">0200project</a> and the <a href="https://github.com/0200project/base-tx-explain">source is public</a>.</p>
 
       
       <h2 id="what-is-mcp">What is an MCP server?</h2>
-      <p>MCP — the Model Context Protocol — is an open standard that lets AI assistants and agents discover and call external tools in a uniform way. An MCP server exposes one or more tools over a standard transport; the client (Claude, an agent framework, or your own code) lists the tools and calls them with structured arguments. base-transaction-decoder is a deliberately minimal MCP server: one tool, <code class="inline">explain_transaction</code>, served over streamable HTTP and listed in the official MCP registry as <code class="inline">io.github.0200project/base-transaction-decoder</code>.</p>
+      <p>MCP, the Model Context Protocol, is an open standard that lets AI assistants and agents discover and call external tools in a uniform way. An MCP server exposes one or more tools over a standard transport; the client (Claude, an agent framework, or your own code) lists the tools and calls them with structured arguments. base-transaction-decoder is a deliberately minimal MCP server: one tool, <code class="inline">explain_transaction</code>, served over streamable HTTP and listed in the official MCP registry as <code class="inline">io.github.0200project/base-transaction-decoder</code>.</p>
 
       
       <h2 id="mcp-blockchain-tools">Are there MCP blockchain tools for Base?</h2>
-      <p>Yes — base-transaction-decoder is an MCP blockchain tool built specifically for Base: it turns any Base mainnet transaction into strict JSON over the Model Context Protocol. The official MCP registry lists other blockchain servers too, mostly for raw chain data — balances, logs, blocks. base-transaction-decoder is the explanation layer: one call that says what a transaction <em>did</em>, with risk flags attached. The two kinds compose well — raw-data servers for lookups, base-transaction-decoder for understanding.</p>
+      <p>Yes, base-transaction-decoder is an MCP blockchain tool built specifically for Base: it turns any Base mainnet transaction into strict JSON over the Model Context Protocol. The official MCP registry lists other blockchain servers too, mostly for raw chain data, balances, logs, blocks. base-transaction-decoder is the explanation layer: one call that says what a transaction <em>did</em>, with risk flags attached. The two kinds compose well, raw-data servers for lookups, base-transaction-decoder for understanding.</p>
 
       <h2 id="how-to-decode">How do I decode a Base transaction programmatically?</h2>
       <p>Connect any MCP client to the hosted endpoint at <code class="inline">https://api.0200project.com/mcp</code> (streamable HTTP), or send a plain JSON-RPC <code class="inline">tools/call</code> request with curl. The response is strict JSON with a stable schema, so software can parse it blind. The <a href="/docs/#quickstart">quickstart</a> has the exact config and curl command, and the <a href="/playground/">playground</a> decodes hashes live in your browser.</p>
@@ -79,35 +79,35 @@
       <p>No. There are no accounts, no signup, and no API keys. Every client gets 50 free calls a day (one IPv4 address, or one IPv6 /64), shared by everyone behind it; after that, each call costs $0.02 in USDC on Base, paid through the x402 protocol. The payment challenge arrives inside the response, so an autonomous agent can pay and retry without a human ever filling in a form.</p>
 
       <h2 id="x402">What is x402 and how does pay-per-call work?</h2>
-      <p>x402 is an open protocol that puts the HTTP <code class="inline">402 Payment Required</code> status to work: when a call needs payment, the response carries the exact price, asset, and recipient. The caller pays in USDC on Base from its own wallet, attaches proof of payment, and retries — the whole loop is machine-to-machine. Settlement is verified by a non-custodial facilitator that cannot move or redirect funds, and the server never holds assets or asks for keys. Details in the <a href="/docs/#x402-payments">payment docs</a>.</p>
+      <p>x402 is an open protocol that puts the HTTP <code class="inline">402 Payment Required</code> status to work: when a call needs payment, the response carries the exact price, asset, and recipient. The caller pays in USDC on Base from its own wallet, attaches proof of payment, and retries, the whole loop is machine-to-machine. Settlement is verified by a non-custodial facilitator that cannot move or redirect funds, and the server never holds assets or asks for keys. Details in the <a href="/docs/#x402-payments">payment docs</a>.</p>
 
       <h2 id="subscription">Is there a subscription?</h2>
-      <p>No &mdash; and by construction it can&rsquo;t silently charge you: x402 payments are one-shot authorizations signed by the caller, so nothing here can auto-renew or pull funds later. For volume there is a pass instead: $9 buys 30 days and up to 10,000 calls, purchased with a single x402 payment via <code class="inline">POST /pass</code> or the <code class="inline">buy_pass</code> tool. It returns a bearer token &mdash; no account, transferable, and a lost token is a lost pass. When it expires or runs out, calls fall back to the standard pay-per-call flow, and an agent renews by buying a new pass in the same loop. Details in the <a href="/docs/#pass">pass docs</a>.</p>
+      <p>No, and by construction it can&rsquo;t silently charge you: x402 payments are one-shot authorizations signed by the caller, so nothing here can auto-renew or pull funds later. For volume there is a pass instead: $9 buys 30 days and up to 10,000 calls, purchased with a single x402 payment via <code class="inline">POST /pass</code> or the <code class="inline">buy_pass</code> tool. It returns a bearer token, no account, transferable, and a lost token is a lost pass. When it expires or runs out, calls fall back to the standard pay-per-call flow, and an agent renews by buying a new pass in the same loop. Details in the <a href="/docs/#pass">pass docs</a>.</p>
 
       <h2 id="what-it-detects">What kinds of transactions can it decode?</h2>
       <p>The decoder classifies 30 action types from ~40 builtin event formats: swaps on Uniswap V2, V3, and V4 and Aerodrome; ERC-20, ERC-721, and ERC-1155 transfers; NFT mints, transfers, and Seaport sales; OP-stack bridge deposits and withdrawals; Aave V3 and Compound V3 lending; staking, wrapping, and claims; ERC-4337 account-abstraction bundles; EAS attestations; Basename registrations; and contract deployments. When a transaction can&rsquo;t be fully decoded, the output says so honestly instead of guessing. The full enum is in the <a href="/docs/#response-schema">response schema</a>.</p>
 
-      <h2 id="risk-flags">What are the risk flags — and are they a safety guarantee?</h2>
-      <p>Eight flags, each raised only when evidence was found: <code class="inline">unverified_contract</code>, <code class="inline">unlimited_approval</code>, <code class="inline">approval_for_all</code>, <code class="inline">known_drainer</code> (matched against the ScamSniffer and MyEtherWallet public blocklists), <code class="inline">first_time_counterparty</code>, <code class="inline">impersonated_token</code> (a known token’s symbol reported from the wrong contract address), <code class="inline">nonstandard_token_symbol</code>, and <code class="inline">transaction_reverted</code>. A failed lookup never produces a flag — and the absence of a flag is not a safety guarantee. The tool reports what a transaction did, not whether it was a good idea; it is not financial advice.</p>
+      <h2 id="risk-flags">What are the risk flags, and are they a safety guarantee?</h2>
+      <p>Eight flags, each raised only when evidence was found: <code class="inline">unverified_contract</code>, <code class="inline">unlimited_approval</code>, <code class="inline">approval_for_all</code>, <code class="inline">known_drainer</code> (matched against the ScamSniffer and MyEtherWallet public blocklists), <code class="inline">first_time_counterparty</code>, <code class="inline">impersonated_token</code> (a known token’s symbol reported from the wrong contract address), <code class="inline">nonstandard_token_symbol</code>, and <code class="inline">transaction_reverted</code>. A failed lookup never produces a flag, and the absence of a flag is not a safety guarantee. The tool reports what a transaction did, not whether it was a good idea; it is not financial advice.</p>
 
-      <h2 id="deterministic">Why is the decode deterministic — where&rsquo;s the LLM?</h2>
+      <h2 id="deterministic">Why is the decode deterministic, where&rsquo;s the LLM?</h2>
       <p>There is no LLM anywhere in the response path, by design. Every response is produced by deterministic onchain decoding: the same transaction decoded against the same chain state yields the same JSON. Nothing can hallucinate, the schema never drifts, and your agent doesn&rsquo;t burn tokens reasoning over raw event logs when the decode is mechanical.</p>
 
       <h2 id="vs-etherscan-blockscout">How is this different from the Etherscan or Blockscout APIs?</h2>
-      <p>Different jobs. Etherscan and Blockscout are excellent block explorers that return raw or lightly enriched data — logs, traces, token balances — and Etherscan moved Base API access to its paid plans in 2026. Blockscout&rsquo;s transaction summary is display-oriented prose with an LLM fallback, so it isn&rsquo;t guaranteed deterministic and doesn&rsquo;t carry a stable schema contract or risk flags. base-transaction-decoder does one narrow thing those don&rsquo;t: a single call that turns a transaction into an explanation-level, deterministic, strict-JSON answer with risk signals — no account, no key, priced per call. If you need raw chain data, use an explorer API; if your agent needs to know what a transaction <em>did</em>, that&rsquo;s what this is for.</p>
+      <p>Different jobs. Etherscan and Blockscout are excellent block explorers that return raw or lightly enriched data, logs, traces, token balances, and Etherscan moved Base API access to its paid plans in 2026. Blockscout&rsquo;s transaction summary is display-oriented prose with an LLM fallback, so it isn&rsquo;t guaranteed deterministic and doesn&rsquo;t carry a stable schema contract or risk flags. base-transaction-decoder does one narrow thing those don&rsquo;t: a single call that turns a transaction into an explanation-level, deterministic, strict-JSON answer with risk signals, no account, no key, priced per call. If you need raw chain data, use an explorer API; if your agent needs to know what a transaction <em>did</em>, that&rsquo;s what this is for.</p>
 
       <h2 id="chains">Which chains are supported?</h2>
-      <p>Base mainnet (chain id 8453) only, today. More machine-native tools are in development — new releases are announced on the <a href="/changelog/">changelog</a>.</p>
+      <p>Base mainnet (chain id 8453) only, today. More machine-native tools are in development, new releases are announced on the <a href="/changelog/">changelog</a>.</p>
 
       <h2 id="self-host">Can I self-host it?</h2>
-      <p>Yes. The server is open source, stateless, and runs anywhere Docker runs — clone the <a href="https://github.com/0200project/base-tx-explain">repository</a>, <code class="inline">npm install</code>, and start it in free mode with public Base RPCs. Self-hosting instructions and every environment variable are in the <a href="/docs/#installation">docs</a>.</p>
+      <p>Yes. The server is open source, stateless, and runs anywhere Docker runs, clone the <a href="https://github.com/0200project/base-tx-explain">repository</a>, <code class="inline">npm install</code>, and start it in free mode with public Base RPCs. Self-hosting instructions and every environment variable are in the <a href="/docs/#installation">docs</a>.</p>
 
       <h2 id="agents-pay">Can AI agents really pay for API calls by themselves?</h2>
-      <p>Yes — that is the point of this whole stack. An x402-capable agent holds its own wallet, reads the 402 payment challenge from the response, pays $0.02 in USDC on Base, and retries with proof of payment attached. No card on file, no subscription, no human in the loop. You can watch the loop replayed on the <a href="/">home page</a>, or decode transactions live in the <a href="/playground/">playground</a>.</p>
+      <p>Yes, that is the point of this whole stack. An x402-capable agent holds its own wallet, reads the 402 payment challenge from the response, pays $0.02 in USDC on Base, and retries with proof of payment attached. No card on file, no subscription, no human in the loop. You can watch the loop replayed on the <a href="/">home page</a>, or decode transactions live in the <a href="/playground/">playground</a>.</p>
 
       
       <h2 id="paid-json-api">Is there a blockchain JSON API an AI agent can pay for per call?</h2>
-      <p>That is exactly what base-transaction-decoder is: a blockchain JSON API priced per call for autonomous agents. Every response is deterministic strict JSON, and payment happens in-band through x402 — the agent hits the paywall, pays $0.02 in USDC on Base from its own wallet, and retries, with no account or API key anywhere in the loop. Among crypto tools for AI agents, the design goal here is to be the one your agent can rely on blind: stable schema, evidence-based risk flags, and honest partials when something can&rsquo;t be decoded.</p>
+      <p>That is exactly what base-transaction-decoder is: a blockchain JSON API priced per call for autonomous agents. Every response is deterministic strict JSON, and payment happens in-band through x402, the agent hits the paywall, pays $0.02 in USDC on Base from its own wallet, and retries, with no account or API key anywhere in the loop. Among crypto tools for AI agents, the design goal here is to be the one your agent can rely on blind: stable schema, evidence-based risk flags, and honest partials when something can&rsquo;t be decoded.</p>
 
       <p style="margin-top:3rem"><a class="btn btn-primary" href="/playground/">Try the playground</a>&nbsp;&nbsp;<a class="btn btn-ghost" href="/docs/">Read the docs</a></p>
 
@@ -126,7 +126,7 @@
       "name": "What is base-transaction-decoder?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "base-transaction-decoder is a Base transaction decoder API built for AI agents. It exposes one MCP tool, explain_transaction(tx_hash): you send a Base mainnet transaction hash and get back strict JSON — a plain-English summary, a classified action type, every asset that moved, counterparties labeled where known, evidence-based risk flags, and the gas cost in USD. It is built by 0200project and the source is public."
+        "text": "base-transaction-decoder is a Base transaction decoder API built for AI agents. It exposes one MCP tool, explain_transaction(tx_hash): you send a Base mainnet transaction hash and get back strict JSON, a plain-English summary, a classified action type, every asset that moved, counterparties labeled where known, evidence-based risk flags, and the gas cost in USD. It is built by 0200project and the source is public."
       }
     },
     {
@@ -134,7 +134,7 @@
       "name": "What is an MCP server?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "MCP — the Model Context Protocol — is an open standard that lets AI assistants and agents discover and call external tools in a uniform way. An MCP server exposes one or more tools over a standard transport; the client (Claude, an agent framework, or your own code) lists the tools and calls them with structured arguments. base-transaction-decoder is a deliberately minimal MCP server: one tool, explain_transaction, served over streamable HTTP and listed in the official MCP registry as io.github.0200project/base-transaction-decoder."
+        "text": "MCP, the Model Context Protocol, is an open standard that lets AI assistants and agents discover and call external tools in a uniform way. An MCP server exposes one or more tools over a standard transport; the client (Claude, an agent framework, or your own code) lists the tools and calls them with structured arguments. base-transaction-decoder is a deliberately minimal MCP server: one tool, explain_transaction, served over streamable HTTP and listed in the official MCP registry as io.github.0200project/base-transaction-decoder."
       }
     },
     {
@@ -142,7 +142,7 @@
       "name": "Are there MCP blockchain tools for Base?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes — base-transaction-decoder is an MCP blockchain tool built specifically for Base: it turns any Base mainnet transaction into strict JSON over the Model Context Protocol. The official MCP registry lists other blockchain servers too, mostly for raw chain data — balances, logs, blocks. base-transaction-decoder is the explanation layer: one call that says what a transaction did, with risk flags attached. The two kinds compose well — raw-data servers for lookups, base-transaction-decoder for understanding."
+        "text": "Yes, base-transaction-decoder is an MCP blockchain tool built specifically for Base: it turns any Base mainnet transaction into strict JSON over the Model Context Protocol. The official MCP registry lists other blockchain servers too, mostly for raw chain data, balances, logs, blocks. base-transaction-decoder is the explanation layer: one call that says what a transaction did, with risk flags attached. The two kinds compose well, raw-data servers for lookups, base-transaction-decoder for understanding."
       }
     },
     {
@@ -166,7 +166,7 @@
       "name": "What is x402 and how does pay-per-call work?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "x402 is an open protocol that puts the HTTP 402 Payment Required status to work: when a call needs payment, the response carries the exact price, asset, and recipient. The caller pays in USDC on Base from its own wallet, attaches proof of payment, and retries — the whole loop is machine-to-machine. Settlement is verified by a non-custodial facilitator that cannot move or redirect funds, and the server never holds assets or asks for keys. Details in the payment docs."
+        "text": "x402 is an open protocol that puts the HTTP 402 Payment Required status to work: when a call needs payment, the response carries the exact price, asset, and recipient. The caller pays in USDC on Base from its own wallet, attaches proof of payment, and retries, the whole loop is machine-to-machine. Settlement is verified by a non-custodial facilitator that cannot move or redirect funds, and the server never holds assets or asks for keys. Details in the payment docs."
       }
     },
     {
@@ -174,7 +174,7 @@
       "name": "Is there a subscription?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "No — and by construction it can’t silently charge you: x402 payments are one-shot authorizations signed by the caller, so nothing here can auto-renew or pull funds later. For volume there is a pass instead: $9 buys 30 days and up to 10,000 calls, purchased with a single x402 payment via POST /pass or the buy_pass tool. It returns a bearer token — no account, transferable, and a lost token is a lost pass. When it expires or runs out, calls fall back to the standard pay-per-call flow, and an agent renews by buying a new pass in the same loop. Details in the pass docs."
+        "text": "No, and by construction it can’t silently charge you: x402 payments are one-shot authorizations signed by the caller, so nothing here can auto-renew or pull funds later. For volume there is a pass instead: $9 buys 30 days and up to 10,000 calls, purchased with a single x402 payment via POST /pass or the buy_pass tool. It returns a bearer token, no account, transferable, and a lost token is a lost pass. When it expires or runs out, calls fall back to the standard pay-per-call flow, and an agent renews by buying a new pass in the same loop. Details in the pass docs."
       }
     },
     {
@@ -187,15 +187,15 @@
     },
     {
       "@type": "Question",
-      "name": "What are the risk flags — and are they a safety guarantee?",
+      "name": "What are the risk flags, and are they a safety guarantee?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Eight flags, each raised only when evidence was found: unverified_contract, unlimited_approval, approval_for_all, known_drainer (matched against the ScamSniffer and MyEtherWallet public blocklists), first_time_counterparty, impersonated_token (a known token’s symbol reported from the wrong contract address), nonstandard_token_symbol, and transaction_reverted. A failed lookup never produces a flag — and the absence of a flag is not a safety guarantee. The tool reports what a transaction did, not whether it was a good idea; it is not financial advice."
+        "text": "Eight flags, each raised only when evidence was found: unverified_contract, unlimited_approval, approval_for_all, known_drainer (matched against the ScamSniffer and MyEtherWallet public blocklists), first_time_counterparty, impersonated_token (a known token’s symbol reported from the wrong contract address), nonstandard_token_symbol, and transaction_reverted. A failed lookup never produces a flag, and the absence of a flag is not a safety guarantee. The tool reports what a transaction did, not whether it was a good idea; it is not financial advice."
       }
     },
     {
       "@type": "Question",
-      "name": "Why is the decode deterministic — where’s the LLM?",
+      "name": "Why is the decode deterministic, where’s the LLM?",
       "acceptedAnswer": {
         "@type": "Answer",
         "text": "There is no LLM anywhere in the response path, by design. Every response is produced by deterministic onchain decoding: the same transaction decoded against the same chain state yields the same JSON. Nothing can hallucinate, the schema never drifts, and your agent doesn’t burn tokens reasoning over raw event logs when the decode is mechanical."
@@ -206,7 +206,7 @@
       "name": "How is this different from the Etherscan or Blockscout APIs?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Different jobs. Etherscan and Blockscout are excellent block explorers that return raw or lightly enriched data — logs, traces, token balances — and Etherscan moved Base API access to its paid plans in 2026. Blockscout’s transaction summary is display-oriented prose with an LLM fallback, so it isn’t guaranteed deterministic and doesn’t carry a stable schema contract or risk flags. base-transaction-decoder does one narrow thing those don’t: a single call that turns a transaction into an explanation-level, deterministic, strict-JSON answer with risk signals — no account, no key, priced per call. If you need raw chain data, use an explorer API; if your agent needs to know what a transaction did, that’s what this is for."
+        "text": "Different jobs. Etherscan and Blockscout are excellent block explorers that return raw or lightly enriched data, logs, traces, token balances, and Etherscan moved Base API access to its paid plans in 2026. Blockscout’s transaction summary is display-oriented prose with an LLM fallback, so it isn’t guaranteed deterministic and doesn’t carry a stable schema contract or risk flags. base-transaction-decoder does one narrow thing those don’t: a single call that turns a transaction into an explanation-level, deterministic, strict-JSON answer with risk signals, no account, no key, priced per call. If you need raw chain data, use an explorer API; if your agent needs to know what a transaction did, that’s what this is for."
       }
     },
     {
@@ -214,7 +214,7 @@
       "name": "Which chains are supported?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Base mainnet (chain id 8453) only, today. More machine-native tools are in development — new releases are announced on the changelog."
+        "text": "Base mainnet (chain id 8453) only, today. More machine-native tools are in development, new releases are announced on the changelog."
       }
     },
     {
@@ -222,7 +222,7 @@
       "name": "Can I self-host it?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. The server is open source, stateless, and runs anywhere Docker runs — clone the repository, npm install, and start it in free mode with public Base RPCs. Self-hosting instructions and every environment variable are in the docs."
+        "text": "Yes. The server is open source, stateless, and runs anywhere Docker runs, clone the repository, npm install, and start it in free mode with public Base RPCs. Self-hosting instructions and every environment variable are in the docs."
       }
     },
     {
@@ -230,7 +230,7 @@
       "name": "Can AI agents really pay for API calls by themselves?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes — that is the point of this whole stack. An x402-capable agent holds its own wallet, reads the 402 payment challenge from the response, pays $0.02 in USDC on Base, and retries with proof of payment attached. No card on file, no subscription, no human in the loop. You can watch the loop replayed on the home page, or decode transactions live in the playground."
+        "text": "Yes, that is the point of this whole stack. An x402-capable agent holds its own wallet, reads the 402 payment challenge from the response, pays $0.02 in USDC on Base, and retries with proof of payment attached. No card on file, no subscription, no human in the loop. You can watch the loop replayed on the home page, or decode transactions live in the playground."
       }
     },
     {
@@ -238,7 +238,7 @@
       "name": "Is there a blockchain JSON API an AI agent can pay for per call?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "That is exactly what base-transaction-decoder is: a blockchain JSON API priced per call for autonomous agents. Every response is deterministic strict JSON, and payment happens in-band through x402 — the agent hits the paywall, pays $0.02 in USDC on Base from its own wallet, and retries, with no account or API key anywhere in the loop. Among crypto tools for AI agents, the design goal here is to be the one your agent can rely on blind: stable schema, evidence-based risk flags, and honest partials when something can’t be decoded."
+        "text": "That is exactly what base-transaction-decoder is: a blockchain JSON API priced per call for autonomous agents. Every response is deterministic strict JSON, and payment happens in-band through x402, the agent hits the paywall, pays $0.02 in USDC on Base from its own wallet, and retries, with no account or API key anywhere in the loop. Among crypto tools for AI agents, the design goal here is to be the one your agent can rely on blind: stable schema, evidence-based risk flags, and honest partials when something can’t be decoded."
       }
     }
   ]
