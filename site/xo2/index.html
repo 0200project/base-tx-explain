@@ -179,8 +179,11 @@
 
       <div class="led">
         <div class="panel-head"><span>the two failures</span><span>read from receipts</span></div>
-        <div class="led-row"><span class="led-lbl">nonce 8</span><span class="led-val">Duplicate distributor, sent after nonce 7 had already deployed it<small><code class="inline">0x5b88e0d0&hellip;1f71</code> &middot; reverted, no logs</small></span><span class="led-amt">16,516,751 gas</span></div>
-        <div class="led-row"><span class="led-lbl">nonce 10</span><span class="led-val">Duplicate token, sent after nonce 9 had already deployed it<small><code class="inline">0xe6e193c8&hellip;8675</code> &middot; reverted, no logs</small></span><span class="led-amt">16,517,772 gas</span></div>
+        <div class="led-row"><span class="led-lbl">nonce 8</span><span class="led-val">Duplicate distributor, sent after nonce 7 had already deployed it<small><a class="mono" href="https://basescan.org/tx/0x5b88e0d0391e0e779bffafccd8c5a000d91c0bf1a6b114f1fa5e49134ddd1f71" rel="noopener" title="0x5b88e0d0391e0e779bffafccd8c5a000d91c0bf1a6b114f1fa5e49134ddd1f71">0x5b88e0d0&hellip;1f71</a> &middot; reverted, no logs</small></span><span class="led-amt">16,516,751 gas</span></div>
+        <div class="led-row"><span class="led-lbl">nonce 10</span><span class="led-val">Duplicate token, sent after nonce 9 had already deployed it<small><a class="mono" href="https://basescan.org/tx/0xe6e193c85042359c721a42c938edeafd6fad0b938a681d81ad25d1ed82bc8675" rel="noopener" title="0xe6e193c85042359c721a42c938edeafd6fad0b938a681d81ad25d1ed82bc8675">0xe6e193c8&hellip;8675</a> &middot; reverted, no logs</small></span><span class="led-amt">16,517,772 gas</span></div>
+        <div class="led-foot" style="word-break:break-all"><b>The two hashes in full, so you can paste them anywhere:</b><br>
+        <span class="mono small">0x5b88e0d0391e0e779bffafccd8c5a000d91c0bf1a6b114f1fa5e49134ddd1f71</span><br>
+        <span class="mono small">0xe6e193c85042359c721a42c938edeafd6fad0b938a681d81ad25d1ed82bc8675</span></div>
         <div class="led-foot">A wallet popup vanished mid-signature and the transaction was re-sent. <b>It happened twice.</b> Both re-sends were deployments to an address that was already occupied, and because every contract here was deployed with <code class="inline">CREATE2</code> &mdash; where the address is fixed by the salt rather than by the sender&rsquo;s nonce &mdash; <b>the duplicate reverted instead of deploying a second copy</b>. With nonce-based <code class="inline">CREATE</code> each re-send would have landed at a fresh address and produced a real duplicate contract holding real supply.</div>
       </div>
       <p class="term-note" style="margin-top:.75rem">Total cost of both mistakes: <strong>33,034,523 gas</strong>, which is about <strong>$0.50</strong> at the gas price our own decoder reports for the block that carried the token deployment. We are publishing the failures because they are the only evidence we have that the design choice was worth making, and evidence about ourselves is the kind nobody volunteers.</p>
@@ -190,11 +193,18 @@
 
       <div class="led">
         <div class="panel-head"><span>five locks &middot; one beneficiary</span><span>holding &amp; per-30-day ceiling</span></div>
-        <div class="led-row"><span class="led-lbl">founder/team</span><span class="led-val"><code class="inline">0x78e0DA18&hellip;408F</code><small>ceiling 417,000 per 30 days</small></span><span class="led-amt">20,000,000</span></div>
-        <div class="led-row"><span class="led-lbl">treasury</span><span class="led-val"><code class="inline">0x9F0Ddc55&hellip;A818</code><small>ceiling 630,000 per 30 days</small></span><span class="led-amt">15,000,000</span></div>
-        <div class="led-row"><span class="led-lbl">ecosystem</span><span class="led-val"><code class="inline">0x98aa8D4F&hellip;B6CE</code><small>ceiling 520,000 per 30 days</small></span><span class="led-amt">25,000,000</span></div>
-        <div class="led-row"><span class="led-lbl">contributors</span><span class="led-val"><code class="inline">0x6594662D&hellip;CeDa</code><small>ceiling 210,000 per 30 days</small></span><span class="led-amt">5,000,000</span></div>
-        <div class="led-row"><span class="led-lbl">undesignated</span><span class="led-val"><code class="inline">0x3f4Fb350&hellip;9Cd1</code><small>ceiling 729,000 per 30 days</small></span><span class="led-amt">35,000,000</span></div>
+        <div class="led-row"><span class="led-lbl">founder/team</span><span class="led-val"><a class="mono" href="https://basescan.org/address/0x78e0DA1821C214534523262EFaC2Df561c00408F" rel="noopener" title="0x78e0DA1821C214534523262EFaC2Df561c00408F">0x78e0DA18&hellip;408F</a><small>ceiling 417,000 per 30 days</small></span><span class="led-amt">20,000,000</span></div>
+        <div class="led-row"><span class="led-lbl">treasury</span><span class="led-val"><a class="mono" href="https://basescan.org/address/0x9F0Ddc559d1071c135b6265c2DBB2fB8407bA818" rel="noopener" title="0x9F0Ddc559d1071c135b6265c2DBB2fB8407bA818">0x9F0Ddc55&hellip;A818</a><small>ceiling 630,000 per 30 days</small></span><span class="led-amt">15,000,000</span></div>
+        <div class="led-row"><span class="led-lbl">ecosystem</span><span class="led-val"><a class="mono" href="https://basescan.org/address/0x98aa8D4F6EAB6EF780800b1C3183897703E7B6CE" rel="noopener" title="0x98aa8D4F6EAB6EF780800b1C3183897703E7B6CE">0x98aa8D4F&hellip;B6CE</a><small>ceiling 520,000 per 30 days</small></span><span class="led-amt">25,000,000</span></div>
+        <div class="led-row"><span class="led-lbl">contributors</span><span class="led-val"><a class="mono" href="https://basescan.org/address/0x6594662D521eb4e66F94B44149F92cc1928FCeDa" rel="noopener" title="0x6594662D521eb4e66F94B44149F92cc1928FCeDa">0x6594662D&hellip;CeDa</a><small>ceiling 210,000 per 30 days</small></span><span class="led-amt">5,000,000</span></div>
+        <div class="led-row"><span class="led-lbl">undesignated</span><span class="led-val"><a class="mono" href="https://basescan.org/address/0x3f4Fb350Ccdf0a604E5a32e4032e150d7e539Cd1" rel="noopener" title="0x3f4Fb350Ccdf0a604E5a32e4032e150d7e539Cd1">0x3f4Fb350&hellip;9Cd1</a><small>ceiling 729,000 per 30 days</small></span><span class="led-amt">35,000,000</span></div>
+        <div class="led-foot" style="word-break:break-all"><b>The five lock addresses in full:</b><br>
+        <span class="mono small">0x78e0DA1821C214534523262EFaC2Df561c00408F</span><br>
+        <span class="mono small">0x9F0Ddc559d1071c135b6265c2DBB2fB8407bA818</span><br>
+        <span class="mono small">0x98aa8D4F6EAB6EF780800b1C3183897703E7B6CE</span><br>
+        <span class="mono small">0x6594662D521eb4e66F94B44149F92cc1928FCeDa</span><br>
+        <span class="mono small">0x3f4Fb350Ccdf0a604E5a32e4032e150d7e539Cd1</span><br>
+        <span class="small faint">distributor 0x2FaBA769283db7d5FF6A71DC930b2dB2521b2d95</span></div>
         <div class="led-foot">Holdings sum to <b>100,000,000 exactly</b>. Each lock carries its own ceiling and they are never pooled &mdash; a lock cannot borrow another's allowance. Every lock enforces a <b>30-day delay</b> before a release completes.</div>
       </div>
 
@@ -216,7 +226,7 @@
       <h2 class="h-section" style="margin:2.5rem 0 .75rem">Nobody can mint, pause, upgrade or seize it.</h2>
       <p class="lead" style="margin-bottom:1rem">We checked by calling the privileged functions rather than by reading our own source. Each of these reverts on the deployed token, because the function does not exist:</p>
       <div class="codeblock">
-        <div class="panel-head"><span>absent on 0xdE906C74&hellip;414b</span><span>every call reverts</span></div>
+        <div class="panel-head"><span>absent on <a class="mono" href="https://basescan.org/address/0xdE906C748E56fD6F648eb8564532673257Ac414b" rel="noopener" title="0xdE906C748E56fD6F648eb8564532673257Ac414b">0xdE906C74&hellip;414b</a></span><span>every call reverts</span></div>
         <pre><code>owner()            getOwner()          admin()
 pendingOwner()     transferOwnership() renounceOwnership()
 mint()             burn()              burnFrom()
@@ -250,9 +260,9 @@ balanceOf()    for 0xf4211E30…9807 and 0x3129b6…1783 — both zero</code></p
 
       <h2 class="h-section" style="margin:2.5rem 0 .75rem">There was an earlier token, and it is not this one.</h2>
       <div class="card" style="border-left:2px solid var(--border-strong)">
-        <p style="margin:0 0 .6rem">A different wallet, <code class="inline">0x3129b6&hellip;1783</code>, deployed a token called <strong>$0200</strong> on 2026&#8209;09&#8209;01 at 17:21&nbsp;UTC. It was retired <strong>31 hours later</strong>: the pool was withdrawn and the entire supply sent to an address it cannot leave. That wallet holds none of it, and holds no XO2 either.</p>
-        <p style="margin:0 0 .6rem">Both tokens are permanently on Base and both are visible from those addresses. <strong>XO2 was not deployed by that wallet</strong> &mdash; it was deployed by <code class="inline">0xf4211E30&hellip;9807</code>, the same address that receives every release above.</p>
-        <p class="small" style="margin:0"><strong>One thing here you cannot check and are taking from us:</strong> both wallets are ours. No chain query establishes that &mdash; we are telling you, in our own voice, because a page arguing that you should check everything cannot quietly mix in something you can't.</p>
+        <p style="margin:0 0 .6rem">A different wallet, <a class="mono" href="https://basescan.org/address/0x3129b6525dBe86a0c61d3C8ad162A333a5EF1783" rel="noopener" title="0x3129b6525dBe86a0c61d3C8ad162A333a5EF1783">0x3129b6&hellip;1783</a>, deployed a token called <strong>$0200</strong> on 2026&#8209;09&#8209;01 at 17:21&nbsp;UTC. It was retired <strong>31 hours later</strong>: the pool was withdrawn and the entire supply sent to an address it cannot leave. That wallet holds none of it, and holds no XO2 either.</p>
+        <p style="margin:0 0 .6rem">Both tokens are permanently on Base and both are visible from those addresses. <strong>XO2 was not deployed by that wallet</strong> &mdash; it was deployed by <a class="mono" href="https://basescan.org/address/0xf4211E309d80a074dAc37C616d1Aa7899ed29807" rel="noopener" title="0xf4211E309d80a074dAc37C616d1Aa7899ed29807">0xf4211E30&hellip;9807</a>, the same address that receives every release above.</p>
+        <p style="margin:0"><strong>One thing here you cannot check and are taking from us: both wallets are ours.</strong> No chain query establishes that &mdash; we are telling you, in our own voice, because a page arguing that you should check everything cannot quietly mix in something you can't.</p>
       </div>
 
     </div>
