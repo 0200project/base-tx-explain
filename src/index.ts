@@ -114,7 +114,7 @@ const TOOL_DESCRIPTION =
   // signal that this costs money is a 402 an unequipped client cannot act on,
   // by which point the operator is debugging rather than deciding. Say the price
   // and the routes up front, while they can still choose to pay.
-  `PRICING: ${FREE_CALLS} free calls per IP per 24h - shared by everyone behind one address - then $0.02 in USDC on Base via x402 - ` +
+  `PRICING: ${FREE_CALLS} free calls per 24h per IPv4 address or IPv6 /64 - then $0.02 in USDC on Base via x402 - ` +
   'attach payment at _meta[\'x402/payment\'] and retry, or use POST /explain over plain HTTP with any x402 client. ' +
   'Heavy use: $9 buys a 30-day pass (10,000 calls) via the buy_pass tool or POST /pass. No account, no API key.';
 
@@ -600,7 +600,7 @@ async function initPayments(): Promise<void> {
     accepts,
     extensions: BAZAAR_EXTENSIONS,
     hint:
-      `${FREE_CALLS} free calls per IP per 24h, shared behind one address - no account, no API key. ` +
+      `${FREE_CALLS} free calls per 24h per IPv4 address or IPv6 /64 - no account, no API key. ` +
       'This is an MCP server (streamable HTTP). Connect an MCP client with header ' +
       '"Accept: application/json, text/event-stream" and call the explain_transaction tool; ' +
       'payment settles over the x402 MCP transport (_meta["x402/payment"]). ' +
@@ -802,7 +802,7 @@ app.get('/', (_req, res) => {
         `Health:   ${PUBLIC_URL}/healthz\n` +
         `Docs:     ${SITE_URL}/docs/\n` +
         `Registry: io.github.0200project/base-transaction-decoder (registry.modelcontextprotocol.io)\n` +
-        `Pricing:  ${FREE_CALLS} free calls per IP per 24h (shared behind one address), then $${PRICE_USD}/call in USDC on Base via x402.\n` +
+        `Pricing:  ${FREE_CALLS} free calls per 24h per IPv4 address or IPv6 /64, then $${PRICE_USD}/call in USDC on Base via x402.\n` +
         `Pass:     $${PASS_PRICE_USD} for ${PASS_DAYS} days / ${PASS_CALL_CAP.toLocaleString('en-US')} calls - POST ${PUBLIC_URL}/pass or the buy_pass tool.\n`,
     );
 });
@@ -817,7 +817,7 @@ app.get('/llms.txt', (_req, res) => {
         `> One MCP tool: explain_transaction(tx_hash) -> strict JSON explanation of any Base mainnet (chain id 8453) transaction. Deterministic onchain decode, no LLM in the response path.\n\n` +
         `MCP endpoint (streamable HTTP): POST ${PUBLIC_URL}/mcp\n` +
         `REST endpoint (standard x402 HTTP flow): POST ${PUBLIC_URL}/explain with {"tx_hash":"0x..."}\n` +
-        `Pricing: ${FREE_CALLS} free calls per IP per 24h - shared by everyone behind one address, resets daily - then $${PRICE_USD} per call in USDC on Base via x402 (MCP: challenge in-band, attach payment at _meta["x402/payment"] and retry; REST: standard 402 + PAYMENT-REQUIRED header). No account, no API key.\n` +
+        `Pricing: ${FREE_CALLS} free calls per 24h per IPv4 address or IPv6 /64, resets daily - then $${PRICE_USD} per call in USDC on Base via x402 (MCP: challenge in-band, attach payment at _meta["x402/payment"] and retry; REST: standard 402 + PAYMENT-REQUIRED header). No account, no API key.\n` +
         `Pass: $${PASS_PRICE_USD} buys ${PASS_DAYS} days / ${PASS_CALL_CAP.toLocaleString('en-US')} calls - POST ${PUBLIC_URL}/pass or the buy_pass MCP tool; present the token as X-BTX-Pass (REST) or _meta["btx/pass"] (MCP).\n\n` +
         `## Contracts\n\n` +
         `- [OpenAPI](${PUBLIC_URL}/openapi.json): request/response schemas for the tools/call envelope\n` +
@@ -1266,7 +1266,12 @@ app.get('/healthz', (_req, res) => {
       // the tool description and openapi.json — this copy exists so the SITE,
       // which cannot import the constant, has a live value to check itself
       // against instead of drifting silently the way it did on 2026-08-26.
-      free_tier: { calls: FREE_CALLS, window_hours: FREE_WINDOW_HOURS, per: 'ip' },
+      // `per` said 'ip', which is a MACHINE-READABLE version of the same wrong
+      // claim the prose carried: an integrator branching on this field would
+      // build per-address accounting and be wrong for every IPv6 caller, where
+      // a whole /64 shares one counter. A field someone branches on is a claim,
+      // and this one was false in the direction that under-counts the sharing.
+      free_tier: { calls: FREE_CALLS, window_hours: FREE_WINDOW_HOURS, per: 'ipv4-address-or-ipv6-/64' },
       metrics: publicMetrics,
       // Operational demand only — the full ledger (revenue, settlements,
       // customer/self splits, client counts, the revenue_note prose) is on

@@ -108,7 +108,7 @@ export function initFreeTier(): void {
     }
     prune(Date.now());
     persistent = true;
-    console.log(`free tier: ${statePath} (${freeCalls.size} clients tracked, ${FREE_CALLS} free calls each)`);
+    console.log(`free tier: ${statePath} (${freeCalls.size} clients tracked, ${FREE_CALLS} free calls per IPv4 address or IPv6 /64)`);
   } catch (err) {
     // A broken state file must never take the service down. Degrading to
     // in-memory means over-granting free calls, never wrongly charging.

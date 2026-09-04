@@ -127,7 +127,7 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
               '(swap, bridge_in, bridge_out, lending_supply, lending_borrow, lending_repay, nft_sale, stake, and more), ' +
               'correct handling of reverted transactions (no phantom asset movements), and three per-address ' +
               'observations — contract_verification, first_interaction, drainer_blacklist — each reporting whether it ' +
-              `actually ran; absence of a flag is not a clean result. $${priceUsd} per call via x402 after ${freeCalls} free calls per 24h per IP.`,
+              `actually ran; absence of a flag is not a clean result. $${priceUsd} per call via x402 after ${freeCalls} free calls per 24h per IPv4 address or IPv6 /64.`,
             // "YOU HAVE USED YOURS" WAS A LIE TO THE PERSON MOST LIKELY TO READ IT.
             //
             // The free tier is keyed on IP address, so everyone behind one
@@ -142,13 +142,13 @@ export function registerRestRoutes(app: express.Express, deps: RestDeps): void {
             // claim to. It says what is actually true — this address is out —
             // and names the reason they might not recognise, and when it lifts.
             free_tier: isDiscoveryProbe
-              ? `The first ${freeCalls} calls from each IP address are free. This 402 is the ` +
+              ? `The first ${freeCalls} calls from each IPv4 address (or IPv6 /64) are free. This 402 is the ` +
                 "endpoint's standing payment challenge, not a statement that your allowance is " +
                 'gone: a bare GET advertises the paid path and spends nothing. Read the ' +
                 'X-Free-Calls-Remaining header for where this address actually stands, then ' +
                 'GET ?tx_hash=0x... or POST {"tx_hash":"0x..."} to decode — an allowance is ' +
                 'only spent by a real decode.'
-              : `The first ${freeCalls} calls from each IP address are free, and this address has used them. ` +
+              : `The first ${freeCalls} calls from each IPv4 address (or IPv6 /64) are free, and this address has used them. ` +
                 'If you have not called us before, someone sharing your IP address, office network, VPN ' +
                 'or mobile carrier likely has. The allowance resets within 24 hours.',
             price_usd: priceUsd,

@@ -47,7 +47,19 @@ API="${BTX_URL:-https://api.0200project.com}"
 # the product page for a listing that bills real money. A gate scoped to one
 # surface silently certifies the others.
 SITE="$ROOT/site"
-SURFACES="$ROOT/site $ROOT/README.md"
+# 2026-09-04, THE SAME LESSON A THIRD TIME. The README was added above because a
+# gate scoped to site/ certified everything else. Tonight sixteen strings were
+# corrected across ten site surfaces and proven by negative control -- while the
+# SERVICE served the retired claim from src/ on its root page, llms.txt and
+# openapi.json. The fix certified a TREE rather than a company, and llms.txt and
+# openapi.json are what an AGENT reads, which is the worst audience available.
+#
+# ⚠️ AND ADDING src/ ALONE WOULD HAVE GONE GREEN WHILE CHECKING NOTHING. The
+# pattern below greps for the literal call count, and src/ never contains it --
+# the service interpolates `${FREE_CALLS}`. A gate that cannot see a templated
+# claim is a gate that certifies every templated claim. The count pattern is
+# widened to match the interpolated forms for exactly that reason.
+SURFACES="$ROOT/site $ROOT/README.md $ROOT/src"
 
 fails=0
 
@@ -110,6 +122,10 @@ if [ -z "$HEALTH" ]; then
 else
   CALLS="$(printf '%s' "$HEALTH_FLAT" | sed -n 's/.*"free_tier":{[^}]*"calls":\([0-9]*\).*/\1/p')"
   HOURS="$(printf '%s' "$HEALTH_FLAT" | sed -n 's/.*"free_tier":{[^}]*"window_hours":\([0-9]*\).*/\1/p')"
+  # The claim appears RENDERED on the site and README, and TEMPLATED in src/ --
+  # the service interpolates the constant rather than spelling the number. A
+  # pattern that only knows the digit reads src/ as clean no matter what it says.
+  CALLS_PAT="(${CALLS}|[$]\\{FREE_CALLS\\}|[$]\\{freeCalls\\})"
 
   if [ -z "$CALLS" ] || [ -z "$HOURS" ]; then
     fail "/healthz has no readable free_tier block" \
@@ -178,7 +194,7 @@ else
     # Thirteen strings across nine surfaces sat green. Only the /64 itself, or an
     # explicit IPv6, is now accepted: the qualifier must name the thing that makes
     # the claim true, not merely sit in the same vocabulary as it.
-    UNQUAL="$(grep -rnE "${CALLS} (free calls|calls)" $SURFACES 2>/dev/null \
+    UNQUAL="$(grep -rnE "${CALLS_PAT} (free calls|calls)" $SURFACES 2>/dev/null \
               | grep -v '/changelog/' \
               | grep -vE '/64|IPv6' || true)"
 
