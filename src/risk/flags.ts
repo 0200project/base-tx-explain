@@ -5,7 +5,7 @@ import type { DecodedEvent } from '../decode/events.js';
 import { getTokenSupply, shortAddress } from '../decode/tokens.js';
 import { getLabel } from '../labels.js';
 import type { AssetMovement, CheckStatus, ChecksPerformed, RiskFlag } from '../types.js';
-import { DRAINER_REFRESH_MS, drainerListAgeMs, drainerListLoaded, isKnownDrainer } from './drainers.js';
+import { DRAINER_REFRESH_MS, drainerListAgeMs, drainerListLoaded, drainerSourceHealth, isKnownDrainer } from './drainers.js';
 import { isFirstInteraction } from './firstTime.js';
 import { verificationStatus } from './verification.js';
 
@@ -259,12 +259,19 @@ export async function buildRiskFlags(ctx: FlagContext): Promise<RiskAssessment> 
   // longer vouch for. Reporting that as `ok` is the precise over-claim this
   // whole field exists to prevent, so age degrades the status.
   const drainerStale = drainerAge !== null && drainerAge > DRAINER_REFRESH_MS;
+  // A merge that lost a source is answering from partial coverage. The merged set
+  // is still non-empty, so nothing else here would notice: `loaded` and `age` both
+  // read healthy while half the blacklist is missing. Degrade on the source count
+  // for the same reason age degrades — reporting reduced coverage as `ok` is the
+  // over-claim this field exists to prevent.
+  const sources = drainerSourceHealth();
+  const drainerIncomplete = sources.tried > 0 && sources.ok < sources.tried;
   const drainerStatus: CheckStatus =
     exposedAddresses.size === 0
       ? 'not_applicable'
       : drainerAge === null
         ? 'unavailable'
-        : drainerStale
+        : drainerStale || drainerIncomplete
           ? 'partial'
           : 'ok';
 

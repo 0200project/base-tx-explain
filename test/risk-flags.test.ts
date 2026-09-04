@@ -21,7 +21,8 @@ const state = vi.hoisted(() => ({
   truncatedFor: new Set<string>(), // -> { kind: 'truncated' }
   unreachableFor: new Set<string>(), // -> { kind: 'unreachable' }, without a global outage
   drainerListDown: false, // blacklist never loaded
-  drainerAgeMs: 0, // how long since the blacklist last actually rebuilt
+  drainerAgeMs: 0,
+  drainerSources: { ok: 2, tried: 2 } as { ok: number; tried: number }, // how long since the blacklist last actually rebuilt
 }));
 
 vi.mock('../src/risk/verification.js', () => ({
@@ -41,6 +42,10 @@ vi.mock('../src/risk/drainers.js', () => ({
     !state.drainerListDown && state.drainers.has(addr.toLowerCase()),
   drainerListLoaded: () => !state.drainerListDown,
   drainerListAgeMs: () => (state.drainerListDown ? null : state.drainerAgeMs),
+  // How many blacklist sources answered on the last refresh. A merge that lost
+  // one still produces a non-empty set, so this is the only signal that
+  // distinguishes full coverage from half of it.
+  drainerSourceHealth: () => state.drainerSources,
   DRAINER_REFRESH_MS: 12 * 60 * 60 * 1000,
 }));
 // Partial mock: keep the real shortAddress/sanitizeSymbol, stub the network read.
@@ -89,6 +94,7 @@ beforeEach(() => {
   state.historyDown = false;
   state.drainerListDown = false;
   state.drainerAgeMs = 0;
+  state.drainerSources = { ok: 2, tried: 2 };
 });
 
 describe('buildRiskFlags — approval trust target resolution', () => {
@@ -395,6 +401,31 @@ describe('buildRiskFlags — coverage cannot be gamed', () => {
     expect(flagCodes(res)).toContain('unverified_contract');
     expect(detailFor(res, 'unverified_contract')).toContain(short(ATTACKER));
     expect(res.checks.unchecked_addresses).not.toContain(ATTACKER.toLowerCase());
+  });
+
+  it('a blacklist that lost one of its sources is not reported as ok', async () => {
+    // ⚠️ THE MERGED SET STAYS NON-EMPTY WHEN ONE SOURCE FAILS. refresh() merges
+    // with Promise.allSettled and skips rejections silently, so `loaded` and
+    // `age` both read healthy while roughly half the coverage is missing. If
+    // ScamSniffer started 404ing, MyEtherWallet alone would keep answering and
+    // the check would keep saying `ok`.
+    //
+    // Same defect as the fossil source in its other form: that one was LIVE BUT
+    // FROZEN, this one is ABSENT BUT COVERED FOR. Both let a degraded check
+    // answer clean.
+    state.drainerSources = { ok: 1, tried: 2 };
+    state.verified.add(ATTACKER.toLowerCase());
+
+    const res = await buildRiskFlags({
+      from: SENDER,
+      to: USDC,
+      blockNumber: 1000n,
+      reverted: false,
+      classification: { action: 'erc20_approval', detail: {} },
+      events: [approvalEvent(ATTACKER)],
+      movements: [],
+    });
+    expect(res.checks.drainer_blacklist).toBe('partial');
   });
 
   it('a blacklist older than its refresh interval is not reported as ok', async () => {

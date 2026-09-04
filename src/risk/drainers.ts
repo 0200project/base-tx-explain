@@ -91,6 +91,27 @@ let refreshing: Promise<void> | null = null;
  */
 const sourceVersions = new Map<string, { sha: string; date: string } | null>();
 
+/**
+ * How many sources answered on the last refresh, out of how many were tried.
+ *
+ * ⚠️ WHY A COUNT AND NOT A BOOLEAN. refresh() merges with Promise.allSettled and
+ * skips rejected sources silently, and the loaded/stale signals both derive from
+ * the MERGED set — which stays non-empty while any ONE source answers. So if
+ * ScamSniffer started 404ing, MyEtherWallet alone would keep the set populated
+ * and the check would keep reporting `ok` with roughly half its coverage and no
+ * signal anywhere.
+ *
+ * That is the same defect as the fossil we just removed, in its other form: the
+ * frozen file was a source that was LIVE BUT STALE; this is a source that is
+ * ABSENT BUT COVERED FOR. Both let a degraded check answer clean.
+ */
+let lastRefreshSources = { ok: 0, tried: 0 };
+
+/** Sources that answered on the last successful refresh, and how many were tried. */
+export function drainerSourceHealth(): { ok: number; tried: number } {
+  return { ...lastRefreshSources };
+}
+
 async function fetchSourceVersion(repo: string, path: string): Promise<{ sha: string; date: string } | null> {
   try {
     const res = await fetch(
@@ -131,12 +152,17 @@ async function refresh(): Promise<void> {
       }),
     );
     const merged = new Set<string>();
+    let okCount = 0;
     for (const r of results) {
-      if (r.status === 'fulfilled') for (const a of r.value) merged.add(a.toLowerCase());
+      if (r.status === 'fulfilled') {
+        okCount++;
+        for (const a of r.value) merged.add(a.toLowerCase());
+      }
     }
     // Keep the previous set if every source failed; a stale list beats an empty one.
     if (merged.size > 0) {
       drainerSet = merged;
+      lastRefreshSources = { ok: okCount, tried: SOURCES.length };
       lastSuccessfulRefresh = Date.now();
       nextAttemptAt = Date.now() + REFRESH_MS;
     } else {

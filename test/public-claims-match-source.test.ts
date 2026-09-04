@@ -91,35 +91,36 @@ describe('public site claims match the code that makes them true', () => {
    * it false. If retention is ever actually removed, this test stops objecting
    * on its own instead of having to be remembered and deleted.
    */
-  it('does not deny keeping records while the ledger keeps them', () => {
-    // ⚠️ KEYED ON THE WRITE CALL, NOT ON A COMMENT ABOUT IT.
-    //
-    // The first version of this guard tested for the strings "Append-only usage
-    // ledger" and "holds every one forever" — both COMMENT PROSE. Rewording
-    // either one, a tidy-up or a rename that changes nothing about the system,
-    // would have flipped this to false, returned early, and quietly re-permitted
-    // the exact denial it exists to forbid. It failed OPEN, in the reassuring
-    // direction, on an edit that touched no behaviour.
-    //
-    // That is the same defect as a docstring that is true of the branch above it
-    // and false of the branch below: a claim keyed to documentation rather than
-    // to the thing documented. A comment is a claim about the system; the append
-    // call IS the system.
-    const keepsAPermanentLedger =
-      /appendFileSync\(\s*ledgerPath/.test(usageSrc) &&
-      /ledgerPath = join\(dataDir, 'events\.jsonl'\)/.test(usageSrc) &&
-      !/\bprune|\bretention|\bexpire(s|d)?\b/i.test(usageSrc);
-    if (!keepsAPermanentLedger) return; // retention genuinely removed; the denial would be fair
+  /**
+   * ⚠️ THIS ASSERTS THE PRESENCE OF THE TRUE STATEMENT, NOT THE ABSENCE OF THE
+   * FALSE ONE — and the direction is the whole point.
+   *
+   * The first version banned the substrings "no database", "no request archive",
+   * "no user records". An HONEST correction must contain them: once in the true
+   * sentence explaining what is and is not kept, and again in a dated note
+   * quoting what the page used to say. So the guard fired RED against the
+   * corrected page and the cheapest way to make it green was to delete the
+   * disclosure it existed to force. A guard that converts into its own opposite
+   * under time pressure is worse than no guard, because it goes green when it
+   * succeeds in causing the harm.
+   *
+   * A presence test cannot be satisfied by deletion and cannot fire on a
+   * quotation. Absence tests fail at both.
+   */
+  it('states the retention it actually performs, while it performs it', () => {
+    // Keyed on the write call and the stored field, not on comments about them.
+    const appendsForever = /appendFileSync\(\s*ledgerPath/.test(usageSrc);
+    const storesPayer = /payer\?: string/.test(usageSrc);
+    if (!appendsForever || !storesPayer) return; // behaviour changed; the duty changes with it
 
-    const denials = [/no request archive/i, /no user records/i, /\bno database\b/i, /we keep nothing/i];
-    const found: string[] = [];
-    for (const { path, html } of currentTensePages()) {
-      for (const d of denials) {
-        const m = d.exec(html);
-        if (m) found.push(`${path}: "${m[0]}"`);
-      }
-    }
-    expect(found).toEqual([]);
+    const privacy = currentTensePages().find((p) => p.path.includes('privacy'));
+    expect(privacy, 'privacy page not found — did the path move?').toBeDefined();
+    const text = privacy!.html.replace(/<[^>]+>/g, ' ');
+
+    // It must SAY it keeps a per-event record...
+    expect(text).toMatch(/append-only|event log|record of requests/i);
+    // ...and that a wallet address is part of what that record links.
+    expect(text).toMatch(/wallet address|payer/i);
   });
 
   it('does not deny storing identifiers while the ledger stores a payer address', () => {
