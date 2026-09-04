@@ -166,7 +166,7 @@ const dataDir = process.env.DATA_DIR ?? './data';
 const ledgerPath = join(dataDir, 'events.jsonl');
 
 const days = new Map<string, DayAgg>();
-const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0, payment_failures: 0, repeat_purchases_refused: 0 };
+const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, unattributed_calls: 0, settlements: 0, revenue_usd: 0, payment_failures: 0, repeat_purchases_refused: 0 };
 
 /**
  * Every settlement as it arrived, so the revenue split can be DERIVED rather
@@ -276,6 +276,17 @@ function absorb(ev: LedgerEvent): void {
   if (ev.e === 'call') {
     agg.calls++;
     lifetime.calls++;
+    // ROWS WRITTEN BEFORE THE MARKER EXISTED. `ev.internal` is falsy for BOTH
+    // `false` and ABSENT, so these 101 rows (2026-08-20 to 2026-08-21T16:28Z)
+    // are counted as neither ours nor a stranger's — they fall through into the
+    // funnel branches below and are silently treated as external.
+    //
+    // Counted separately, and OUTSIDE the funnel chain so no row changes bucket,
+    // because publishing `calls` and `internal_calls` alone invites the
+    // subtraction `calls - internal_calls = external`, which is FALSE by exactly
+    // this many. A reader doing correct arithmetic on two honest numbers would
+    // get a wrong third one. The gap has to be visible or the pair is a trap.
+    if (ev.internal === undefined) lifetime.unattributed_calls++;
     if (ev.internal) {
       // Checked FIRST, above every funnel branch, for the same reason `degraded`
       // is checked above the charge branches: the funnel answers "what did
@@ -585,7 +596,18 @@ export function flushCheckHealth(): void {
  * deploy gate.
  */
 export function publicHealthLifetime(lifetime: Record<string, unknown>): Record<string, unknown> {
-  const keep = ['calls', 'free', 'wall_hits', 'degraded_calls'] as const;
+  // `internal_calls` and `unattributed_calls` are published DELIBERATELY, and
+  // they are the only commercial-adjacent numbers on this list. /healthz said
+  // `calls: 1319` while 397 of those were our own traffic and the field that
+  // disclosed it was filtered out of the same response — the public number
+  // included us and the correction did not. Publishing the divisor beside the
+  // total is the only fix that ADDS information: it leaves every figure already
+  // written down still true, where shrinking `calls` would make every past quote
+  // retroactively wrong in a way nobody can trace.
+  //
+  // All three, or none. `calls` and `internal_calls` without the unattributed
+  // count is a pair that reads as a partition and is not one.
+  const keep = ['calls', 'internal_calls', 'unattributed_calls', 'free', 'wall_hits', 'degraded_calls'] as const;
   const out: Record<string, unknown> = {};
   for (const k of keep) if (k in lifetime) out[k] = lifetime[k];
   return out;
