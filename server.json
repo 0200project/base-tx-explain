@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.0200project/base-transaction-decoder",
   "title": "Base Transaction Decoder",
-  "description": "Decode any Base tx: plain English, strict JSON, risk flags, no LLM. 50 free/day per IP, then $0.02.",
+  "description": "Decode Base txs: plain English, strict JSON, risk flags, no LLM. 50 free/day per IPv4 or /64, $0.02.",
   "version": "0.1.4",
   "websiteUrl": "https://0200project.com/",
   "repository": {

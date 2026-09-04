@@ -11,7 +11,7 @@
       "assets_moved": { "type": "array", "description": "Every asset that moved: token, amount (decimal string), from, to, token_address, standard." },
       "counterparties": { "type": "array", "description": "Addresses involved, labeled where known (routers, bridges, marketplaces)." },
       "risk_flags": { "type": "array", "description": "Evidence-based flags: unverified_contract, unlimited_approval, approval_for_all, known_drainer, first_time_counterparty, transaction_reverted." },
-      "gas_paid_usd": { "type": "number", "description": "Total gas cost in USD, including the OP-stack L1 data fee, priced at the transaction's block." },
+      "gas_paid_usd": { "type": "number", "description": "Total gas cost in USD, including the OP-stack L1 data fee. Priced at the transaction's block when that read succeeds; under concurrency it can fall back to the latest ETH price, which gas_price_basis reports." },
       "timestamp": { "type": "string" },
       "block_number": { "type": "integer" },
       "tx_hash": { "type": "string" },
