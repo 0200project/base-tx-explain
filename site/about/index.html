@@ -149,8 +149,9 @@
       <div class="led reveal" id="live-panel">
         <div class="panel-head"><span>api.0200project.com/healthz</span><span id="live-when">fetching&hellip;</span></div>
         <div class="led-row"><span class="led-lbl">version</span><span class="led-val">Running in production</span><span class="led-amt" id="lv-ver">&mdash;</span></div>
-        <div class="led-row"><span class="led-lbl">calls</span><span class="led-val">Lifetime, all clients<small><span id="lv-free">&mdash;</span> served on the free tier</small></span><span class="led-amt" id="lv-calls">&mdash;</span></div>
-        <div class="led-row"><span class="led-lbl">wall hits</span><span class="led-val">Callers who reached the paywall<small>Every one of them is someone the free tier could not finish serving</small></span><span class="led-amt" id="lv-wall">&mdash;</span></div>
+        <div class="led-row"><span class="led-lbl">calls</span><span class="led-val">Lifetime, including our own<small><span id="lv-free">&mdash;</span> served on the free tier</small></span><span class="led-amt" id="lv-calls">&mdash;</span></div>
+        <div class="led-row"><span class="led-lbl">of which ours</span><span class="led-val">Calls we made ourselves<small><span id="lv-unmarked">&mdash;</span> more we cannot attribute either way</small></span><span class="led-amt" id="lv-internal">&mdash;</span></div>
+        <div class="led-row"><span class="led-lbl">wall hits</span><span class="led-val">Times the free tier ran out<small>A count of responses, not of people, the same caller can appear many times</small></span><span class="led-amt" id="lv-wall">&mdash;</span></div>
         <div class="led-row"><span class="led-lbl">degraded</span><span class="led-val">Calls answered while a check was unavailable<small>Reported rather than hidden, this is the number most services do not publish</small></span><span class="led-amt" id="lv-deg">&mdash;</span></div>
         <div class="led-foot" id="lv-checks">Loading per-check health&hellip;</div>
       </div>
@@ -249,6 +250,8 @@
       el('lv-free').textContent  = n(lt.free);
       el('lv-wall').textContent  = n(lt.wall_hits);
       el('lv-deg').textContent   = n(lt.degraded_calls);
+      el('lv-internal').textContent = n(lt.internal_calls);
+      el('lv-unmarked').textContent = n(lt.unmarked_calls);
       el('live-when').textContent = 'read ' + new Date().toISOString().slice(0, 16).replace('T', ' ') + 'Z';
       var ch = (d.check_health && d.check_health.checks) || {}, names = Object.keys(ch);
       if (names.length) {
