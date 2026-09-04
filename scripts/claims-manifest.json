@@ -1,0 +1,138 @@
+{
+ "Unreachable is not clean": {
+  "category": "checks-contract",
+  "pages": [
+   "about/"
+  ]
+ },
+ "per IPv4 address or IPv6 /64": {
+  "category": "free-tier",
+  "pages": [
+   "about/",
+   "docs/",
+   "/",
+   "playground/",
+   "pricing/",
+   "tools/"
+  ]
+ },
+ "Reported rather than hidden": {
+  "category": "panel",
+  "pages": [
+   "about/"
+  ]
+ },
+ "A count of responses, not of people": {
+  "category": "panel",
+  "pages": [
+   "about/"
+  ]
+ },
+ "Lifetime, including our own": {
+  "category": "panel",
+  "pages": [
+   "about/"
+  ]
+ },
+ "Times the free tier ran out": {
+  "category": "panel",
+  "pages": [
+   "about/"
+  ]
+ },
+ "IPv6 collapses to the /64": {
+  "category": "free-tier",
+  "pages": [
+   "changelog/",
+   "docs/"
+  ]
+ },
+ "one IPv4 address, or one IPv6 /64": {
+  "category": "free-tier",
+  "pages": [
+   "docs/",
+   "faq/",
+   "terms/"
+  ]
+ },
+ "single-writer": {
+  "category": "self-host",
+  "pages": [
+   "docs/"
+  ]
+ },
+ "absence of a flag is not a safety guarantee": {
+  "category": "checks-contract",
+  "pages": [
+   "faq/"
+  ]
+ },
+ "not a signed attestation": {
+  "category": "refusal",
+  "pages": [
+   "/"
+  ]
+ },
+ "no deposit, no card on file, nothing recurs": {
+  "category": "rail",
+  "pages": [
+   "/",
+   "pricing/"
+  ]
+ },
+ "USDC on Base is the default because it settles in seconds": {
+  "category": "rail",
+  "pages": [
+   "pay/",
+   "pricing/"
+  ]
+ },
+ "the receipt is the invoice": {
+  "category": "rail",
+  "pages": [
+   "pay/"
+  ]
+ },
+ "not an opinion you can hand to a regulator": {
+  "category": "refusal",
+  "pages": [
+   "pricing/"
+  ]
+ },
+ "not an opinion about whether your system is sound": {
+  "category": "refusal",
+  "pages": [
+   "services/"
+  ]
+ },
+ "the document already exists": {
+  "category": "services",
+  "pages": [
+   "services/"
+  ]
+ },
+ "Field notes: x402 settlement failures": {
+  "category": "services",
+  "pages": [
+   "services/"
+  ]
+ },
+ "absence of a flag is not an endorsement of a transaction or a counterparty, and not a safety guarantee": {
+  "category": "checks-contract",
+  "pages": [
+   "terms/"
+  ]
+ },
+ "XO2 has no utility today": {
+  "category": "asset",
+  "pages": [
+   "xo2/"
+  ]
+ },
+ "no utility today": {
+  "category": "asset",
+  "pages": [
+   "xo2/"
+  ]
+ }
+}
