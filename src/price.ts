@@ -1,5 +1,5 @@
 import { formatUnits } from 'viem';
-import { HOUR, TtlCache } from './cache.js';
+import { HOUR, NEGATIVE_TTL, TtlCache } from './cache.js';
 import { client } from './rpc.js';
 
 // Chainlink ETH/USD aggregator proxy on Base mainnet (docs.chain.link).
@@ -85,7 +85,44 @@ export async function ethUsdAtBlock(blockNumber: bigint): Promise<PriceBasis> {
   // function of the transaction's block: same input, same rate, same
   // `feed_block`, cold or warm, first caller or thousandth.
   const anchor = (blockNumber / 300n) * 300n;
-  return priceCache.getOrLoad(`eth-usd:${anchor.toString()}`, async () => {
+  return priceCache.getOrLoad(
+    `eth-usd:${anchor.toString()}`,
+    async () => {
+    // ⚠️ RETRY THE HISTORICAL READ BEFORE FALLING BACK, because the fallback was
+    // firing on TRANSIENT failures and mislabelling them.
+    //
+    // Observed: block 50842200 read `at-block` when called alone and `latest`
+    // when called inside a burst — the public RPC rate-limited us, the read
+    // threw, and the catch reported "historical state unavailable" for a block
+    // whose archive state was perfectly available. The label was right (it was a
+    // latest price) and THE STATED CAUSE WAS INVENTED. That is the same defect
+    // this whole field exists to remove, one level down.
+    //
+    // Worse, the spurious answer was then cached for 24 hours under the anchor
+    // key, so one rate-limited moment poisoned that bucket for a day and every
+    // decode in it reported a non-reproducible figure.
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const [roundId, answer] = await client.readContract({
+          address: ETH_USD_FEED,
+          abi: FEED_ABI,
+          functionName: 'latestRoundData',
+          blockNumber: anchor,
+        });
+        return {
+          source: 'at-block' as const,
+          eth_usd: Number.parseFloat(formatUnits(answer, 8)),
+          feed_block: anchor.toString(),
+          round_id: roundId.toString(),
+          note: `ETH/USD read from the Chainlink feed at block ${anchor}, the ~10-minute anchor for this transaction's block. Reproducible by anyone with archive access to that block.`,
+        };
+      } catch (err) {
+        lastErr = err;
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 250 * 2 ** attempt));
+      }
+    }
+    void lastErr;
     try {
       const [roundId, answer] = await client.readContract({
         address: ETH_USD_FEED,
@@ -101,6 +138,25 @@ export async function ethUsdAtBlock(blockNumber: bigint): Promise<PriceBasis> {
         note: `ETH/USD read from the Chainlink feed at block ${anchor}, the ~10-minute anchor for this transaction's block. Reproducible by anyone with archive access to that block.`,
       };
     } catch {
+      // ⚠️ ESTABLISH THE CAUSE RATHER THAN SHRUGGING AT IT. One extra read, only on
+      // a path that is already rare, and it separates two cases a buyer would
+      // treat completely differently:
+      //
+      //   the feed had NO CODE at that block — deterministic and reproducible
+      //     forever, because a contract that did not exist then never will have.
+      //     Observed: the ETH/USD feed has no code at Base block 2,000,000.
+      //   the feed existed and we still could not read it — genuinely unknown,
+      //     and the honest answer stays "not established".
+      //
+      // Without this the note blamed pruned archive state for what was sometimes
+      // a rate limit and sometimes a contract that had not been deployed yet.
+      let feedExisted: boolean | null = null;
+      try {
+        const code = await client.getCode({ address: ETH_USD_FEED, blockNumber: anchor });
+        feedExisted = Boolean(code && code !== '0x');
+      } catch {
+        feedExisted = null;
+      }
       try {
         const [roundId, answer] = await client.readContract({
           address: ETH_USD_FEED,
@@ -113,8 +169,15 @@ export async function ethUsdAtBlock(blockNumber: bigint): Promise<PriceBasis> {
           feed_block: null,
           round_id: roundId.toString(),
           note:
-            'LATEST price, historical state unavailable. Today\'s ETH/USD has been applied to a past transaction\'s gas, ' +
-            'so this figure is NOT reproducible on another day and must not be treated as a point-in-time value.',
+            'LATEST price applied to a past transaction\'s gas, so this figure is NOT reproducible on another day ' +
+            'and must not be treated as a point-in-time value. ' +
+            (feedExisted === false
+              ? `The Chainlink ETH/USD feed had no code at block ${anchor} — it was not deployed yet, so no ` +
+                'at-block price exists for this transaction and none ever will. That part IS reproducible.'
+              : feedExisted === true
+                ? 'The feed existed at that block but could not be read after retries; the cause is not established ' +
+                  'here and may be pruned archive state or a transient upstream failure.'
+                : 'Whether the feed existed at that block could not be determined, so the cause is not established.'),
         };
       } catch {
         return {
@@ -126,5 +189,13 @@ export async function ethUsdAtBlock(blockNumber: bigint): Promise<PriceBasis> {
         };
       }
     }
-  });
+    },
+    // ⚠️ ONLY AN `at-block` ANSWER IS DURABLE. It is a fact about an already-mined
+    // block and cannot change. `latest` and `unavailable` are statements about a
+    // moment of upstream health, and caching them for a day is how a transient
+    // blip becomes a day of non-reproducible figures — the same reason
+    // verification.ts gives `unknown` a short TTL and firstTime.ts gives
+    // `unreachable` one. price.ts is the file that missed that convention twice.
+    (v) => (v.source === 'at-block' ? 24 * HOUR : NEGATIVE_TTL),
+  );
 }
