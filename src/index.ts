@@ -1192,6 +1192,33 @@ app.get('/healthz', (_req, res) => {
     .json({
       ok: true,
       version: VERSION,
+      /**
+       * WHICH BUILD IS ACTUALLY RUNNING.
+       *
+       * Everything anyone said about what was deployed used to rest on comparing
+       * commit timestamps to a boot time — inference, and it produced three
+       * different answers to one question in a single night. This is a reading.
+       *
+       * `sha` is baked in at image build; it is NOT read from a working tree at
+       * request time, because that would describe the repo rather than the image
+       * and would be worse than nothing for looking like an answer.
+       *
+       * `dirty` matters because `fly deploy` builds the WORKING DIRECTORY rather
+       * than a commit, so a sha alone can misdescribe an image built over
+       * uncommitted changes.
+       *
+       * Both report the string "unknown" when the build args were absent —
+       * never an empty string, which a reader would take for a value.
+       */
+      build: {
+        sha: process.env.BUILD_SHA || 'unknown',
+        dirty: process.env.BUILD_DIRTY === '' || process.env.BUILD_DIRTY === undefined
+          ? 'unknown'
+          : process.env.BUILD_DIRTY === 'true',
+        // Set by Fly for every machine; identifies the image itself even when the
+        // build args were forgotten, so "which image" is always answerable.
+        image: process.env.FLY_IMAGE_REF || 'unknown',
+      },
       payment_mode: PAYMENT_MODE,
       // False means the facilitator was unreachable and we are on the free tier
       // only. Published so a degraded payment path is visible, rather than being

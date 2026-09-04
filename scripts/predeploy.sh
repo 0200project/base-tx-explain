@@ -142,3 +142,29 @@ LOCAL=$(sed -n 's/.*"version": "\([^"]*\)".*/\1/p' package.json | head -1)
 [ -n "$LIVE" ] && echo "predeploy: live version $LIVE, local $LOCAL"
 
 echo "predeploy: OK, deploying $(git rev-parse --short HEAD)"
+
+# ---------------------------------------------------------------------------
+# VERIFYING WHAT IS ACTUALLY RUNNING, when the metadata is absent or lying.
+#
+# /healthz now reports build.sha, build.dirty and build.image, baked in at image
+# build. That covers the normal case. It does NOT cover the case where the build
+# args were forgotten (sha reads "unknown"), or where you have reason to doubt
+# the field itself — and "the field that tells you what is deployed" is exactly
+# the field you cannot check with itself.
+#
+# THE FALLBACK IS A MARKER PROBE, and it is how the fa19a82 boundary was
+# established on 2026-09-04 before this field existed. Pick a string that only
+# ONE SIDE of a commit can contain, then grep the deployed artifact for it:
+#
+#   fly ssh console -C "grep -c 'someStringAddedByThatCommit' /app/dist/foo.js"
+#
+# Choosing the marker is the skilled part. It must be present on exactly one
+# side of the commit and stable across a build — an identifier or a literal,
+# never a comment, since comments do not survive compilation. Probe several
+# commits at once and you get a bracket rather than a point: the deployed build
+# is at or after the newest marker present and before the oldest marker absent.
+#
+# This found that /app contained blacklist/address.json while the repo had moved
+# to all.json — a one-line fact that three people had been inferring from commit
+# timestamps and getting three different answers.
+# ---------------------------------------------------------------------------

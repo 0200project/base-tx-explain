@@ -18,7 +18,7 @@
     "status": "tsx scripts/status.ts",
     "report": "node scripts/daily-report.mjs",
     "predeploy": "sh scripts/predeploy.sh",
-    "deploy": "sh scripts/predeploy.sh && fly deploy --now",
+    "deploy": "sh scripts/predeploy.sh && fly deploy --now --build-arg GIT_SHA=$(git rev-parse HEAD) --build-arg GIT_DIRTY=$(git diff --quiet HEAD && echo false || echo true)",
     "postinstall": "git config core.hooksPath .githooks 2>/dev/null || true"
   },
   "dependencies": {
