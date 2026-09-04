@@ -315,7 +315,7 @@ await client.close();</code></pre>
       <h3>Hosted endpoint</h3>
       <p>The hosted server at <code class="inline">https://api.0200project.com/mcp</code> works with any MCP client using the config in the <a href="#quickstart">quickstart</a> — nothing to install. It is also listed in the MCP registry as <code class="inline">io.github.0200project/base-transaction-decoder</code>.</p>
       <h3>Self-hosting</h3>
-      <p>The server is open source under an MIT-style license and runs anywhere Docker runs. It is a stateless Express server — no database, no sessions — so it scales horizontally without coordination.</p>
+      <p>The server is open source under an MIT-style license and runs anywhere Docker runs. It is a <strong>single-writer</strong> service: the free-tier counters, the passes and the event log are files on one machine&rsquo;s disk, so it runs as one instance rather than a scaled pool. That is a deliberate constraint rather than a stage we have not outgrown &mdash; a settled engagement cannot be charged a second time, because the guard that refuses a repeat reads state only one process writes. Two instances would split that state, and a pass minted on one would be unknown to the other.</p>
       <div class="codeblock">
         <div class="panel-head"><span>terminal</span><button class="copy-btn" type="button" data-copy="#selfhost-cmd">Copy</button></div>
         <pre><code id="selfhost-cmd">git clone https://github.com/0200project/base-tx-explain
@@ -586,7 +586,7 @@ npm run dev</code></pre>
       <ul>
         <li><strong>Free tier</strong> — the first 50 calls in any 24 hours are free, with no signup. Metering is per client &mdash; one IPv4 address, or one IPv6 /64: machines behind the same NAT or a shared CI egress draw from one counter, so shared networks can hit the paywall early, and the counter resets a day later. After that, each call is paid via x402.</li>
         <li><strong>Rate limit</strong> — 60 requests per minute per client. Exceeding it returns JSON-RPC error <code class="inline">-32000</code> with HTTP 429.</li>
-        <li><strong>Statelessness</strong> — the server keeps no sessions and no database, and a fresh MCP server is created per request. Calls are independent and deterministic, so parallelizing and retrying are always safe.</li>
+        <li><strong>Per-request isolation</strong> &mdash; no sessions, and a fresh MCP server is created per request, so concurrent calls do not corrupt each other&rsquo;s state. That is not the same as free, and not the same as identical. <strong>Retries cost:</strong> every call draws on the free tier or is paid, and a lookup that comes back <code>not_found</code> is charged rather than refunded, so retrying an empty result costs each time. <strong>Parallel calls contend:</strong> the rate limit above is 60 a minute, and under concurrency the ETH price behind <code>gas_paid_usd</code> can fall back to the latest feed reading instead of the price at the transaction&rsquo;s block &mdash; <code>gas_price_basis</code> says which one was used. <strong>The decode is deterministic; the response around it is not.</strong></li>
       </ul>
 
       <h2 id="pricing">Pricing</h2>
