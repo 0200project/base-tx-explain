@@ -228,6 +228,37 @@ function reapPending(now: number): void {
  * CHEAPEST PARTIAL FIX WHEN THE TRIGGER FIRES: pass the nonce on the REST rail
  * too. It costs one argument and converts "unrecoverable" into "recoverable
  * from chain", without storing anything about a buyer we were not already told.
+ *
+ * ─────────────────────────────────────────────────────────────────────────
+ * ⚠️ THE CONSEQUENCE WITH MONEY ATTACHED: WE CANNOT REVOKE A DISPUTED PASS.
+ *
+ * A PassEntry carries NO PAYMENT HANDLE — no Stripe session id, no transaction
+ * hash. The ledger's `settled` event DOES carry a stable `id` for exactly this
+ * purpose. So both halves of the link exist and NOTHING JOINS THEM.
+ *
+ * The revocation surface confirms the shape rather than merely suggesting it:
+ *   revokePass(token)          — needs the token, which only the holder has
+ *   revokePendingPass(nonce)   — needs a nonce the REST rail never records
+ *   revokeInternalPasses()     — skips everything non-internal by construction
+ * For a pass minted on the REST rail or through Stripe guest checkout — the path
+ * a stranger actually uses — WE HOLD NO IDENTIFIER THAT CAN REVOKE IT.
+ *
+ * Sized from our own constants, not estimated: PASS_CALL_CAP 10,000 calls over
+ * PASS_DAYS 30 is $200.00 of service at our own per-call price, against a $9.00
+ * chargeback. The free tier over the same window is 1,500 calls, so the pass is
+ * worth keeping rather than notional. stripe.ts already contemplates "a
+ * chargeback plus a dispute mark", so the rail is real.
+ *
+ * ⚠️ AND THE MITIGATION DEGRADES AS THE BUSINESS SUCCEEDS, which is the worst
+ * available shape. This is UNLINKED, not unrecoverable: with sales this rare you
+ * can correlate a settlement and a mint by timestamp and be right. That works
+ * precisely while volume is near zero and fails SILENTLY the moment two sales
+ * land close together — the exact condition we are trying to create. So it must
+ * not wait for the first dispute to be noticed.
+ *
+ * The Stripe half is one field: store the session id on the entry at mint. It is
+ * not personal data beyond what Stripe already holds, and it converts "we cannot
+ * find the pass this charge paid for" into a lookup.
  */
 export function mintPass(
   opts: { payer?: string; pending?: boolean; nonce?: string; days?: number; cap?: number; internal?: boolean } = {},
