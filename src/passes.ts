@@ -243,11 +243,26 @@ function reapPending(now: number): void {
  * For a pass minted on the REST rail or through Stripe guest checkout — the path
  * a stranger actually uses — WE HOLD NO IDENTIFIER THAT CAN REVOKE IT.
  *
- * Sized from our own constants, not estimated: PASS_CALL_CAP 10,000 calls over
- * PASS_DAYS 30 is $200.00 of service at our own per-call price, against a $9.00
- * chargeback. The free tier over the same window is 1,500 calls, so the pass is
- * worth keeping rather than notional. stripe.ts already contemplates "a
- * chargeback plus a dispute mark", so the rail is real.
+ * ⚠️ TWO NUMBERS, AND THEY ANSWER DIFFERENT QUESTIONS. Do not collapse them.
+ *
+ *   WHAT IT COSTS US: $9.00 of revenue reversed, plus the marginal cost of the
+ *   calls served — RPC and compute, far below our $0.02 list price each. That is
+ *   the figure on our books.
+ *
+ *   WHAT THE HOLDER RECEIVES: PASS_CALL_CAP 10,000 calls over PASS_DAYS 30 =
+ *   $200.00 at list price. That is NOT a loss. It is why a pass is worth
+ *   disputing for and worth keeping afterwards — the free tier over the same
+ *   window is only 1,500 calls.
+ *
+ * Written out because the one-sentence version — "$200 of service against a $9
+ * chargeback" — summarises to "each chargeback costs us $200", which is false by
+ * more than an order of magnitude and false in the direction that INFLATES
+ * urgency. Same collapse that has produced wrong rate figures here before: a
+ * structure reduced to one number, with the constraint that made it meaningful
+ * dropped on the way.
+ *
+ * stripe.ts already contemplates "a chargeback plus a dispute mark", so the rail
+ * is real.
  *
  * ⚠️ AND THE MITIGATION DEGRADES AS THE BUSINESS SUCCEEDS, which is the worst
  * available shape. This is UNLINKED, not unrecoverable: with sales this rare you
