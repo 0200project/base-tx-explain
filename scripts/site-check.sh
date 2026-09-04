@@ -622,6 +622,30 @@ else
   rm -f "$SAMP_BAD" "$SAMP_SPENT"
 fi
 
+# ---------------------------------------------------------------------------
+# THE FIRST-CUSTOMER GATE
+#
+# Written 2026-09-04, deliberately BEFORE anything has landed, because this is
+# the one check nobody will want to apply on the day it fires. The failure mode
+# arrives WITH GOOD NEWS: a payment lands, somebody puts it on a page, and the
+# sentence is individually true and wrong in scope. "A customer paid us" is true
+# of $0.02. "We deliver settlement engagements" would be true of one.
+#
+# So: a public surface may not imply a POPULATION of customers, and a count of
+# one is written as one. This branch does not know how many customers we have --
+# it refuses the shapes that imply many without saying how many.
+POP="$(grep -rniE "our (customers|clients|users)|customers (say|use|trust|rely)|trusted by|used by (teams|companies|firms)|companies (use|rely)|teams (use|rely)|join (hundreds|thousands|other)|(hundreds|thousands|dozens) of (customers|clients|teams|companies|users)|clients include|what our (customers|clients|users)" \
+        $SURFACES 2>/dev/null | grep -v '/changelog/' || true)"
+if [ -n "$POP" ]; then
+  fail "a surface implies a population of customers" \
+    "$(printf '%s' "$POP" | sed "s|$ROOT/||" | sed 's/^/        /')
+        A count of one is written as one. If a real number belongs on the page,
+        state the number. These phrasings are true of any count above zero and
+        a reader takes them as many."
+else
+  pass "no surface implies a customer population"
+fi
+
 if [ "$fails" -gt 0 ]; then
   printf 'site-check: %s FAILED. The site is telling a prospect something the server will not honour.\n\n' "$fails"
   exit 1

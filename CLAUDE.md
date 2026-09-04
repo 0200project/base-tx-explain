@@ -59,6 +59,26 @@ Each individual step was defensible. **Scope is the quieter half of a claim: it
 never appears in a failure message**, which is why a stale-scoped check reports
 success and a narrow question returns a confident answer to a different one.
 
+### The first-customer rule, written before anything landed
+
+When a payment, a grant or an engagement lands, somebody will want it on a page
+within the hour. **The scope failure arrives WITH GOOD NEWS**, which is the one
+condition under which nobody wants to apply the test.
+
+So it is decided in advance: **a count of one is written as one.** No first
+customer, first payment, first grant or first engagement reaches a public
+surface without the same treatment as any other claim, and a surface may never
+imply a POPULATION it does not have. "A customer paid us" is true of two cents.
+"We deliver settlement engagements" would be true of one.
+
+`site-check.sh` enforces the population half — it refuses *our customers*,
+*trusted by*, *used by teams*, *clients include* and their relatives. It cannot
+know how many customers we have; it refuses the shapes that imply many without
+saying how many. Proven by planting "Trusted by teams building on Base" and
+watching it fail.
+
+The other half is not automatable and belongs to whoever writes the sentence.
+
 ### Recording a decision, not a discovery
 
 When the founder rules on a risk, write down **what actually changed.** Usually
