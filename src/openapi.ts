@@ -286,7 +286,7 @@ export function buildOpenApiDocument(
       '400': { description: 'tx_hash missing or malformed' },
       '402': {
         description:
-          'Payment Required (x402; challenge in the PAYMENT-REQUIRED header and the body). No USDC on Base yet? x402 uses EIP-3009, so you need USDC but NOT ETH for gas — the facilitator submits the transfer and pays the gas. Acquire USDC on Base by withdrawing from an exchange such as Coinbase directly to the Base network, using a fiat on-ramp that supports Base, or bridging from another chain at bridge.base.org.',
+          'Payment Required (x402). THE CHALLENGE IS IN THE PAYMENT-REQUIRED RESPONSE HEADER, base64-encoded — x402Version, error, resource, accepts. The JSON BODY does NOT repeat it: the body is a separate human-readable object whose fields are all strings — error, what_you_get, free_tier, price_usd, pay_per_call, funding, pass, buy_with_card, talk_to_us, docs, openapi. An x402 client reads the header; a person reading the body gets prose. (The /mcp 402 is different: MCP has no response headers, so the challenge travels in-band in the tool result.) No USDC on Base yet? x402 uses EIP-3009, so you need USDC but NOT ETH for gas — the facilitator submits the transfer and pays the gas. Acquire USDC on Base by withdrawing from an exchange such as Coinbase directly to the Base network, using a fiat on-ramp that supports Base, or bridging from another chain at bridge.base.org.',
       },
       '404': { description: 'No such transaction on Base mainnet' },
     },
