@@ -309,7 +309,7 @@ await client.close();</code></pre>
       </div>
 
       <p>Whichever path you take, the tool result carries the explanation twice: as <code class="inline">structuredContent</code>, and stringified in <code class="inline">content[0].text</code>. Parse whichever your client prefers.</p>
-      <p><strong>The free tier is metered per client IP.</strong> The first 50 calls in any 24 hours are free with no signup, counted per IP address (IPv6 collapses to the /64) — machines behind one NAT or a shared CI egress draw from a single counter, which is why the paywall can appear before 50 of your own calls. The window is rolling: a shared address that runs out recovers the next day rather than staying walled. After that, each call is $0.02 via <a href="#x402-payments">x402</a>.</p>
+      <p><strong>The free tier is metered per client &mdash; one IPv4 address, or one IPv6 /64.</strong> The first 50 calls in any 24 hours are free with no signup, counted per IP address (IPv6 collapses to the /64) — machines behind one NAT or a shared CI egress draw from a single counter, which is why the paywall can appear before 50 of your own calls. The window is rolling: a shared address that runs out recovers the next day rather than staying walled. After that, each call is $0.02 via <a href="#x402-payments">x402</a>.</p>
 
       <h2 id="installation">Installation</h2>
       <h3>Hosted endpoint</h3>
