@@ -67,6 +67,31 @@ if [ "$((KT * 1000))" -ne "$KTMS" ]; then
   than what Fly actually waits, a paid request gets SIGKILLed mid-settle -- the
   payer's money moves and they get nothing. Set KILL_TIMEOUT_MS to $((KT * 1000))."
 fi
+# The free-tier size is ALSO decided in two places: fly.toml's FREE_CALLS_PER_IP
+# and the code default in src/freeTier.ts that applies when the var is unset.
+# They drifted -- the default stayed at the retired 10 after the tier moved to
+# 50 -- and nothing caught it, because the retired-facts check reads tracked
+# FILES for stale prose and a code default is neither prose nor wrong-looking.
+#
+# It matters now that it is not just ours: a self-hoster runs with no env at
+# all, meets the default, and reads 50 on our site. Same class as kill_timeout,
+# so it gets the same treatment rather than a third one-off fix.
+FC_TOML=$(sed -n "s/^ *FREE_CALLS_PER_IP *= *'\([0-9]*\)'.*/\1/p" fly.toml | head -1)
+FC_CODE=$(sed -n "s/.*FREE_CALLS_PER_IP ?? '\([0-9]*\)'.*/\1/p" src/freeTier.ts | head -1)
+if [ -z "$FC_TOML" ] || [ -z "$FC_CODE" ]; then
+  fail "could not read FREE_CALLS_PER_IP from fly.toml and src/freeTier.ts.
+  Both are required: the env var is what production serves, the code default is
+  what everyone else serves."
+fi
+if [ "$FC_TOML" -ne "$FC_CODE" ]; then
+  fail "the free tier disagrees with itself: fly.toml says $FC_TOML, the code
+  default in src/freeTier.ts says $FC_CODE.
+
+  Production serves $FC_TOML. Anyone running this without the env var -- a
+  self-hoster, a local run, a fresh environment -- serves $FC_CODE while our
+  published copy says $FC_TOML. Set the code default to $FC_TOML."
+fi
+
 # Matching is not the same invariant as SUFFICIENT. The two values can agree
 # perfectly at a nonsense setting -- and a sub-second kill_timeout SIGKILLs a
 # settle no matter what we drain, so refuse it rather than making it survivable.

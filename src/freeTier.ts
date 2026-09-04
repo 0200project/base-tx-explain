@@ -9,7 +9,18 @@ import { DAY, HOUR, TtlCache } from './cache.js';
  * grants a different count is the same drift as a comment describing code it no
  * longer matches — and this one is read by the person deciding whether to pay.
  */
-export const FREE_CALLS = Math.max(0, Number.parseInt(process.env.FREE_CALLS_PER_IP ?? '10', 10) || 0);
+// The default is the SHIPPED number, not a smaller safe-looking one. It was
+// '10' — the figure this tier retired — so any deployment that did not set the
+// env var silently served the old count while our own site said 50. Production
+// was never wrong (fly.toml sets it), which is exactly why it survived: the
+// retired fact was living in a code DEFAULT, where the retired-facts gate does
+// not look, and only a reader who never sets the var would ever meet it.
+//
+// That reader is now a real person. A self-hoster runs this with no env at all.
+// Kept honest by scripts/predeploy.sh, which refuses to deploy when this
+// default and fly.toml's FREE_CALLS_PER_IP disagree — the same two-place
+// invariant, and the same enforcement, as KILL_TIMEOUT_MS.
+export const FREE_CALLS = Math.max(0, Number.parseInt(process.env.FREE_CALLS_PER_IP ?? '50', 10) || 0);
 /**
  * How long a client's free-call count lasts before it resets.
  *
