@@ -9,7 +9,7 @@
  *
  * Putting the token in the path collapses setup to pasting one string:
  *
- *   https://base-tx-explain.fly.dev/mcp/btxp_<hex>
+ *   https://api.0200project.com/mcp/btxp_<hex>
  *
  * ---
  *
