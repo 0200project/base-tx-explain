@@ -5,25 +5,75 @@
   "fields": {
     "type": "object",
     "properties": {
-      "summary": { "type": "string", "description": "Plain-English summary of what the transaction did (1-3 sentences)." },
-      "action_type": { "type": "string", "description": "One of 30 deterministic classifications, e.g. swap, erc20_transfer, nft_mint, bridge_out." },
-      "status": { "type": "string", "enum": ["success", "reverted"] },
-      "assets_moved": { "type": "array", "description": "Every asset that moved: token, amount (decimal string), from, to, token_address, standard." },
-      "counterparties": { "type": "array", "description": "Addresses involved, labeled where known (routers, bridges, marketplaces)." },
-      "risk_flags": { "type": "array", "description": "Evidence-based flags: unverified_contract, unlimited_approval, approval_for_all, known_drainer, first_time_counterparty, transaction_reverted." },
-      "gas_paid_usd": { "type": "number", "description": "Total gas cost in USD, including the OP-stack L1 data fee. Priced at the transaction's block when that read succeeds; under concurrency it can fall back to the latest ETH price, which gas_price_basis reports." },
-      "timestamp": { "type": "string" },
-      "block_number": { "type": "integer" },
-      "tx_hash": { "type": "string" },
-      "basescan_url": { "type": "string" },
-      "partial": { "type": "boolean", "description": "True when the full meaning could not be established; the summary states exactly what is and is not known." }
+      "summary": {
+        "type": "string",
+        "description": "Plain-English summary of what the transaction did (1-3 sentences)."
+      },
+      "action_type": {
+        "type": "string",
+        "description": "One of 30 deterministic classifications, e.g. swap, erc20_transfer, nft_mint, bridge_out."
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "success",
+          "reverted"
+        ]
+      },
+      "assets_moved": {
+        "type": "array",
+        "description": "Every asset that moved: token, amount (decimal string), from, to, token_address, standard."
+      },
+      "counterparties": {
+        "type": "array",
+        "description": "Addresses involved, labeled where known (routers, bridges, marketplaces)."
+      },
+      "risk_flags": {
+        "type": "array",
+        "description": "Evidence-based flags: unverified_contract, unlimited_approval, approval_for_all, known_drainer, first_time_counterparty, transaction_reverted."
+      },
+      "checks": {
+        "type": "object",
+        "description": "Which risk checks actually ran: contract_verification, first_interaction and drainer_blacklist, each with its own status. A check that could not run reports unavailable rather than silently producing no flag, so an empty risk_flags is only meaningful read alongside this."
+      },
+      "gas_paid_usd": {
+        "type": "number",
+        "description": "Total gas cost in USD, including the OP-stack L1 data fee. Priced at the transaction's block when that read succeeds; under concurrency it can fall back to the latest ETH price, which gas_price_basis reports."
+      },
+      "gas_price_basis": {
+        "type": "object",
+        "description": "Where the ETH/USD rate behind gas_paid_usd came from. source is at-block (reproduces forever), latest (does not reproduce; used when the historical read fails, which happens under concurrency) or unavailable. Carries eth_usd, feed_block, round_id and a plain-language note."
+      },
+      "timestamp": {
+        "type": "string"
+      },
+      "block_number": {
+        "type": "integer"
+      },
+      "tx_hash": {
+        "type": "string"
+      },
+      "basescan_url": {
+        "type": "string"
+      },
+      "partial": {
+        "type": "boolean",
+        "description": "True when the full meaning could not be established; the summary states exactly what is and is not known."
+      }
     }
   },
   "views": {
     "overview": {
       "title": "Overview",
       "transformation": {
-        "fields": ["summary", "action_type", "status", "gas_paid_usd", "tx_hash"]
+        "fields": [
+          "summary",
+          "action_type",
+          "status",
+          "checks",
+          "gas_paid_usd",
+          "tx_hash"
+        ]
       },
       "display": {
         "component": "table"
