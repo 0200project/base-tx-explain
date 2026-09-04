@@ -149,17 +149,18 @@
 .copied{color:#3fb950 !important}
 
 /* ── token hero, XRP-style presence ─────────────────────────────────── */
-.tok-hero{position:relative;overflow:hidden;padding:3.5rem 0 2.25rem;border-bottom:1px solid var(--border)}
+.tok-hero{position:relative;overflow:hidden;padding:5.5rem 0 3.25rem;border-bottom:1px solid var(--border)}
 .tok-hero::before{content:"";position:absolute;inset:-40% -20% auto -20%;height:120%;
-  background:radial-gradient(60% 55% at 50% 30%,var(--accent-dim,#1f6feb)22,transparent 70%);pointer-events:none}
-.tok-wrap{position:relative;display:flex;align-items:center;gap:1.75rem;flex-wrap:wrap}
-.tok-coin{width:132px;height:132px;border-radius:50%;flex:none;object-fit:cover;
+  background:radial-gradient(65% 60% at 50% 28%,var(--accent-dim,#1f6feb)33,transparent 72%);pointer-events:none}
+.tok-wrap{position:relative;display:flex;align-items:center;gap:2.5rem;flex-wrap:wrap}
+.tok-coin{width:184px;height:184px;border-radius:50%;flex:none;object-fit:cover;
   box-shadow:0 0 0 1px var(--border-strong),0 18px 44px -14px rgba(0,0,0,.55);background:var(--bg-inset)}
 .tok-id{min-width:min(100%,17rem);flex:1 1 17rem}
 .tok-ticker{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;margin:0 0 .35rem}
-.tok-sym{font-family:var(--mono);font-size:clamp(2.6rem,9vw,4.4rem);font-weight:700;letter-spacing:-.02em;
-  line-height:.95;color:var(--fg-strong)}
-.tok-name{font-size:.95rem;color:var(--fg-muted)}
+.tok-sym{font-family:var(--mono);font-size:clamp(3.4rem,12vw,6.5rem);font-weight:700;letter-spacing:-.03em;
+  line-height:.92;color:var(--fg-strong)}
+.tok-name{font-size:1.15rem;color:var(--fg-muted);letter-spacing:.01em}
+.tok-cash{color:var(--accent,#58a6ff);font-weight:600}
 .tok-badges{display:flex;gap:.45rem;flex-wrap:wrap;margin-top:.7rem}
 .tok-badge{font-family:var(--mono);font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;
   padding:.3rem .6rem;border:1px solid var(--border-strong);border-radius:999px;color:var(--fg-muted);background:var(--bg-raised)}
@@ -170,7 +171,7 @@
 .tok-stat dt{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-faint);margin:0 0 .3rem}
 .tok-stat dd{margin:0;font-family:var(--mono);font-size:1.02rem;color:var(--fg-strong);font-variant-numeric:tabular-nums;word-break:break-all}
 .tok-note{position:relative;margin:1.15rem 0 0;font-size:.82rem;color:var(--fg-faint);max-width:46rem}
-@media (max-width:40rem){.tok-coin{width:92px;height:92px}.tok-hero{padding:2.5rem 0 1.75rem}}
+@media (max-width:40rem){.tok-coin{width:108px;height:108px}.tok-hero{padding:3rem 0 2rem}}
 </style>
 </head>
 <body>
@@ -202,11 +203,11 @@
   <section class="tok-hero">
     <div class="container">
       <div class="tok-wrap">
-        <img class="tok-coin" src="/assets/xo2-512.png" width="132" height="132"
+        <img class="tok-coin" src="/assets/xo2-512.png" width="184" height="184"
              alt="XO2 token mark" loading="eager" decoding="async">
         <div class="tok-id">
           <div class="tok-ticker">
-            <h1 class="tok-sym">XO2</h1>
+            <h1 class="tok-sym"><span class="tok-cash">$</span>XO2</h1>
             <span class="tok-name">0200&nbsp;Protocol</span>
           </div>
           <div class="tok-badges">
@@ -220,7 +221,7 @@
       </div>
 
       <dl class="tok-stats">
-        <div class="tok-stat"><dt>ticker</dt><dd>XO2</dd></div>
+        <div class="tok-stat"><dt>ticker</dt><dd><span class="tok-cash">$</span>XO2</dd></div>
         <div class="tok-stat"><dt>total supply</dt><dd>100,000,000</dd></div>
         <div class="tok-stat"><dt>deployed</dt><dd>2026&#8209;09&#8209;03</dd></div>
         <div class="tok-stat"><dt>contract</dt><dd class="mono">0xdE906C748E56fD6F648eb8564532673257Ac414b</dd></div>
