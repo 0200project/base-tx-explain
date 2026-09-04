@@ -32,7 +32,15 @@ function currentTensePages(): Array<{ path: string; html: string }> {
     for (const entry of readdirSync(dir)) {
       const p = join(dir, entry);
       if (statSync(p).isDirectory()) {
-        if (entry === 'changelog' || entry === 'assets') continue; // dated history / non-prose
+        // The changelog is DATED HISTORY, not a current-tense claim: its v0.1.0
+        // entry correctly says "10 free calls per client" for 2026-08-20, and a
+        // later entry records the change to 50. Asserting today's values against
+        // it would produce false failures and train everyone to ignore this file.
+        // ⚠️ THE EXEMPTION IS FILE-SHAPED AND CONTAINERS ACQUIRE CONTENTS: a
+        // current-tense summary added to the top of that page would be invisible
+        // to every assertion here, permanently. If that ever happens, exempt
+        // dated ENTRIES rather than the directory.
+        if (entry === 'changelog' || entry === 'assets') continue;
         walk(p);
       } else if (entry.endsWith('.html')) {
         out.push({ path: p.slice(root.length), html: readFileSync(p, 'utf8') });
@@ -84,8 +92,23 @@ describe('public site claims match the code that makes them true', () => {
    * on its own instead of having to be remembered and deleted.
    */
   it('does not deny keeping records while the ledger keeps them', () => {
+    // ⚠️ KEYED ON THE WRITE CALL, NOT ON A COMMENT ABOUT IT.
+    //
+    // The first version of this guard tested for the strings "Append-only usage
+    // ledger" and "holds every one forever" — both COMMENT PROSE. Rewording
+    // either one, a tidy-up or a rename that changes nothing about the system,
+    // would have flipped this to false, returned early, and quietly re-permitted
+    // the exact denial it exists to forbid. It failed OPEN, in the reassuring
+    // direction, on an edit that touched no behaviour.
+    //
+    // That is the same defect as a docstring that is true of the branch above it
+    // and false of the branch below: a claim keyed to documentation rather than
+    // to the thing documented. A comment is a claim about the system; the append
+    // call IS the system.
     const keepsAPermanentLedger =
-      /Append-only usage ledger/.test(usageSrc) && /holds every one forever/.test(usageSrc);
+      /appendFileSync\(\s*ledgerPath/.test(usageSrc) &&
+      /ledgerPath = join\(dataDir, 'events\.jsonl'\)/.test(usageSrc) &&
+      !/\bprune|\bretention|\bexpire(s|d)?\b/i.test(usageSrc);
     if (!keepsAPermanentLedger) return; // retention genuinely removed; the denial would be fair
 
     const denials = [/no request archive/i, /no user records/i, /\bno database\b/i, /we keep nothing/i];

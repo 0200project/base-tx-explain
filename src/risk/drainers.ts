@@ -9,9 +9,32 @@ import { HOUR } from '../cache.js';
  */
 const SOURCES = [
   {
-    url: 'https://raw.githubusercontent.com/scamsniffer/scam-database/main/blacklist/address.json',
-    parse: (raw: unknown): string[] =>
-      Array.isArray(raw) ? raw.filter((a): a is string => typeof a === 'string') : [],
+    /**
+     * ⚠️ THIS USED TO POINT AT blacklist/address.json, WHICH HAS BEEN FROZEN
+     * SINCE 2024-02-28.
+     *
+     * That path has two commits in its entire history, the most recent
+     * 2024-02-28. Meanwhile the repository is pushed daily and those pushes
+     * touch blacklist/all.json. So every `drainer_blacklist: "ok"` we emitted
+     * meant "not in a list that stopped being updated two and a half years
+     * ago" — a check that ran, reported cleanly, and was measuring a fossil.
+     *
+     * Verified before switching, because the shapes differ and a wrong parse
+     * fails SILENTLY to an empty list here: all.json is an OBJECT with keys
+     * `address` (4,607 entries), `domains` and `combined` — not a top-level
+     * array. The old parse would have returned [] against it.
+     *
+     * Coverage checked rather than assumed: the new address list is a strict
+     * SUPERSET of the old one — 0 of the 2,530 old entries missing, 2,077
+     * gained. All already lowercase.
+     */
+    url: 'https://raw.githubusercontent.com/scamsniffer/scam-database/main/blacklist/all.json',
+    versionPath: 'blacklist/all.json',
+    versionRepo: 'scamsniffer/scam-database',
+    parse: (raw: unknown): string[] => {
+      const addrs = (raw as { address?: unknown } | null)?.address;
+      return Array.isArray(addrs) ? addrs.filter((a): a is string => typeof a === 'string') : [];
+    },
   },
   {
     url: 'https://raw.githubusercontent.com/MyEtherWallet/ethereum-lists/master/src/addresses/addresses-darklist.json',
@@ -50,13 +73,61 @@ let nextAttemptAt = 0;
 let lastSuccessfulRefresh = 0;
 let refreshing: Promise<void> | null = null;
 
+/**
+ * The commit each source was at when we last read it.
+ *
+ * ⚠️ WHY A TIMESTAMP WAS NOT ENOUGH. `drainerListAgeMs` reports when WE last
+ * fetched, which is a fact about our scheduler and not about the data. A fresh
+ * fetch of a file frozen in 2024 reports as perfectly fresh — that is exactly
+ * how the stale source survived for months. The source's own commit is the only
+ * thing that distinguishes "current" from "recently downloaded".
+ *
+ * It also makes the claim CITABLE: "not present in scamsniffer/scam-database
+ * blacklist/all.json at <sha>" can be re-checked by anyone, at any later date,
+ * against the same bytes. "Not on the drainer list" cannot.
+ *
+ * Best-effort and never blocking: if the commit lookup fails the list still
+ * loads and the version reads null, which is honest rather than absent.
+ */
+const sourceVersions = new Map<string, { sha: string; date: string } | null>();
+
+async function fetchSourceVersion(repo: string, path: string): Promise<{ sha: string; date: string } | null> {
+  try {
+    const res = await fetch(
+      `https://api.github.com/repos/${repo}/commits?path=${encodeURIComponent(path)}&per_page=1`,
+      { signal: AbortSignal.timeout(8_000), headers: { accept: 'application/vnd.github+json' } },
+    );
+    if (!res.ok) return null;
+    const body = (await res.json()) as Array<{ sha?: unknown; commit?: { committer?: { date?: unknown } } }>;
+    const top = Array.isArray(body) ? body[0] : undefined;
+    const sha = typeof top?.sha === 'string' ? top.sha : null;
+    const date = typeof top?.commit?.committer?.date === 'string' ? top.commit.committer.date : null;
+    return sha && date ? { sha, date } : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * What each drainer source was at when last read: commit sha and its date, or
+ * null when the lookup failed. Callers should report this beside any
+ * drainer_blacklist result so the answer cites the version it was measured against.
+ */
+export function drainerSourceVersions(): Record<string, { sha: string; date: string } | null> {
+  return Object.fromEntries(sourceVersions);
+}
+
 async function refresh(): Promise<void> {
   try {
     const results = await Promise.allSettled(
       SOURCES.map(async (s) => {
         const res = await fetch(s.url, { signal: AbortSignal.timeout(10_000) });
         if (!res.ok) throw new Error(`${s.url}: ${res.status}`);
-        return s.parse((await res.json()) as unknown);
+        const parsed = s.parse((await res.json()) as unknown);
+        const repo = (s as { versionRepo?: string }).versionRepo;
+        const path = (s as { versionPath?: string }).versionPath;
+        if (repo && path) sourceVersions.set(path, await fetchSourceVersion(repo, path));
+        return parsed;
       }),
     );
     const merged = new Set<string>();
