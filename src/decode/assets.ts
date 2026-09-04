@@ -186,6 +186,32 @@ export async function buildAssetsMoved(
  * Net flow of each asset relative to one address (usually the tx sender):
  * positive = received, negative = sent. Drives "swapped X for Y" phrasing.
  */
+/**
+ * Whether the subject parted with or gained a NON-FUNGIBLE.
+ *
+ * `netFlows` skips erc721/erc1155 deliberately — a token id has no meaningful
+ * "net", and summing ids would be nonsense. But callers that ask netFlows a
+ * DIRECTIONAL question ("did they part with value and get nothing back?") were
+ * silently getting `false` for NFT-only transactions, because no flow entry
+ * exists to be negative. That is the answer to a different question than the
+ * one asked, and classify.ts:188 — the guard that stops a drainer's `claim()`
+ * being summarised as a reward — was reading it as "no outflow".
+ *
+ * Reported as two booleans rather than a quantity, because direction is the
+ * only thing anyone can honestly ask of a set of token ids.
+ */
+export function nftFlow(movements: AssetMovement[], subject: string): { sent: boolean; received: boolean } {
+  const who = subject.toLowerCase();
+  let sent = false;
+  let received = false;
+  for (const m of movements) {
+    if (m.standard !== 'erc721' && m.standard !== 'erc1155') continue;
+    if (m.from.toLowerCase() === who) sent = true;
+    if (m.to.toLowerCase() === who) received = true;
+  }
+  return { sent, received };
+}
+
 export function netFlows(movements: AssetMovement[], subject: string): Map<string, { token: string; net: number }> {
   const flows = new Map<string, { token: string; net: number }>();
   const who = subject.toLowerCase();

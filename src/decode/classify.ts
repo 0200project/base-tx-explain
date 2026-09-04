@@ -1,7 +1,7 @@
 import type { Address } from 'viem';
 import { getLabel, WETH_ADDRESS, type LabelCategory } from '../labels.js';
 import type { ActionType, AssetMovement } from '../types.js';
-import { netFlows } from './assets.js';
+import { netFlows, nftFlow } from './assets.js';
 import type { DecodedEvent } from './events.js';
 import type { SelectorHint } from './selectors.js';
 
@@ -63,11 +63,19 @@ export function classify(input: ClassifyInput): Classification {
   const fromCategory = (kind: DecodedEvent['kind'], category: LabelCategory) =>
     events.some((e) => e.kind === kind && getLabel(e.emitter)?.category === category);
 
-  // Net fungible flow for the sender: did they part with value / receive value?
-  // Used to keep a selector-named "claim" from hiding an actual outflow.
+  // Flow for the sender: did they part with value / receive value? Used to keep
+  // a selector-named "claim" from hiding an actual outflow.
+  //
+  // NFTs are folded in through `nftFlow` rather than `netFlows`, which skips
+  // them by design. Without that, an NFT-only transfer produced NO flow entry,
+  // so `senderSent` was false whenever `value` was 0 — and the guard below,
+  // written specifically against drainers whose entrypoint is named `claim()`,
+  // was blind to the asset class those drainers actually take. An NFT leaving
+  // the sender under a claim-named function was summarised as a reward claim.
   const senderFlowValues = [...netFlows(movements, sender).values()];
-  const senderSent = value > 0n || senderFlowValues.some((f) => f.net < -1e-12);
-  const senderReceived = senderFlowValues.some((f) => f.net > 1e-12);
+  const senderNft = nftFlow(movements, sender);
+  const senderSent = value > 0n || senderFlowValues.some((f) => f.net < -1e-12) || senderNft.sent;
+  const senderReceived = senderFlowValues.some((f) => f.net > 1e-12) || senderNft.received;
 
   // 1. Deployment
   if (!to) return { action: 'contract_deployment', detail };

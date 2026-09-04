@@ -266,10 +266,36 @@ if [ -z "$CLAIMED" ]; then
 else
   for name in $CLAIMED; do
     slug="${name#io.github.0200project/}"
-    if curl -s --max-time 15 \
-        "https://registry.modelcontextprotocol.io/v0/servers?search=$slug&limit=100" \
-        | grep -q "\"$name\""; then
+    # THREE OUTCOMES, NOT TWO. This check previously ran ONE curl and treated an
+    # empty body as proof the listing was gone -- so a timeout from a flaky
+    # third party became "the site names a registry entry that does not exist"
+    # and blocked the deploy. That endpoint times out intermittently; it did so
+    # while blocking a privacy correction that was FALSE on the live site, and
+    # the same flakiness had already produced a confident "we are absent from
+    # the registry" that two seats acted on for an hour.
+    #
+    # A POSITIVE CONTROL SEPARATES "GONE" FROM "COULD NOT LOOK". An absence
+    # observation from an unreachable endpoint is not evidence; a presence
+    # observation is. So: if the control fails we say we could not check and do
+    # NOT block -- blocking every deploy on someone else's uptime is the worse
+    # failure, especially when the change being held is a correction. If the
+    # control passes and our name is missing, that is real and still fails.
+    reg() { curl -s --max-time 20 "https://registry.modelcontextprotocol.io/v0/servers?search=$1&limit=100"; }
+    hit=''; ctl=''
+    for _try in 1 2 3; do
+      hit="$(reg "$slug")"
+      case "$hit" in *"\"$name\""*) break ;; esac
+      ctl="$(reg github)"
+      case "$ctl" in *'"name"'*) break ;; esac   # control answered: absence is real
+      sleep 2
+    done
+    if printf '%s' "$hit" | grep -q "\"$name\""; then
       pass "registry claim resolves: $name"
+    elif ! printf '%s' "$ctl" | grep -q '"name"'; then
+      unverif "could not check the registry claim: $name" \
+        "The registry endpoint did not answer a positive control either, so this
+        is a fact about their uptime and not about our listing. Per the rule at
+        the top of this file: UNVERIFIED is not FAILED."
     else
       # The historical changelog entry legitimately names a retired listing --
       # it records what shipped that day. Live claims must resolve; history
