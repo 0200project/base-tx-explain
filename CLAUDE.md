@@ -19,6 +19,56 @@ outside readers, or anything a customer sees.**
 
 ---
 
+## THE SCOPE TEST — every seat, every buyer-facing sentence
+
+Board ruling, 2026-09-04. **The failure that matters is not a false claim. It is
+a TRUE claim with the wrong scope**, which passes every check aimed at its
+nouns.
+
+**THE TEST, and it replaces "is this accurate?":**
+
+> **What does this sentence make a reasonable person think was CHECKED?**
+
+A sentence can be defensible word by word and still leave a reader believing we
+examined something we never looked at. That reader is not being careless. They
+are doing what readers do.
+
+**Scopes that must be explicit — the board's list:**
+transaction · address · time window · data source · risk · identity exposure ·
+payment-rail presentation.
+
+**Two prohibitions:** no clean-bill-of-health implication, ever. And **no
+beautiful ambiguity** — if a sentence reads better because it is vague about
+what we checked, that is the sentence to delete.
+
+### Why this is a rule and not a preference
+
+Found four times in one day, in four unrelated places, every time by a different
+route:
+
+- a rails FAQ where each sentence was true and **the gradient between two of
+  them** offered the risky option most readily where exposure was highest;
+- a fix scoped to **the page where a problem was noticed** rather than to the
+  pair of pages that shared the sentence;
+- a check whose **allowlist** accepted the exact phrasing that made a claim
+  wrong;
+- a finding that searched **a proxy** (who a page addresses) and reported the
+  proxy's answer as the thing (what a page claims).
+
+Each individual step was defensible. **Scope is the quieter half of a claim: it
+never appears in a failure message**, which is why a stale-scoped check reports
+success and a narrow question returns a confident answer to a different one.
+
+### Recording a decision, not a discovery
+
+When the founder rules on a risk, write down **what actually changed.** Usually
+the artifact did not improve and the exposure did not shrink — **a person
+decided it, knowingly.** A write-up that implies the underlying risk went away
+converts a deliberate position into a false reassurance, and the next reader
+inherits the reassurance without the decision.
+
+---
+
 ## SURFACE — the Sunshine Department ☀️💅
 
 Other seats: skip to your own.
