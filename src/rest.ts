@@ -479,6 +479,18 @@ export interface EngagementRouteDeps {
    * so service revenue stays separable from product revenue.
    */
   recordSale: (engagement: Engagement) => void;
+  /**
+   * Record that an already-settled engagement was asked for again.
+   *
+   * The refusal itself does not change: the caller still gets the same 404 an
+   * unknown id gets, because answering differently would confirm a past sale to
+   * anyone who probed. The OUTWARD answer and the INWARD record are allowed to
+   * differ, and here they must — `guardSettled` exists because a company's AP
+   * system retries by design, so this is the only trace that a paying customer
+   * tried to pay us a second time. Without it, that arrival is indistinguishable
+   * in our own data from a stranger guessing a URL.
+   */
+  recordRepeatRefused: (engagement: Engagement) => void;
 }
 
 /**
@@ -554,6 +566,10 @@ export function registerEngagementRoutes(app: express.Express, deps: EngagementR
     // to an unknown id, so it confirms nothing about a past sale.
     const guardSettled: express.RequestHandler = (_req, res, next) => {
       if (isEngagementSettled(engagement.id)) {
+        // Recorded BEFORE the response, so a client that disconnects mid-write
+        // still leaves the trace. The 404 below is byte-identical to the
+        // unknown-id answer and stays that way.
+        deps.recordRepeatRefused(engagement);
         notFound(res);
         return;
       }

@@ -16,6 +16,10 @@ describe('publicHealthLifetime: operational demand only, never commercial', () =
     free: 50,
     wall_hits: 10,
     degraded_calls: 2,
+    // Commercially sensitive for a reason the other fields are not: a non-zero
+    // count tells an anonymous prober that SOME engagement has been sold, which
+    // is precisely what the identical-404 on `guardSettled` exists to withhold.
+    repeat_purchases_refused: 3,
     paid_calls: 40,
     pass_calls: 8,
     settlements: 5,
@@ -63,6 +67,7 @@ describe('publicHealthLifetime: operational demand only, never commercial', () =
       'payment_failures',
       'paid_calls',
       'pass_calls',
+      'repeat_purchases_refused',
     ]) {
       expect(pub).not.toHaveProperty(gone);
     }

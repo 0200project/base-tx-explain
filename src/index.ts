@@ -389,8 +389,10 @@ async function initPayments(): Promise<void> {
           e: 'settled',
           client: settlement.payer ?? 'unknown',
           amount_usd: Number.parseFloat(PRICE_USD),
+          rail: 'x402',
           payer: settlement.payer,
           tx: settlement.transaction,
+          ...(isOwnPayer(settlement.payer) ? { self: true } : {}),
         });
       },
     },
@@ -510,8 +512,10 @@ async function initPayments(): Promise<void> {
           e: 'settled',
           client: settlement.payer ?? 'unknown',
           amount_usd: Number.parseFloat(PASS_PRICE_USD),
+          rail: 'x402',
           payer: settlement.payer,
           tx: settlement.transaction,
+          ...(isOwnPayer(settlement.payer) ? { self: true } : {}),
         });
       },
     },
@@ -999,6 +1003,7 @@ function handleStripeWebhook(req: express.Request, res: express.Response): void 
             t: new Date().toISOString(),
             e: 'settled',
             client: 'stripe',
+            rail: 'stripe',
             amount_usd: typeof obj.amount_total === 'number' ? obj.amount_total / 100 : 0,
             // The session id: stable, unique, and already the handle finance
             // uses to talk about a purchase.
@@ -1066,7 +1071,18 @@ function handleStripeWebhook(req: express.Request, res: express.Response): void 
             recordEvent({
               t: new Date().toISOString(),
               e: 'settled',
-              client: 'stripe',
+              // NOT the constant 'stripe'. Every card renewal shared one client
+              // value, so the ledger could not tell one subscriber renewing
+              // twelve times from twelve subscribers renewing once - which is
+              // the single distinction the retention question turns on.
+              //
+              // The id is HASHED AND MINTED BY US: a subscription id is Stripe's
+              // handle, not the customer's, and hashing it means the ledger
+              // gains a grouping key without gaining a new piece of personal
+              // data. Stable per subscription, so renewals group; opaque, so it
+              // identifies nobody outside our own books.
+              client: `stripe:${createHash('sha256').update(`btx:${subId}`).digest('hex').slice(0, 8)}`,
+              rail: 'stripe',
               amount_usd: typeof obj.amount_paid === 'number' ? obj.amount_paid / 100 : 0,
               // The invoice id: a recurring payment from an established paying
               // customer had NEITHER tx nor id, so it was permanently
@@ -2103,6 +2119,31 @@ for (const path of ['/explain', '/pass'] as const) {
   });
 }
 
+/**
+ * A settlement whose PAYER is one of our own wallets is money that ARRIVED, not
+ * money we EARNED — the same distinction `isSelfPurchase` draws on the card
+ * rail, drawn here at the moment it happens rather than reconciled later.
+ *
+ * Needed at the source because the founder's own test wallet is the ONLY
+ * repeat payer in company history, so any metric that groups settlements by
+ * client — retention, repeat rate, customers — reports it as a real repeat
+ * customer unless it is excluded where the row is written. A naive group-by
+ * produced a 33% repeat rate off exactly this.
+ *
+ * ⚠️ UNARMED IF `BUDGET_WALLET_ADDRESS` IS UNSET, and the failure is in the
+ * FLATTERING direction: our own arrival is then booked as customer revenue.
+ * Same shape as an unset SELF_PURCHASE_EMAIL. walletMonitor already warns at
+ * boot when it is missing; nothing here can detect it after the fact, which is
+ * why this comment says so rather than implying the check always applies.
+ */
+const isOwnPayer = (payer: string | undefined): boolean => {
+  if (!payer) return false;
+  const mine = [process.env.BUDGET_WALLET_ADDRESS, process.env.X402_PAY_TO]
+    .filter((a): a is string => typeof a === 'string' && a.length > 0)
+    .map((a) => a.toLowerCase());
+  return mine.includes(payer.toLowerCase());
+};
+
 function registerPaidRoutes(): void {
   if (paidRoutesRegistered) return;
   if (PAYMENT_MODE !== 'x402' || !sharedResourceServer) return;
@@ -2178,6 +2219,7 @@ function registerPaidRoutes(): void {
             e: 'settled',
             client: 'rest-pass',
             amount_usd: Number.parseFloat(PASS_PRICE_USD),
+            rail: 'x402',
             id: `rest-pass-${Date.now()}`,
           });
         },
@@ -2200,8 +2242,17 @@ function registerPaidRoutes(): void {
             e: 'settled',
             client: 'rest-engagement',
             amount_usd: engagement.amountUsd,
+            rail: 'x402',
             id: `engagement-${engagement.id}-${Date.now()}`,
           });
+      },
+        recordRepeatRefused: (engagement) => {
+          recordEvent({
+            t: new Date().toISOString(),
+            e: 'repeat_purchase_refused',
+            engagement: engagement.id,
+          });
+          console.log(`[engagement] ${engagement.id} already settled; repeat purchase refused (404) and recorded`);
         },
       });
       if (ENGAGEMENTS.length) {

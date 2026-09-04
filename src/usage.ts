@@ -42,6 +42,17 @@ export type UsageEvent =
       e: 'settled';
       client: string;
       amount_usd: number;
+      /**
+       * WHICH RAIL THE MONEY CAME IN ON, stated rather than inferred.
+       *
+       * It was previously recoverable only from ABSENCE: `payer`+`tx` present
+       * meant x402, `client: 'stripe'` meant card. Every reading of the books
+       * therefore depended on remembering an unwritten rule, and reasoning from
+       * a missing field is how several wrong figures were produced. A rail that
+       * gains a third member, or a card settlement that one day carries a `tx`,
+       * silently breaks every past query. So it is recorded.
+       */
+      rail: 'x402' | 'stripe';
       payer?: string;
       tx?: string;
       /** Ours, detected at settlement. Resolved, so never awaiting attribution. */
@@ -54,6 +65,19 @@ export type UsageEvent =
        */
       id?: string;
     }
+  /**
+   * A REPEAT PURCHASE REFUSED because the engagement is already settled.
+   *
+   * The 404 is deliberate and stays exactly as it is — answering differently
+   * would confirm a past sale to anyone who probed. But the OUTWARD answer and
+   * the INWARD record are allowed to differ, and they must here: `guardSettled`
+   * exists because "a company's AP system retries by design", so this event is
+   * the only trace that a paying company tried to pay us a second time. Without
+   * it that arrival is byte-identical, in our own data, to a stranger guessing
+   * a URL. Given how few customers there are, it is the most expensive thing on
+   * the ledger not to know.
+   */
+  | { t: string; e: 'repeat_purchase_refused'; engagement: string }
   /**
    * A PAYMENT THAT DID NOT COMPLETE, and why.
    *
@@ -142,7 +166,7 @@ const dataDir = process.env.DATA_DIR ?? './data';
 const ledgerPath = join(dataDir, 'events.jsonl');
 
 const days = new Map<string, DayAgg>();
-const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0, payment_failures: 0 };
+const lifetime = { calls: 0, free: 0, wall_hits: 0, paid_calls: 0, pass_calls: 0, degraded_calls: 0, internal_calls: 0, settlements: 0, revenue_usd: 0, payment_failures: 0, repeat_purchases_refused: 0 };
 
 /**
  * Every settlement as it arrived, so the revenue split can be DERIVED rather
@@ -222,6 +246,14 @@ function absorb(ev: LedgerEvent): void {
   // Every type is matched explicitly. A line this replay does not recognise —
   // a rollback to a build that predates an event type, say — must be ignored,
   // not fall through a trailing `else` and be counted as a settlement.
+  if (ev.e === 'repeat_purchase_refused') {
+    // Counted on its own line and nowhere else. It is NOT a call (nothing was
+    // served), NOT a settlement (no money moved) and NOT a payment failure
+    // (nothing was attempted). It is a customer arriving at a door we closed on
+    // purpose, which is its own fact and the reason the event exists.
+    lifetime.repeat_purchases_refused++;
+    return;
+  }
   if (ev.e === 'payfail') {
     // Counted, never mistaken for demand or revenue. A failed payment is
     // neither a sale nor an absence of interest, and both readings are wrong
