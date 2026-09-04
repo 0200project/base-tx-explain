@@ -280,7 +280,11 @@ else
     # NOT block -- blocking every deploy on someone else's uptime is the worse
     # failure, especially when the change being held is a correction. If the
     # control passes and our name is missing, that is real and still fails.
-    reg() { curl -s --max-time 20 "https://registry.modelcontextprotocol.io/v0/servers?search=$1&limit=100"; }
+    # `|| true` is load-bearing: this file runs under `set -e`, so a curl that
+    # exits non-zero (connection refused, DNS failure) would abort the whole
+    # gate mid-run rather than reach the unverified branch below. Caught by
+    # testing the outage path instead of only the success path.
+    reg() { curl -s --max-time 20 "https://registry.modelcontextprotocol.io/v0/servers?search=$1&limit=100" || true; }
     hit=''; ctl=''
     for _try in 1 2 3; do
       hit="$(reg "$slug")"
