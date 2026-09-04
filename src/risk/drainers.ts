@@ -31,6 +31,25 @@ const SOURCES = [
     url: 'https://raw.githubusercontent.com/scamsniffer/scam-database/main/blacklist/all.json',
     versionPath: 'blacklist/all.json',
     versionRepo: 'scamsniffer/scam-database',
+    /**
+     * ⚠️ THE PUBLIC EDITION IS LAGGED BY SEVEN DAYS, BY THE VENDOR'S DESIGN, AND
+     * POINTING AT THE MAINTAINED FILE DOES NOT CLOSE THAT.
+     *
+     * Their README, read 2026-09-04: "7-Day Delay: The open-source data is
+     * provided with a 7-day delay to balance between offering free resources and
+     * protecting our real-time data's integrity." Their real-time API is $999/mo.
+     *
+     * So the honest claim after every fix we have made is "not present in a
+     * blacklist whose public edition trails real-time by seven days" — not "not a
+     * known drainer". It matters more here than almost anywhere else because THE
+     * VALUE OF A DRAINER CHECK IS CONCENTRATED IN ITS NEWEST ROWS: an address
+     * flagged five days ago is, by construction, invisible to us, and that is
+     * exactly the population a caller is asking about.
+     *
+     * This is not a bug to fix, it is a boundary to disclose. Carried on the
+     * claim for the same reason gas_price_basis is carried on the gas figure.
+     */
+    lag: { days: 7, stated_by: 'vendor README', read_at: '2026-09-04' },
     parse: (raw: unknown): string[] => {
       const addrs = (raw as { address?: unknown } | null)?.address;
       return Array.isArray(addrs) ? addrs.filter((a): a is string => typeof a === 'string') : [];
@@ -38,6 +57,9 @@ const SOURCES = [
   },
   {
     url: 'https://raw.githubusercontent.com/MyEtherWallet/ethereum-lists/master/src/addresses/addresses-darklist.json',
+    // No lag policy is stated by this source. UNKNOWN rather than none — absence
+    // of a published delay is not evidence of real-time data.
+    lag: null,
     parse: (raw: unknown): string[] =>
       Array.isArray(raw)
         ? raw
@@ -136,6 +158,21 @@ async function fetchSourceVersion(repo: string, path: string): Promise<{ sha: st
  */
 export function drainerSourceVersions(): Record<string, { sha: string; date: string } | null> {
   return Object.fromEntries(sourceVersions);
+}
+
+/**
+ * What each source says about its own freshness, so a `drainer_blacklist` result
+ * can be reported with the lag attached rather than as a present-tense fact.
+ *
+ * `null` means the source publishes no lag policy — UNKNOWN, not zero.
+ */
+export function drainerSourceLag(): Record<string, { days: number; stated_by: string; read_at: string } | null> {
+  return Object.fromEntries(
+    SOURCES.map((s) => [
+      (s as { versionPath?: string }).versionPath ?? s.url,
+      (s as { lag?: { days: number; stated_by: string; read_at: string } | null }).lag ?? null,
+    ]),
+  );
 }
 
 async function refresh(): Promise<void> {
